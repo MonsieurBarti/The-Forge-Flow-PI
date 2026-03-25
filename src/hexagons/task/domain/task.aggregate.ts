@@ -133,10 +133,10 @@ export class Task extends AggregateRoot<TaskProps> {
       return this.applyTransition("open", now);
     }
     this.props.blockedBy = this.props.blockedBy.filter((id) => id !== blockerId);
-    this.props.updatedAt = now;
     if (this.props.blockedBy.length === 0) {
-      this.props.status = "open";
+      return this.applyTransition("open", now);
     }
+    this.props.updatedAt = now;
     return { ok: true, data: undefined };
   }
 

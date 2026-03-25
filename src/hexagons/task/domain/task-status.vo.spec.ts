@@ -1,10 +1,11 @@
 import { isErr, isOk } from "@kernel";
 import { describe, expect, it } from "vitest";
+import type { TaskStatus } from "./task.schemas";
 import { TaskStatusVO } from "./task-status.vo";
 
 describe("TaskStatusVO", () => {
   describe("valid transitions", () => {
-    const validTransitions: [string, string][] = [
+    const validTransitions: [TaskStatus, TaskStatus][] = [
       ["open", "in_progress"],
       ["open", "blocked"],
       ["in_progress", "closed"],
@@ -14,8 +15,8 @@ describe("TaskStatusVO", () => {
 
     for (const [from, to] of validTransitions) {
       it(`allows ${from} -> ${to}`, () => {
-        const vo = TaskStatusVO.create(from as "open");
-        const result = vo.transitionTo(to as "open");
+        const vo = TaskStatusVO.create(from);
+        const result = vo.transitionTo(to);
 
         expect(isOk(result)).toBe(true);
         if (isOk(result)) {
@@ -26,7 +27,7 @@ describe("TaskStatusVO", () => {
   });
 
   describe("invalid transitions", () => {
-    const invalidTransitions: [string, string][] = [
+    const invalidTransitions: [TaskStatus, TaskStatus][] = [
       ["open", "closed"],
       ["open", "open"],
       ["in_progress", "open"],
@@ -42,8 +43,8 @@ describe("TaskStatusVO", () => {
 
     for (const [from, to] of invalidTransitions) {
       it(`rejects ${from} -> ${to}`, () => {
-        const vo = TaskStatusVO.create(from as "open");
-        const result = vo.transitionTo(to as "open");
+        const vo = TaskStatusVO.create(from);
+        const result = vo.transitionTo(to);
 
         expect(isErr(result)).toBe(true);
         if (isErr(result)) {
