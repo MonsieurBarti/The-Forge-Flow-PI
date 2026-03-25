@@ -1,6 +1,6 @@
 import type { Id, PersistenceError, Result } from "@kernel";
+import { ProjectRepositoryPort } from "../domain/ports/project-repository.port";
 import type { Project } from "../domain/project.aggregate";
-import { ProjectRepositoryPort } from "../domain/project-repository.port";
 
 export class SqliteProjectRepository extends ProjectRepositoryPort {
   save(_project: Project): Promise<Result<void, PersistenceError>> {

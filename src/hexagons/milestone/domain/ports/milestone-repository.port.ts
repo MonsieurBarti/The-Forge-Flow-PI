@@ -1,5 +1,5 @@
 import type { Id, PersistenceError, Result } from "@kernel";
-import type { Milestone } from "./milestone.aggregate";
+import type { Milestone } from "../milestone.aggregate";
 
 export abstract class MilestoneRepositoryPort {
   abstract save(milestone: Milestone): Promise<Result<void, PersistenceError>>;

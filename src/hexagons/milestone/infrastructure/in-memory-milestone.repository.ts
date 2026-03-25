@@ -1,7 +1,7 @@
 import { err, type Id, ok, PersistenceError, type Result } from "@kernel";
 import { Milestone } from "../domain/milestone.aggregate";
 import type { MilestoneProps } from "../domain/milestone.schemas";
-import { MilestoneRepositoryPort } from "../domain/milestone-repository.port";
+import { MilestoneRepositoryPort } from "../domain/ports/milestone-repository.port";
 
 export class InMemoryMilestoneRepository extends MilestoneRepositoryPort {
   private store = new Map<string, MilestoneProps>();

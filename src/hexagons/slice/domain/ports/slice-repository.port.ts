@@ -1,5 +1,5 @@
 import type { Id, PersistenceError, Result } from "@kernel";
-import type { Slice } from "./slice.aggregate";
+import type { Slice } from "../slice.aggregate";
 
 export abstract class SliceRepositoryPort {
   abstract save(slice: Slice): Promise<Result<void, PersistenceError>>;

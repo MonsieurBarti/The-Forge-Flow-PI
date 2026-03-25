@@ -1,7 +1,7 @@
 import { isErr, isOk } from "@kernel";
 import { beforeEach, describe, expect, it } from "vitest";
+import type { ProjectRepositoryPort } from "../domain/ports/project-repository.port";
 import { ProjectBuilder } from "../domain/project.builder";
-import type { ProjectRepositoryPort } from "../domain/project-repository.port";
 import { InMemoryProjectRepository } from "./in-memory-project.repository";
 
 function runContractTests(name: string, factory: () => ProjectRepositoryPort & { reset(): void }) {

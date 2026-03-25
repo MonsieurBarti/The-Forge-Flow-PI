@@ -1,6 +1,6 @@
 import type { Id, PersistenceError, Result } from "@kernel";
+import { SliceRepositoryPort } from "../domain/ports/slice-repository.port";
 import type { Slice } from "../domain/slice.aggregate";
-import { SliceRepositoryPort } from "../domain/slice-repository.port";
 
 export class SqliteSliceRepository extends SliceRepositoryPort {
   save(_slice: Slice): Promise<Result<void, PersistenceError>> {

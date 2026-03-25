@@ -1,6 +1,6 @@
 import { AggregateRoot, type Id } from "@kernel";
+import { ProjectInitializedEvent } from "./events/project-initialized.event";
 import { type ProjectProps, ProjectPropsSchema } from "./project.schemas";
-import { ProjectInitializedEvent } from "./project-initialized.event";
 
 export class Project extends AggregateRoot<ProjectProps> {
   private constructor(props: ProjectProps) {

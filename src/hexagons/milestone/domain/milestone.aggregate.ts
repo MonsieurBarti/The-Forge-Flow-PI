@@ -1,11 +1,11 @@
 import { AggregateRoot, err, type Id, InvalidTransitionError, ok, type Result } from "@kernel";
+import { MilestoneClosedEvent } from "./events/milestone-closed.event";
+import { MilestoneCreatedEvent } from "./events/milestone-created.event";
 import {
   type MilestoneProps,
   MilestonePropsSchema,
   type MilestoneStatus,
 } from "./milestone.schemas";
-import { MilestoneClosedEvent } from "./milestone-closed.event";
-import { MilestoneCreatedEvent } from "./milestone-created.event";
 
 export class Milestone extends AggregateRoot<MilestoneProps> {
   private constructor(props: MilestoneProps) {

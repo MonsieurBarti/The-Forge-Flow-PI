@@ -1,7 +1,7 @@
 import { isErr, isOk } from "@kernel";
 import { beforeEach, describe, expect, it } from "vitest";
 import { MilestoneBuilder } from "../domain/milestone.builder";
-import type { MilestoneRepositoryPort } from "../domain/milestone-repository.port";
+import type { MilestoneRepositoryPort } from "../domain/ports/milestone-repository.port";
 import { InMemoryMilestoneRepository } from "./in-memory-milestone.repository";
 
 function runContractTests(

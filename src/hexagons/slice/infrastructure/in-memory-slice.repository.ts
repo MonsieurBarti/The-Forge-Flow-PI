@@ -1,7 +1,7 @@
 import { err, type Id, ok, PersistenceError, type Result } from "@kernel";
+import { SliceRepositoryPort } from "../domain/ports/slice-repository.port";
 import { Slice } from "../domain/slice.aggregate";
 import type { SliceProps } from "../domain/slice.schemas";
-import { SliceRepositoryPort } from "../domain/slice-repository.port";
 
 export class InMemorySliceRepository extends SliceRepositoryPort {
   private store = new Map<string, SliceProps>();

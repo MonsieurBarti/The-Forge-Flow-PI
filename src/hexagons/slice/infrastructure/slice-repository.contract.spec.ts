@@ -1,7 +1,7 @@
 import { isErr, isOk } from "@kernel";
 import { beforeEach, describe, expect, it } from "vitest";
+import type { SliceRepositoryPort } from "../domain/ports/slice-repository.port";
 import { SliceBuilder } from "../domain/slice.builder";
-import type { SliceRepositoryPort } from "../domain/slice-repository.port";
 import { InMemorySliceRepository } from "./in-memory-slice.repository";
 
 function runContractTests(name: string, factory: () => SliceRepositoryPort & { reset(): void }) {

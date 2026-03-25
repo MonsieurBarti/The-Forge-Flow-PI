@@ -1,7 +1,7 @@
 import { err, type Id, ok, PersistenceError, type Result } from "@kernel";
+import { ProjectRepositoryPort } from "../domain/ports/project-repository.port";
 import { Project } from "../domain/project.aggregate";
 import type { ProjectProps } from "../domain/project.schemas";
-import { ProjectRepositoryPort } from "../domain/project-repository.port";
 
 export class InMemoryProjectRepository extends ProjectRepositoryPort {
   private store = new Map<string, ProjectProps>();

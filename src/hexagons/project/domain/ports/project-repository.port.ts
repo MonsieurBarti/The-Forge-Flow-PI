@@ -1,5 +1,5 @@
 import type { Id, PersistenceError, Result } from "@kernel";
-import type { Project } from "./project.aggregate";
+import type { Project } from "../project.aggregate";
 
 export abstract class ProjectRepositoryPort {
   abstract save(project: Project): Promise<Result<void, PersistenceError>>;

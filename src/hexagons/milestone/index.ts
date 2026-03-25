@@ -1,9 +1,9 @@
+export { MilestoneClosedEvent } from "./domain/events/milestone-closed.event";
+export { MilestoneCreatedEvent } from "./domain/events/milestone-created.event";
 export type { MilestoneDTO, MilestoneStatus } from "./domain/milestone.schemas";
 export {
   MilestoneLabelSchema,
   MilestonePropsSchema,
   MilestoneStatusSchema,
 } from "./domain/milestone.schemas";
-export { MilestoneClosedEvent } from "./domain/milestone-closed.event";
-export { MilestoneCreatedEvent } from "./domain/milestone-created.event";
-export { MilestoneRepositoryPort } from "./domain/milestone-repository.port";
+export { MilestoneRepositoryPort } from "./domain/ports/milestone-repository.port";

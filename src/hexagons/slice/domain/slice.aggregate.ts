@@ -1,4 +1,6 @@
 import { AggregateRoot, type Id, type InvalidTransitionError, type Result } from "@kernel";
+import { SliceCreatedEvent } from "./events/slice-created.event";
+import { SliceStatusChangedEvent } from "./events/slice-status-changed.event";
 import {
   type ComplexityCriteria,
   type ComplexityTier,
@@ -7,9 +9,7 @@ import {
   SlicePropsSchema,
   type SliceStatus,
 } from "./slice.schemas";
-import { SliceCreatedEvent } from "./slice-created.event";
 import { SliceStatusVO } from "./slice-status.vo";
-import { SliceStatusChangedEvent } from "./slice-status-changed.event";
 
 export class Slice extends AggregateRoot<SliceProps> {
   private constructor(props: SliceProps) {

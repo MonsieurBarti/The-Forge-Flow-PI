@@ -1,3 +1,7 @@
+export { SliceNotFoundError } from "./domain/errors/slice-not-found.error";
+export { SliceCreatedEvent } from "./domain/events/slice-created.event";
+export { SliceStatusChangedEvent } from "./domain/events/slice-status-changed.event";
+export { SliceRepositoryPort } from "./domain/ports/slice-repository.port";
 export type {
   ArchitectureImpact,
   ComplexityCriteria,
@@ -15,7 +19,3 @@ export {
   SlicePropsSchema,
   SliceStatusSchema,
 } from "./domain/slice.schemas";
-export { SliceCreatedEvent } from "./domain/slice-created.event";
-export { SliceNotFoundError } from "./domain/slice-not-found.error";
-export { SliceRepositoryPort } from "./domain/slice-repository.port";
-export { SliceStatusChangedEvent } from "./domain/slice-status-changed.event";
