@@ -10,7 +10,7 @@
 
 | Slice    | Title                              | Status     | Complexity | Blocked By     |
 |----------|------------------------------------|------------|------------|----------------|
-| M01-S01  | Project scaffolding, Biome & Vitest| discussing | F-lite     | —              |
+| M01-S01  | Project scaffolding, Biome & Vitest| completed  | F-lite     | —              |
 | M01-S02  | Kernel base classes                | discussing | F-lite     | S01            |
 | M01-S03  | Kernel schemas & ports             | discussing | S          | S02            |
 | M01-S04  | Kernel errors & event names        | discussing | S          | S02            |
@@ -20,4 +20,4 @@
 
 ## Next Step
 
-Run `/tff:discuss` for M01-S01 to begin the first slice.
+Run `/tff:discuss` for M01-S02 to begin the next slice.
