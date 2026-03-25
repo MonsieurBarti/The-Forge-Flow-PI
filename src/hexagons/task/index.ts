@@ -4,5 +4,8 @@ export { TaskBlockedEvent } from "./domain/events/task-blocked.event";
 export { TaskCompletedEvent } from "./domain/events/task-completed.event";
 export { TaskCreatedEvent } from "./domain/events/task-created.event";
 export { TaskRepositoryPort } from "./domain/ports/task-repository.port";
+export { WaveDetectionPort } from "./domain/ports/wave-detection.port";
 export type { TaskDTO, TaskLabel, TaskStatus } from "./domain/task.schemas";
 export { TaskLabelSchema, TaskPropsSchema, TaskStatusSchema } from "./domain/task.schemas";
+export type { TaskDependencyInput, Wave } from "./domain/wave.schemas";
+export { TaskDependencyInputSchema, WaveSchema } from "./domain/wave.schemas";
