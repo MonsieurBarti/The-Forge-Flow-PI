@@ -1,7 +1,7 @@
 # State — M02
 
 ## Progress
-- Slices: 0/7 completed
+- Slices: 1/7 completed
 - Tasks: 14/14 completed
 
 ## Slices
@@ -13,4 +13,4 @@
 | M02-S03: Settings hexagon | open | 0/0 | 0% |
 | M02-S02: Wave detection | open | 0/0 | 0% |
 | M02-S04: EventBus implementation | open | 0/0 | 0% |
-| M02-S01: Task hexagon | verifying | 14/14 | 100% |
+| M02-S01: Task hexagon | closed | 14/14 | 100% |
