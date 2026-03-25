@@ -261,12 +261,11 @@ export { CyclicDependencyError } from "./domain/errors/cyclic-dependency.error";
 
 ### Kernel Changes
 
-Add to `EVENT_NAMES` in `src/kernel/events/event-names.ts`:
+Add `TASK_CREATED` to `EVENT_NAMES` in `src/kernel/event-names.ts`:
 ```typescript
 TASK_CREATED: "task.created",
-TASK_COMPLETED: "task.completed",
-TASK_BLOCKED: "task.blocked",
 ```
+Note: `TASK_COMPLETED` and `TASK_BLOCKED` already exist in kernel.
 
 ## Acceptance Criteria
 
@@ -290,7 +289,7 @@ TASK_BLOCKED: "task.blocked",
 - [ ] AC18: `CyclicDependencyError` has code `TASK.CYCLIC_DEPENDENCY` and includes cycle path
 - [ ] AC19: `TaskNotFoundError` has code `TASK.NOT_FOUND`
 - [ ] AC20: Barrel exports only ports, events, schemas, DTOs, and errors (not aggregate or VO)
-- [ ] AC21: Kernel `EVENT_NAMES` updated with task events
+- [ ] AC21: Kernel `EVENT_NAMES` updated with `TASK_CREATED` (TASK_COMPLETED and TASK_BLOCKED already exist)
 - [ ] AC22: All tests pass
 - [ ] AC23: `biome check` passes on all new files
 
