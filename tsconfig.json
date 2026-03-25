@@ -16,6 +16,7 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "paths": {
+      "@kernel": ["./src/kernel"],
       "@kernel/*": ["./src/kernel/*"],
       "@hexagons/*": ["./src/hexagons/*"],
       "@infrastructure/*": ["./src/infrastructure/*"]
