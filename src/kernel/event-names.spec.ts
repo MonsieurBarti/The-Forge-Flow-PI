@@ -3,8 +3,8 @@ import type { EventName } from "./event-names";
 import { EVENT_NAMES, EventNameSchema } from "./event-names";
 
 describe("EVENT_NAMES", () => {
-  it("contains all 11 event names", () => {
-    expect(Object.keys(EVENT_NAMES)).toHaveLength(11);
+  it("contains all 12 event names", () => {
+    expect(Object.keys(EVENT_NAMES)).toHaveLength(12);
   });
 
   it("all values are unique", () => {
