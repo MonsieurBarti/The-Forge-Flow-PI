@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { AggregateRoot } from "./aggregate-root.base";
 import { DomainEvent } from "./domain-event.base";
+import { EVENT_NAMES } from "./event-names";
 
 const TestAggregateSchema = z.object({
   id: z.uuid(),
@@ -11,7 +12,7 @@ const TestAggregateSchema = z.object({
 type TestAggregateProps = z.infer<typeof TestAggregateSchema>;
 
 class TestEvent extends DomainEvent {
-  readonly eventName = "test.happened";
+  readonly eventName = EVENT_NAMES.PROJECT_INITIALIZED;
 
   constructor(aggregateId: string) {
     super({
@@ -58,7 +59,7 @@ describe("AggregateRoot", () => {
     aggregate.doSomething();
     const events = aggregate.pullEvents();
     expect(events).toHaveLength(1);
-    expect(events[0].eventName).toBe("test.happened");
+    expect(events[0].eventName).toBe(EVENT_NAMES.PROJECT_INITIALIZED);
     expect(events[0].aggregateId).toBe(validProps.id);
   });
 
@@ -77,7 +78,7 @@ describe("AggregateRoot", () => {
     const events = aggregate.pullEvents();
     expect(events).toHaveLength(3);
     for (const event of events) {
-      expect(event.eventName).toBe("test.happened");
+      expect(event.eventName).toBe(EVENT_NAMES.PROJECT_INITIALIZED);
     }
   });
 });

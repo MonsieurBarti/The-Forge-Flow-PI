@@ -9,6 +9,8 @@ export {
   PersistenceError,
   SyncError,
 } from "./errors";
+export type { EventName } from "./event-names";
+export { EVENT_NAMES, EventNameSchema } from "./event-names";
 export type {
   GitFileStatus,
   GitLogEntry,

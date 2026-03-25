@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { EventName } from "./event-names";
 import type { Id, Timestamp } from "./schemas";
 import { IdSchema, TimestampSchema } from "./schemas";
 
@@ -12,7 +13,7 @@ export const DomainEventPropsSchema = z.object({
 export type DomainEventProps = z.infer<typeof DomainEventPropsSchema>;
 
 export abstract class DomainEvent {
-  abstract readonly eventName: string;
+  abstract readonly eventName: EventName;
   public readonly id: Id;
   public readonly aggregateId: Id;
   public readonly occurredAt: Timestamp;

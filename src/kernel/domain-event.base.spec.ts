@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import type { DomainEventProps } from "./domain-event.base";
 import { DomainEvent } from "./domain-event.base";
+import { EVENT_NAMES } from "./event-names";
 
 class TestEvent extends DomainEvent {
-  readonly eventName = "test.happened";
+  readonly eventName = EVENT_NAMES.PROJECT_INITIALIZED;
 }
 
 function validProps(overrides?: Partial<DomainEventProps>): DomainEventProps {
@@ -79,6 +80,6 @@ describe("DomainEvent", () => {
 
   it("eventName is accessible on subclass", () => {
     const event = new TestEvent(validProps());
-    expect(event.eventName).toBe("test.happened");
+    expect(event.eventName).toBe(EVENT_NAMES.PROJECT_INITIALIZED);
   });
 });
