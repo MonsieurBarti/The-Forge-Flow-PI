@@ -1,0 +1,51 @@
+{
+  "$schema": "https://biomejs.dev/schemas/latest/schema.json",
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "suspicious": {
+        "noExplicitAny": "error"
+      },
+      "style": {
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "patterns": [
+              {
+                "group": [
+                  "@hexagons/project/*",
+                  "@hexagons/milestone/*",
+                  "@hexagons/slice/*",
+                  "@hexagons/task/*",
+                  "@hexagons/execution/*",
+                  "@hexagons/review/*",
+                  "@hexagons/intelligence/*",
+                  "@hexagons/settings/*",
+                  "@hexagons/workflow/*"
+                ],
+                "message": "Import from the hexagon barrel (@hexagons/<name>) instead of its internals."
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "files": {
+    "includes": ["**", "!node_modules", "!dist", "!coverage", "!.tff", "!.beads"]
+  }
+}

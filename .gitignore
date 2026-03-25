@@ -1,5 +1,11 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
 
 # Beads / Dolt files (added by bd init)
 .dolt/
 *.db
 .beads-credential-key
+
+.code-graph/
