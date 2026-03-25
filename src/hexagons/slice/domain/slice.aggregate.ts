@@ -1,4 +1,4 @@
-import { AggregateRoot, type Id, type InvalidTransitionError, type Result } from "@kernel";
+import { AggregateRoot, type Id, type InvalidTransitionError, ok, type Result } from "@kernel";
 import { SliceCreatedEvent } from "./events/slice-created.event";
 import { SliceStatusChangedEvent } from "./events/slice-status-changed.event";
 import {
@@ -118,7 +118,7 @@ export class Slice extends AggregateRoot<SliceProps> {
       );
     }
 
-    return { ok: true, data: undefined };
+    return ok(undefined);
   }
 
   classify(criteria: ComplexityCriteria, now: Date): void {

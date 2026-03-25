@@ -1,10 +1,11 @@
 import { isErr, isOk } from "@kernel";
 import { describe, expect, it } from "vitest";
+import type { SliceStatus } from "./slice.schemas";
 import { SliceStatusVO } from "./slice-status.vo";
 
 describe("SliceStatusVO", () => {
   describe("valid transitions", () => {
-    const validTransitions: [string, string][] = [
+    const validTransitions: [SliceStatus, SliceStatus][] = [
       ["discussing", "researching"],
       ["researching", "planning"],
       ["planning", "planning"],
@@ -19,8 +20,8 @@ describe("SliceStatusVO", () => {
 
     for (const [from, to] of validTransitions) {
       it(`allows ${from} -> ${to}`, () => {
-        const vo = SliceStatusVO.create(from as "discussing");
-        const result = vo.transitionTo(to as "discussing");
+        const vo = SliceStatusVO.create(from);
+        const result = vo.transitionTo(to);
 
         expect(isOk(result)).toBe(true);
         if (isOk(result)) {
@@ -31,7 +32,7 @@ describe("SliceStatusVO", () => {
   });
 
   describe("invalid transitions", () => {
-    const invalidTransitions: [string, string][] = [
+    const invalidTransitions: [SliceStatus, SliceStatus][] = [
       ["discussing", "closed"],
       ["discussing", "planning"],
       ["researching", "executing"],
@@ -44,8 +45,8 @@ describe("SliceStatusVO", () => {
 
     for (const [from, to] of invalidTransitions) {
       it(`rejects ${from} -> ${to}`, () => {
-        const vo = SliceStatusVO.create(from as "discussing");
-        const result = vo.transitionTo(to as "discussing");
+        const vo = SliceStatusVO.create(from);
+        const result = vo.transitionTo(to);
 
         expect(isErr(result)).toBe(true);
         if (isErr(result)) {
