@@ -6,6 +6,7 @@ export {
   BaseDomainError,
   GitError,
   GitHubError,
+  InvalidTransitionError,
   PersistenceError,
   SyncError,
 } from "./errors";
