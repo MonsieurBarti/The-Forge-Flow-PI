@@ -22,9 +22,9 @@ function runContractTests(name: string, factory: () => SliceRepositoryPort & { r
       expect(isOk(findResult)).toBe(true);
       if (isOk(findResult)) {
         expect(findResult.data).not.toBeNull();
-        expect(findResult.data!.id).toBe(slice.id);
-        expect(findResult.data!.label).toBe(slice.label);
-        expect(findResult.data!.title).toBe(slice.title);
+        expect(findResult.data?.id).toBe(slice.id);
+        expect(findResult.data?.label).toBe(slice.label);
+        expect(findResult.data?.title).toBe(slice.title);
       }
     });
 
@@ -36,7 +36,7 @@ function runContractTests(name: string, factory: () => SliceRepositoryPort & { r
       expect(isOk(result)).toBe(true);
       if (isOk(result)) {
         expect(result.data).not.toBeNull();
-        expect(result.data!.id).toBe(slice.id);
+        expect(result.data?.id).toBe(slice.id);
       }
     });
 
