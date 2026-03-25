@@ -61,19 +61,18 @@ Build the foundational DDD building blocks and the first three hexagons (Project
 
 ---
 
-### M01-S04: Kernel errors & event names
+### M01-S04: Event name constants
 
-**Requirements:** R03
-**Dependencies:** M01-S02
+**Requirements:** R03 (partial — error classes delivered in S03)
+**Dependencies:** M01-S03
 **Complexity:** S
 
-- `BaseDomainError` abstract extending Error with `code` string and optional `metadata`
-- `PersistenceError`, `GitError`, `GitHubError`, `SyncError` concrete errors
 - Event name constants (`EVENT_NAMES` as `const` object) with `EventName` type
+- Tighten `EventBusPort.subscribe` key from `string` to `EventName`
 
 **AC:**
-- Error codes follow `DOMAIN.SPECIFIC` format (e.g., `GIT.BRANCH_NOT_FOUND`)
 - Event names are compile-time checked (no string typos possible)
+- `EventBusPort.subscribe` uses `EventName` type for event key
 
 ---
 

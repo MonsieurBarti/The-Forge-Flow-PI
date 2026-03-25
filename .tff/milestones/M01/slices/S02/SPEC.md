@@ -115,12 +115,12 @@ Re-export all public symbols from schemas, result, entity, aggregate-root, value
 
 ## Acceptance Criteria
 
-- [ ] AC1: All base classes are generic, Zod-validated in constructors, and independently unit-tested
-- [ ] AC2: Result type used as discriminated union with `ok()`, `err()`, `isOk()`, `isErr()`, `match()` — all tested
-- [ ] AC3: `ValueObject.equals()` uses deterministic structural comparison — tested with same/different props
-- [ ] AC4: `AggregateRoot.pullEvents()` returns collected events and clears the internal list — tested
-- [ ] AC5: `DomainEvent` validates props against `DomainEventPropsSchema` — tested with valid and invalid props
-- [ ] AC6: `biome check`, `vitest run`, `tsc --noEmit` all pass
+- [x] AC1: All base classes are generic, Zod-validated in constructors, and independently unit-tested
+- [x] AC2: Result type used as discriminated union with `ok()`, `err()`, `isOk()`, `isErr()`, `match()` — all tested
+- [x] AC3: `ValueObject.equals()` uses deterministic structural comparison — tested with same/different props
+- [x] AC4: `AggregateRoot.pullEvents()` returns collected events and clears the internal list — tested
+- [x] AC5: `DomainEvent` validates props against `DomainEventPropsSchema` — tested with valid and invalid props
+- [x] AC6: `biome check`, `vitest run`, `tsc --noEmit` all pass
 
 ## File Map
 

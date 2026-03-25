@@ -218,13 +218,13 @@ Add re-exports for errors and ports.
 
 ## Acceptance Criteria
 
-- [ ] AC1: All error classes extend `BaseDomainError`, have `code` and optional `metadata`, `name` set to class name
-- [ ] AC2: Error codes follow `DOMAIN.SPECIFIC` format — tested with each concrete error
-- [ ] AC3: All port DTO schemas export both Zod schema and inferred TypeScript type
-- [ ] AC4: All ports are abstract classes with correct method signatures — verified by `tsc --noEmit`
-- [ ] AC5: `EventBusPort.publish` accepts `DomainEvent`, `subscribe` accepts `string` event type
-- [ ] AC6: Port methods return `Result<T, E>` with the correct domain error type
-- [ ] AC7: `biome check`, `vitest run`, `tsc --noEmit` all pass
+- [x] AC1: All error classes extend `BaseDomainError`, have `code` and optional `metadata`, `name` set to class name
+- [x] AC2: Error codes follow `DOMAIN.SPECIFIC` format — tested with each concrete error
+- [x] AC3: All port DTO schemas export both Zod schema and inferred TypeScript type
+- [x] AC4: All ports are abstract classes with correct method signatures — verified by `tsc --noEmit`
+- [x] AC5: `EventBusPort.publish` accepts `DomainEvent`, `subscribe` accepts `string` event type
+- [x] AC6: Port methods return `Result<T, E>` with the correct domain error type
+- [x] AC7: `biome check`, `vitest run`, `tsc --noEmit` all pass
 
 ## Unknowns
 

@@ -29,10 +29,10 @@ Set up the TypeScript project foundation: package.json, tsconfig, Biome linting 
 
 ## Acceptance Criteria
 
-- [ ] `biome check` passes on all source files
-- [ ] `vitest run` executes successfully (zero tests is OK)
-- [ ] Hexagon import boundary lint rules configured via `noRestrictedImports`
-- [ ] Path aliases resolve in both TypeScript compilation and Vitest
+- [x] `biome check` passes on all source files
+- [x] `vitest run` executes successfully (zero tests is OK)
+- [x] Hexagon import boundary lint rules configured via `noRestrictedImports`
+- [x] Path aliases resolve in both TypeScript compilation and Vitest
 
 ## Unknowns
 
