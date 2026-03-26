@@ -16,6 +16,7 @@ export {
   ConsoleLoggerAdapter,
   InProcessEventBus,
   SilentLoggerAdapter,
+  SystemDateProvider,
 } from "./infrastructure";
 export type {
   GitFileStatus,
