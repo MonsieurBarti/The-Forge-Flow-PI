@@ -1,14 +1,14 @@
 import { faker } from "@faker-js/faker";
-import { describe, expect, it } from "vitest";
-import { isOk } from "@kernel";
-import { InMemoryProjectRepository } from "@hexagons/project/infrastructure/in-memory-project.repository";
-import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/in-memory-milestone.repository";
-import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
-import { InMemoryTaskRepository } from "@hexagons/task/infrastructure/in-memory-task.repository";
-import { Project } from "@hexagons/project/domain/project.aggregate";
 import { Milestone } from "@hexagons/milestone/domain/milestone.aggregate";
+import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/in-memory-milestone.repository";
+import { Project } from "@hexagons/project/domain/project.aggregate";
+import { InMemoryProjectRepository } from "@hexagons/project/infrastructure/in-memory-project.repository";
 import { Slice } from "@hexagons/slice/domain/slice.aggregate";
+import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
 import { Task } from "@hexagons/task/domain/task.aggregate";
+import { InMemoryTaskRepository } from "@hexagons/task/infrastructure/in-memory-task.repository";
+import { isOk } from "@kernel";
+import { describe, expect, it } from "vitest";
 import { GetStatusUseCase } from "./get-status.use-case";
 
 function setup() {
@@ -79,7 +79,7 @@ describe("GetStatusUseCase", () => {
     const result = await useCase.execute();
     expect(isOk(result)).toBe(true);
     if (isOk(result)) {
-      expect(result.data.activeMilestone!.label).toBe("M02");
+      expect(result.data.activeMilestone?.label).toBe("M02");
     }
   });
 

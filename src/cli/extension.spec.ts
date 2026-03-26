@@ -17,9 +17,7 @@ describe("createTffExtension", () => {
     const api = makeMockApi();
     createTffExtension(api, { projectRoot: "/workspace" });
 
-    const commandNames = api.registerCommand.mock.calls.map(
-      (call: unknown[]) => call[0],
-    );
+    const commandNames = api.registerCommand.mock.calls.map((call: unknown[]) => call[0]);
     expect(commandNames).toContain("tff:new");
     expect(commandNames).toContain("tff:status");
   });
@@ -28,12 +26,10 @@ describe("createTffExtension", () => {
     const api = makeMockApi();
     createTffExtension(api, { projectRoot: "/workspace" });
 
-    const toolNames = api.registerTool.mock.calls.map(
-      (call: unknown[]) => {
-        const tool = call[0];
-        return isRecord(tool) ? tool["name"] : undefined;
-      },
-    );
+    const toolNames = api.registerTool.mock.calls.map((call: unknown[]) => {
+      const tool = call[0];
+      return isRecord(tool) ? tool.name : undefined;
+    });
     expect(toolNames).toContain("tff_init_project");
     expect(toolNames).toContain("tff_status");
   });

@@ -1,9 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
-import { registerWorkflowExtension } from "./workflow.extension";
-import { InMemoryProjectRepository } from "@hexagons/project/infrastructure/in-memory-project.repository";
 import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/in-memory-milestone.repository";
+import { InMemoryProjectRepository } from "@hexagons/project/infrastructure/in-memory-project.repository";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
 import { InMemoryTaskRepository } from "@hexagons/task/infrastructure/in-memory-task.repository";
+import { describe, expect, it, vi } from "vitest";
+import { registerWorkflowExtension } from "./workflow.extension";
 
 function makeMockApi() {
   return {
@@ -35,8 +35,6 @@ describe("registerWorkflowExtension", () => {
       sliceRepo: new InMemorySliceRepository(),
       taskRepo: new InMemoryTaskRepository(),
     });
-    expect(api.registerTool).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "tff_status" }),
-    );
+    expect(api.registerTool).toHaveBeenCalledWith(expect.objectContaining({ name: "tff_status" }));
   });
 });

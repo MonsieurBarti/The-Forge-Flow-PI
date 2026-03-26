@@ -1,20 +1,20 @@
+import type { MergeSettingsUseCase } from "@hexagons/settings";
 import {
   type DateProviderPort,
   type EventBusPort,
-  type PersistenceError,
-  type Result,
   err,
   isErr,
   ok,
+  type PersistenceError,
+  type Result,
 } from "@kernel";
 import { stringify } from "yaml";
 import { z } from "zod";
 import { ProjectAlreadyExistsError } from "../domain/errors/project-already-exists.error";
-import { ProjectRepositoryPort } from "../domain/ports/project-repository.port";
-import { ProjectFileSystemPort } from "../domain/ports/project-filesystem.port";
+import type { ProjectFileSystemPort } from "../domain/ports/project-filesystem.port";
+import type { ProjectRepositoryPort } from "../domain/ports/project-repository.port";
 import { Project } from "../domain/project.aggregate";
 import type { ProjectDTO } from "../domain/project.schemas";
-import { MergeSettingsUseCase } from "@hexagons/settings";
 
 export const InitProjectParamsSchema = z.object({
   name: z.string().min(1),
@@ -34,9 +34,7 @@ export class InitProjectUseCase {
     private readonly dateProvider: DateProviderPort,
   ) {}
 
-  async execute(
-    params: InitProjectParams,
-  ): Promise<Result<ProjectDTO, InitProjectError>> {
+  async execute(params: InitProjectParams): Promise<Result<ProjectDTO, InitProjectError>> {
     const tffDir = `${params.projectRoot}/.tff`;
 
     // 1. Guard: project already exists
@@ -47,11 +45,7 @@ export class InitProjectUseCase {
     }
 
     // 2. Create directory structure
-    for (const dir of [
-      `${tffDir}/milestones`,
-      `${tffDir}/skills`,
-      `${tffDir}/observations`,
-    ]) {
+    for (const dir of [`${tffDir}/milestones`, `${tffDir}/skills`, `${tffDir}/observations`]) {
       const mkdirResult = await this.projectFs.createDirectory(dir, {
         recursive: true,
       });
@@ -60,10 +54,7 @@ export class InitProjectUseCase {
 
     // 3. Write PROJECT.md
     const projectMd = `# ${params.name}\n\n${params.vision}\n`;
-    const writeProjResult = await this.projectFs.writeFile(
-      `${tffDir}/PROJECT.md`,
-      projectMd,
-    );
+    const writeProjResult = await this.projectFs.writeFile(`${tffDir}/PROJECT.md`, projectMd);
     if (isErr(writeProjResult)) return writeProjResult;
 
     // 4. Generate + write settings.yaml

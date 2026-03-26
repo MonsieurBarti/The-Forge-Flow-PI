@@ -1,10 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
-import {
-  InProcessEventBus,
-  SilentLoggerAdapter,
-  DateProviderPort,
-} from "@kernel";
 import { MergeSettingsUseCase } from "@hexagons/settings";
+import { DateProviderPort, InProcessEventBus, SilentLoggerAdapter } from "@kernel";
+import { describe, expect, it, vi } from "vitest";
 import { InMemoryProjectRepository } from "../in-memory-project.repository";
 import { InMemoryProjectFileSystemAdapter } from "../in-memory-project-filesystem.adapter";
 import { registerProjectExtension } from "./project.extension";

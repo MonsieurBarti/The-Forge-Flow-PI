@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type {
-  AgentToolResult,
-  ContentBlock,
-  ExtensionAPI,
-  ExtensionContext,
-  ToolDefinition,
-} from "./pi.types";
+import type { AgentToolResult, ContentBlock } from "./pi.types";
 
 describe("PI SDK type aliases", () => {
   it("ContentBlock text variant is structurally valid", () => {

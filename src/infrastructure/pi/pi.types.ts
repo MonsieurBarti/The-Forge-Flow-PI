@@ -6,9 +6,7 @@
  */
 
 /** Content block in a tool result */
-export type ContentBlock =
-  | { type: "text"; text: string }
-  | { type: "object"; data: unknown };
+export type ContentBlock = { type: "text"; text: string } | { type: "object"; data: unknown };
 
 /** Result returned by a tool execution */
 export interface AgentToolResult<TDetails = unknown> {
