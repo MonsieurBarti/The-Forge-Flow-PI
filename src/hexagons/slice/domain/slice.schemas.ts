@@ -1,4 +1,5 @@
-import { IdSchema, TimestampSchema } from "@kernel";
+import type { ComplexityTier } from "@kernel";
+import { ComplexityTierSchema, IdSchema, TimestampSchema } from "@kernel";
 import { z } from "zod";
 
 export const SliceStatusSchema = z.enum([
@@ -32,8 +33,8 @@ export const ComplexityCriteriaSchema = z.object({
 });
 export type ComplexityCriteria = z.infer<typeof ComplexityCriteriaSchema>;
 
-export const ComplexityTierSchema = z.enum(["S", "F-lite", "F-full"]);
-export type ComplexityTier = z.infer<typeof ComplexityTierSchema>;
+export type { ComplexityTier } from "@kernel";
+export { ComplexityTierSchema };
 
 export function classifyComplexity(criteria: ComplexityCriteria): ComplexityTier {
   if (
