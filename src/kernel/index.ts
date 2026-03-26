@@ -12,6 +12,12 @@ export {
 } from "./errors";
 export type { EventName } from "./event-names";
 export { EVENT_NAMES, EventNameSchema } from "./event-names";
+export {
+  ConsoleLoggerAdapter,
+  InProcessEventBus,
+  SilentLoggerAdapter,
+  SystemDateProvider,
+} from "./infrastructure";
 export type {
   GitFileStatus,
   GitLogEntry,
@@ -31,6 +37,7 @@ export {
   GitPort,
   GitStatusEntrySchema,
   GitStatusSchema,
+  LoggerPort,
   PrFilterSchema,
   PullRequestConfigSchema,
   PullRequestInfoSchema,
@@ -39,6 +46,30 @@ export {
 } from "./ports";
 export type { Result } from "./result";
 export { err, isErr, isOk, match, ok } from "./result";
-export type { Id, Timestamp } from "./schemas";
-export { IdSchema, TimestampSchema } from "./schemas";
+export type { ComplexityTier, Id, ModelProfileName, Timestamp } from "./schemas";
+export { ComplexityTierSchema, IdSchema, ModelProfileNameSchema, TimestampSchema } from "./schemas";
 export { ValueObject } from "./value-object.base";
+// Agent artifacts
+export {
+  AGENT_REGISTRY,
+  AgentCapabilitySchema,
+  AgentCardSchema,
+  AgentCostSchema,
+  AgentDispatchConfigBuilder,
+  AgentDispatchConfigSchema,
+  AgentResultBuilder,
+  AgentResultSchema,
+  AgentTypeSchema,
+  findAgentsByCapability,
+  getAgentCard,
+  ResolvedModelSchema,
+} from "./agents";
+export type {
+  AgentCapability,
+  AgentCard,
+  AgentCost,
+  AgentDispatchConfig,
+  AgentResult,
+  AgentType,
+  ResolvedModel,
+} from "./agents";
