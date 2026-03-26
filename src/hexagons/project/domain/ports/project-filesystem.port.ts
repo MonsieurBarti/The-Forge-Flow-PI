@@ -6,8 +6,5 @@ export abstract class ProjectFileSystemPort {
     path: string,
     options?: { recursive?: boolean },
   ): Promise<Result<void, PersistenceError>>;
-  abstract writeFile(
-    path: string,
-    content: string,
-  ): Promise<Result<void, PersistenceError>>;
+  abstract writeFile(path: string, content: string): Promise<Result<void, PersistenceError>>;
 }

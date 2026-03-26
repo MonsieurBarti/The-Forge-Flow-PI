@@ -25,10 +25,7 @@ export class NodeProjectFileSystemAdapter extends ProjectFileSystemPort {
     }
   }
 
-  async writeFile(
-    path: string,
-    content: string,
-  ): Promise<Result<void, PersistenceError>> {
+  async writeFile(path: string, content: string): Promise<Result<void, PersistenceError>> {
     try {
       await writeFile(path, content, "utf-8");
       return ok(undefined);

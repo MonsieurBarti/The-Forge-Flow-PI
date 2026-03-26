@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import { BaseDomainError } from "@kernel";
+import { describe, expect, it } from "vitest";
 import { ProjectAlreadyExistsError } from "./project-already-exists.error";
 
 describe("ProjectAlreadyExistsError", () => {

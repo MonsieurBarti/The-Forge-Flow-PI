@@ -25,10 +25,7 @@ export class InMemoryProjectFileSystemAdapter extends ProjectFileSystemPort {
     return ok(undefined);
   }
 
-  async writeFile(
-    path: string,
-    content: string,
-  ): Promise<Result<void, PersistenceError>> {
+  async writeFile(path: string, content: string): Promise<Result<void, PersistenceError>> {
     this.entries.set(path, content);
     return ok(undefined);
   }
