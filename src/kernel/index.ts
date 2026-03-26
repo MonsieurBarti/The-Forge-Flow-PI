@@ -14,6 +14,7 @@ export type { EventName } from "./event-names";
 export { EVENT_NAMES, EventNameSchema } from "./event-names";
 export {
   ConsoleLoggerAdapter,
+  GitCliAdapter,
   InProcessEventBus,
   SilentLoggerAdapter,
 } from "./infrastructure";
