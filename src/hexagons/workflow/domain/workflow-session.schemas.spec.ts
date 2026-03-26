@@ -8,10 +8,17 @@ import {
 
 describe("WorkflowPhaseSchema", () => {
   const validPhases = [
-    "idle", "discussing", "researching", "planning",
-    "executing", "verifying", "reviewing",
-    "shipping", "completing-milestone",
-    "paused", "blocked",
+    "idle",
+    "discussing",
+    "researching",
+    "planning",
+    "executing",
+    "verifying",
+    "reviewing",
+    "shipping",
+    "completing-milestone",
+    "paused",
+    "blocked",
   ];
 
   it.each(validPhases)("accepts '%s'", (phase) => {
@@ -25,8 +32,16 @@ describe("WorkflowPhaseSchema", () => {
 
 describe("WorkflowTriggerSchema", () => {
   const validTriggers = [
-    "start", "next", "skip", "back", "fail",
-    "approve", "reject", "pause", "resume", "abort",
+    "start",
+    "next",
+    "skip",
+    "back",
+    "fail",
+    "approve",
+    "reject",
+    "pause",
+    "resume",
+    "abort",
   ];
 
   it.each(validTriggers)("accepts '%s'", (trigger) => {

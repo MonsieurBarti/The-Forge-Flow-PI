@@ -7,7 +7,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function getProps(params: Record<string, unknown>): Record<string, unknown> {
-  const props = params["properties"];
+  const props = params.properties;
   if (!isRecord(props)) throw new Error("Expected properties to be an object");
   return props;
 }
@@ -37,45 +37,45 @@ describe("createZodTool", () => {
   describe("JSON Schema conversion (AC4)", () => {
     it("produces valid JSON Schema 7 for z.object", () => {
       const tool = makeTool();
-      expect(tool.parameters["$schema"]).toBe("http://json-schema.org/draft-07/schema#");
-      expect(tool.parameters["type"]).toBe("object");
+      expect(tool.parameters.$schema).toBe("http://json-schema.org/draft-07/schema#");
+      expect(tool.parameters.type).toBe("object");
     });
 
     it("converts z.string to { type: 'string' }", () => {
       const props = getProps(makeTool().parameters);
-      expect(props["name"]).toEqual({ type: "string" });
+      expect(props.name).toEqual({ type: "string" });
     });
 
     it("converts z.number to { type: 'number' }", () => {
       const props = getProps(makeTool().parameters);
-      expect(props["count"]).toEqual({ type: "number" });
+      expect(props.count).toEqual({ type: "number" });
     });
 
     it("converts z.boolean to { type: 'boolean' }", () => {
       const props = getProps(makeTool().parameters);
-      expect(props["active"]).toEqual({ type: "boolean" });
+      expect(props.active).toEqual({ type: "boolean" });
     });
 
     it("converts z.enum to { type: 'string', enum: [...] }", () => {
       const props = getProps(makeTool().parameters);
-      expect(props["status"]).toEqual({ type: "string", enum: ["open", "closed"] });
+      expect(props.status).toEqual({ type: "string", enum: ["open", "closed"] });
     });
 
     it("converts z.array(z.string()) to { type: 'array', items: { type: 'string' } }", () => {
       const props = getProps(makeTool().parameters);
-      expect(props["tags"]).toEqual({ type: "array", items: { type: "string" } });
+      expect(props.tags).toEqual({ type: "array", items: { type: "string" } });
     });
 
     it("z.optional removes field from required", () => {
       const tool = makeTool();
-      const required = tool.parameters["required"];
+      const required = tool.parameters.required;
       expect(Array.isArray(required) ? required : []).not.toContain("desc");
     });
 
     it("z.default includes default value in schema", () => {
       const props = getProps(makeTool().parameters);
-      const priority = props["priority"];
-      expect(isRecord(priority) ? priority["default"] : undefined).toBe(0);
+      const priority = props.priority;
+      expect(isRecord(priority) ? priority.default : undefined).toBe(0);
     });
   });
 

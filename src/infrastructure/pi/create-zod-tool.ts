@@ -1,10 +1,6 @@
-import { toJSONSchema } from "zod";
 import type { z } from "zod";
-import type {
-  AgentToolResult,
-  ExtensionContext,
-  ToolDefinition,
-} from "./pi.types";
+import { toJSONSchema } from "zod";
+import type { AgentToolResult, ExtensionContext, ToolDefinition } from "./pi.types";
 
 export interface ZodToolConfig<T extends z.ZodObject<z.ZodRawShape>> {
   name: string;
@@ -35,7 +31,7 @@ export function createZodTool<T extends z.ZodObject<z.ZodRawShape>>(
     promptSnippet: config.promptSnippet,
     promptGuidelines: config.promptGuidelines,
     parameters: Object.assign({}, jsonSchema),
-    async execute(toolCallId, rawParams, signal, onUpdate, ctx) {
+    async execute(_toolCallId, rawParams, signal, _onUpdate, ctx) {
       const parsed = config.schema.safeParse(rawParams);
       if (!parsed.success) {
         return {
@@ -47,11 +43,7 @@ export function createZodTool<T extends z.ZodObject<z.ZodRawShape>>(
           ],
         };
       }
-      return config.execute(
-        parsed.data,
-        signal ?? new AbortController().signal,
-        ctx,
-      );
+      return config.execute(parsed.data, signal ?? new AbortController().signal, ctx);
     },
   };
 }

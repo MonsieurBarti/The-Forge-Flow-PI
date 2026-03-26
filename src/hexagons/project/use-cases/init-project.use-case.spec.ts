@@ -1,18 +1,18 @@
-import { describe, expect, it } from "vitest";
-import {
-  InProcessEventBus,
-  SilentLoggerAdapter,
-  isOk,
-  isErr,
-  EVENT_NAMES,
-  type DomainEvent,
-  DateProviderPort,
-} from "@kernel";
 import { MergeSettingsUseCase } from "@hexagons/settings";
+import {
+  DateProviderPort,
+  type DomainEvent,
+  EVENT_NAMES,
+  InProcessEventBus,
+  isErr,
+  isOk,
+  SilentLoggerAdapter,
+} from "@kernel";
+import { describe, expect, it } from "vitest";
+import { ProjectAlreadyExistsError } from "../domain/errors/project-already-exists.error";
 import { InMemoryProjectRepository } from "../infrastructure/in-memory-project.repository";
 import { InMemoryProjectFileSystemAdapter } from "../infrastructure/in-memory-project-filesystem.adapter";
 import { InitProjectUseCase } from "./init-project.use-case";
-import { ProjectAlreadyExistsError } from "../domain/errors/project-already-exists.error";
 
 class StubDateProvider extends DateProviderPort {
   private readonly date: Date;
@@ -96,7 +96,7 @@ describe("InitProjectUseCase", () => {
     expect(isOk(found)).toBe(true);
     if (isOk(found)) {
       expect(found.data).not.toBeNull();
-      expect(found.data!.name).toBe("My Project");
+      expect(found.data?.name).toBe("My Project");
     }
   });
 

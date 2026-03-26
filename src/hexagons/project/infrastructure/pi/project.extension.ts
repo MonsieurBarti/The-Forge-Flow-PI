@@ -1,13 +1,10 @@
-import type { DateProviderPort, EventBusPort } from "@kernel";
 import type { MergeSettingsUseCase } from "@hexagons/settings";
 import type { ExtensionAPI } from "@infrastructure/pi";
 import { createZodTool } from "@infrastructure/pi";
-import { ProjectRepositoryPort } from "../../domain/ports/project-repository.port";
-import { ProjectFileSystemPort } from "../../domain/ports/project-filesystem.port";
-import {
-  InitProjectUseCase,
-  InitProjectParamsSchema,
-} from "../../use-cases/init-project.use-case";
+import type { DateProviderPort, EventBusPort } from "@kernel";
+import type { ProjectFileSystemPort } from "../../domain/ports/project-filesystem.port";
+import type { ProjectRepositoryPort } from "../../domain/ports/project-repository.port";
+import { InitProjectParamsSchema, InitProjectUseCase } from "../../use-cases/init-project.use-case";
 
 export interface ProjectExtensionDeps {
   projectRoot: string;
@@ -18,10 +15,7 @@ export interface ProjectExtensionDeps {
   dateProvider: DateProviderPort;
 }
 
-export function registerProjectExtension(
-  api: ExtensionAPI,
-  deps: ProjectExtensionDeps,
-): void {
+export function registerProjectExtension(api: ExtensionAPI, deps: ProjectExtensionDeps): void {
   api.registerCommand("tff:new", {
     description: "Initialize a new TFF project in the current directory",
     handler: async (_args, ctx) => {
@@ -49,9 +43,7 @@ export function registerProjectExtension(
         const result = await useCase.execute(params);
         if (!result.ok) {
           return {
-            content: [
-              { type: "text", text: `Init failed: ${result.error.message}` },
-            ],
+            content: [{ type: "text", text: `Init failed: ${result.error.message}` }],
           };
         }
         return {

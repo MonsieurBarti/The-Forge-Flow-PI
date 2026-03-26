@@ -1,6 +1,6 @@
+import { AutonomyModeSchema } from "@hexagons/settings";
 import { IdSchema, TimestampSchema } from "@kernel";
 import { z } from "zod";
-import { AutonomyModeSchema } from "@hexagons/settings";
 
 export const WorkflowPhaseSchema = z.enum([
   "idle",

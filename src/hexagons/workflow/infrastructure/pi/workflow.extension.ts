@@ -1,11 +1,11 @@
+import type { MilestoneRepositoryPort } from "@hexagons/milestone";
+import type { ProjectRepositoryPort } from "@hexagons/project";
+import type { SliceRepositoryPort } from "@hexagons/slice";
+import type { TaskRepositoryPort } from "@hexagons/task";
 import type { ExtensionAPI } from "@infrastructure/pi";
 import { createZodTool } from "@infrastructure/pi";
-import { ProjectRepositoryPort } from "@hexagons/project";
-import { MilestoneRepositoryPort } from "@hexagons/milestone";
-import { SliceRepositoryPort } from "@hexagons/slice";
-import { TaskRepositoryPort } from "@hexagons/task";
-import { GetStatusUseCase, type StatusReport } from "../../use-cases/get-status.use-case";
 import { z } from "zod";
+import { GetStatusUseCase, type StatusReport } from "../../use-cases/get-status.use-case";
 
 export interface WorkflowExtensionDeps {
   projectRepo: ProjectRepositoryPort;
@@ -39,20 +39,21 @@ function formatStatusReport(report: StatusReport): string {
     lines.push("| Slice | Status | Tasks |");
     lines.push("|---|---|---|");
     for (const s of report.slices) {
-      lines.push(`| ${s.label}: ${s.title} | ${s.status} | ${s.completedTaskCount}/${s.taskCount} |`);
+      lines.push(
+        `| ${s.label}: ${s.title} | ${s.status} | ${s.completedTaskCount}/${s.taskCount} |`,
+      );
     }
     lines.push("");
   }
 
   const t = report.totals;
-  lines.push(`Slices: ${t.completedSlices}/${t.totalSlices} | Tasks: ${t.completedTasks}/${t.totalTasks}`);
+  lines.push(
+    `Slices: ${t.completedSlices}/${t.totalSlices} | Tasks: ${t.completedTasks}/${t.totalTasks}`,
+  );
   return lines.join("\n");
 }
 
-export function registerWorkflowExtension(
-  api: ExtensionAPI,
-  deps: WorkflowExtensionDeps,
-): void {
+export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExtensionDeps): void {
   const useCase = new GetStatusUseCase(
     deps.projectRepo,
     deps.milestoneRepo,
