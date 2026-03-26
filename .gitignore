@@ -8,4 +8,4 @@ coverage/
 *.db
 .beads-credential-key
 
-.code-graph/
+.code-graph/.tff/worktrees/
