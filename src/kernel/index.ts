@@ -39,6 +39,6 @@ export {
 } from "./ports";
 export type { Result } from "./result";
 export { err, isErr, isOk, match, ok } from "./result";
-export type { Id, Timestamp } from "./schemas";
-export { IdSchema, TimestampSchema } from "./schemas";
+export type { ComplexityTier, Id, Timestamp } from "./schemas";
+export { ComplexityTierSchema, IdSchema, TimestampSchema } from "./schemas";
 export { ValueObject } from "./value-object.base";
