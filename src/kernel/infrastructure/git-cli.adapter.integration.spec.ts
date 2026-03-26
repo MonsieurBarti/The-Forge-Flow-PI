@@ -1,3 +1,4 @@
+import type { ExecFileSyncOptions } from "node:child_process";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -6,18 +7,36 @@ import { isErr, isOk } from "@kernel";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { GitCliAdapter } from "./git-cli.adapter";
 
+function cleanEnv(): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const [k, v] of Object.entries(process.env)) {
+    if (v !== undefined && !k.startsWith("GIT_")) env[k] = v;
+  }
+  return env;
+}
+
+function git(args: string[], repoDir: string, opts?: ExecFileSyncOptions): string {
+  return execFileSync("git", args, {
+    cwd: repoDir,
+    encoding: "utf-8",
+    env: cleanEnv(),
+    ...opts,
+  }) as string;
+}
+
 describe("GitCliAdapter", () => {
   let repoDir: string;
   let adapter: GitCliAdapter;
 
   beforeAll(() => {
     repoDir = mkdtempSync(join(tmpdir(), "tff-git-test-"));
-    execFileSync("git", ["init", "--initial-branch=main"], { cwd: repoDir });
-    execFileSync("git", ["config", "user.name", "Test User"], { cwd: repoDir });
-    execFileSync("git", ["config", "user.email", "test@example.com"], { cwd: repoDir });
+    git(["init", "--initial-branch=main"], repoDir);
+    git(["config", "user.name", "Test User"], repoDir);
+    git(["config", "user.email", "test@example.com"], repoDir);
+    git(["config", "core.hooksPath", "/dev/null"], repoDir);
     writeFileSync(join(repoDir, "initial.txt"), "initial content");
-    execFileSync("git", ["add", "initial.txt"], { cwd: repoDir });
-    execFileSync("git", ["commit", "-m", "initial commit"], { cwd: repoDir });
+    git(["add", "initial.txt"], repoDir);
+    git(["commit", "-m", "initial commit"], repoDir);
     adapter = new GitCliAdapter(repoDir);
   });
 
@@ -26,9 +45,15 @@ describe("GitCliAdapter", () => {
   });
 
   beforeEach(() => {
-    execFileSync("git", ["checkout", "main"], { cwd: repoDir });
-    execFileSync("git", ["reset", "--hard", "HEAD"], { cwd: repoDir });
-    execFileSync("git", ["clean", "-fd"], { cwd: repoDir });
+    git(["checkout", "main"], repoDir);
+    git(["reset", "--hard", "HEAD"], repoDir);
+    git(["clean", "-fd"], repoDir);
+    const branches = git(["branch", "--format=%(refname:short)"], repoDir)
+      .split("\n")
+      .filter((b) => b.trim() && b.trim() !== "main");
+    for (const branch of branches) {
+      git(["branch", "-D", branch.trim()], repoDir);
+    }
   });
 
   describe("runGit + error mapping", () => {
@@ -109,7 +134,7 @@ describe("GitCliAdapter", () => {
     });
 
     it("returns matching branches for pattern", async () => {
-      execFileSync("git", ["branch", "feature/test", "main"], { cwd: repoDir });
+      git(["branch", "feature/test", "main"], repoDir);
       const result = await adapter.listBranches("feature/*");
       expect(isOk(result)).toBe(true);
       if (isOk(result)) {
@@ -187,8 +212,8 @@ describe("GitCliAdapter", () => {
 
     it("respects limit parameter", async () => {
       writeFileSync(join(repoDir, "second.txt"), "second");
-      execFileSync("git", ["add", "second.txt"], { cwd: repoDir });
-      execFileSync("git", ["commit", "-m", "second commit"], { cwd: repoDir });
+      git(["add", "second.txt"], repoDir);
+      git(["commit", "-m", "second commit"], repoDir);
       const result = await adapter.log("main", 1);
       expect(isOk(result)).toBe(true);
       if (isOk(result)) {
