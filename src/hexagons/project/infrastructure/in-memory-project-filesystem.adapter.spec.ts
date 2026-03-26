@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import { isOk } from "@kernel";
+import { describe, expect, it } from "vitest";
 import { InMemoryProjectFileSystemAdapter } from "./in-memory-project-filesystem.adapter";
 
 describe("InMemoryProjectFileSystemAdapter", () => {
