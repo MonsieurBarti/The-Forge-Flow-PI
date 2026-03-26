@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ModelProfileNameSchema } from "@kernel/schemas";
 
 // ---------------------------------------------------------------------------
 // Primitive schemas
@@ -7,7 +8,7 @@ import { z } from "zod";
 export const ModelNameSchema = z.enum(["opus", "sonnet", "haiku"]);
 export type ModelName = z.infer<typeof ModelNameSchema>;
 
-export const ModelProfileNameSchema = z.enum(["quality", "balanced", "budget"]);
+export { ModelProfileNameSchema };
 export type ModelProfileName = z.infer<typeof ModelProfileNameSchema>;
 
 export const AutonomyModeSchema = z.enum(["guided", "plan-to-pr"]);
