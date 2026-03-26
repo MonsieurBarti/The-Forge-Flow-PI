@@ -12,6 +12,11 @@ export {
 } from "./errors";
 export type { EventName } from "./event-names";
 export { EVENT_NAMES, EventNameSchema } from "./event-names";
+export {
+  ConsoleLoggerAdapter,
+  InProcessEventBus,
+  SilentLoggerAdapter,
+} from "./infrastructure";
 export type {
   GitFileStatus,
   GitLogEntry,
@@ -31,6 +36,7 @@ export {
   GitPort,
   GitStatusEntrySchema,
   GitStatusSchema,
+  LoggerPort,
   PrFilterSchema,
   PullRequestConfigSchema,
   PullRequestInfoSchema,
