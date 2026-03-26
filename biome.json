@@ -45,6 +45,18 @@
       }
     }
   },
+  "overrides": [
+    {
+      "includes": ["**/*.spec.ts", "src/cli/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": "off"
+          }
+        }
+      }
+    }
+  ],
   "files": {
     "includes": ["**", "!node_modules", "!dist", "!coverage", "!.tff", "!.beads"]
   }
