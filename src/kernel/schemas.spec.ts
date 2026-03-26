@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { IdSchema, TimestampSchema } from "./schemas";
+import { IdSchema, ModelProfileNameSchema, TimestampSchema } from "./schemas";
 
 describe("IdSchema", () => {
   it("accepts valid UUID", () => {
@@ -36,5 +36,17 @@ describe("TimestampSchema", () => {
 
   it("rejects invalid string", () => {
     expect(() => TimestampSchema.parse("not-a-date")).toThrow();
+  });
+});
+
+describe("ModelProfileNameSchema", () => {
+  it("accepts valid profile names", () => {
+    expect(ModelProfileNameSchema.parse("quality")).toBe("quality");
+    expect(ModelProfileNameSchema.parse("balanced")).toBe("balanced");
+    expect(ModelProfileNameSchema.parse("budget")).toBe("budget");
+  });
+
+  it("rejects invalid profile name", () => {
+    expect(() => ModelProfileNameSchema.parse("premium")).toThrow();
   });
 });
