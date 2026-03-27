@@ -8,7 +8,17 @@ import { WorkflowSliceTransitionAdapter } from "@hexagons/slice/infrastructure/w
 import { InMemoryTaskRepository } from "@hexagons/task/infrastructure/in-memory-task.repository";
 import { registerWorkflowExtension } from "@hexagons/workflow";
 import type { ExtensionAPI } from "@infrastructure/pi";
+import type { Result } from "@kernel";
 import { ConsoleLoggerAdapter, InProcessEventBus, SystemDateProvider } from "@kernel";
+import type { ContextPackage } from "../hexagons/workflow/domain/context-package.value-object";
+import type { ContextStagingError } from "../hexagons/workflow/domain/errors/context-staging.error";
+import { ContextStagingPort } from "../hexagons/workflow/domain/ports/context-staging.port";
+
+class NoOpContextStaging extends ContextStagingPort {
+  async stage(): Promise<Result<ContextPackage, ContextStagingError>> {
+    throw new Error("ContextStagingPort: not yet implemented");
+  }
+}
 
 export interface TffExtensionOptions {
   projectRoot: string;
@@ -46,5 +56,6 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     sliceTransitionPort,
     eventBus,
     dateProvider,
+    contextStaging: new NoOpContextStaging(),
   });
 }

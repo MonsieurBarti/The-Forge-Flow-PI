@@ -3,9 +3,19 @@ import { InMemoryProjectRepository } from "@hexagons/project/infrastructure/in-m
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
 import { WorkflowSliceTransitionAdapter } from "@hexagons/slice/infrastructure/workflow-slice-transition.adapter";
 import { InMemoryTaskRepository } from "@hexagons/task/infrastructure/in-memory-task.repository";
+import type { Result } from "@kernel";
 import { InProcessEventBus, SilentLoggerAdapter, SystemDateProvider } from "@kernel";
 import { describe, expect, it, vi } from "vitest";
+import type { ContextPackage } from "../../domain/context-package.value-object";
+import type { ContextStagingError } from "../../domain/errors/context-staging.error";
+import { ContextStagingPort } from "../../domain/ports/context-staging.port";
 import { registerWorkflowExtension } from "./workflow.extension";
+
+class StubContextStaging extends ContextStagingPort {
+  async stage(): Promise<Result<ContextPackage, ContextStagingError>> {
+    throw new Error("Not implemented");
+  }
+}
 
 function makeMockApi() {
   return {
@@ -27,6 +37,7 @@ describe("registerWorkflowExtension", () => {
       sliceTransitionPort: new WorkflowSliceTransitionAdapter(sliceRepo, dateProvider),
       eventBus: new InProcessEventBus(new SilentLoggerAdapter()),
       dateProvider,
+      contextStaging: new StubContextStaging(),
     });
     expect(api.registerCommand).toHaveBeenCalledWith(
       "tff:status",
@@ -46,6 +57,7 @@ describe("registerWorkflowExtension", () => {
       sliceTransitionPort: new WorkflowSliceTransitionAdapter(sliceRepo, dateProvider),
       eventBus: new InProcessEventBus(new SilentLoggerAdapter()),
       dateProvider,
+      contextStaging: new StubContextStaging(),
     });
     expect(api.registerTool).toHaveBeenCalledWith(expect.objectContaining({ name: "tff_status" }));
   });
