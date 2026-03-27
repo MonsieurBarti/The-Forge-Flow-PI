@@ -1,16 +1,17 @@
-# State — Milestone
+# State — M03
 
 ## Progress
-- Slices: 7/7 completed
-- Tasks: 13/13 completed
+- Slices: 1/8 completed
+- Tasks: 8/8 completed
 
 ## Slices
 | Slice | Status | Tasks | Progress |
 |---|---|---|---|
-| M02-S01: Task hexagon | closed | — | 100% |
-| M02-S02: Wave detection | closed | — | 100% |
-| M02-S03: Settings hexagon | closed | — | 100% |
-| M02-S04: EventBus implementation | closed | — | 100% |
-| M02-S05: Git CLI adapter | closed | — | 100% |
-| M02-S06: Agent artifact schemas | closed | — | 100% |
-| M02-S07: CLI bootstrap + PI SDK wiring | closed | 13/13 | 100% |
+| M03-S01: WorkflowSession aggregate + state machine | closed | 8/8 | 100% |
+| M03-S02: Autonomy modes | open | 0/0 | 0% |
+| M03-S03: Cross-hexagon event wiring | open | 0/0 | 0% |
+| M03-S04: Context staging area | open | 0/0 | 0% |
+| M03-S05: Discuss command | open | 0/0 | 0% |
+| M03-S06: Research command | open | 0/0 | 0% |
+| M03-S07: Plan command | open | 0/0 | 0% |
+| M03-S08: Next-step suggestions | open | 0/0 | 0% |
