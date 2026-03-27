@@ -1,6 +1,9 @@
 import { faker } from "@faker-js/faker";
 import { describe, expect, it } from "vitest";
+import { shouldAutoTransition } from "./autonomy-policy";
+import type { WorkflowEscalationRaisedEvent } from "./events/workflow-escalation-raised.event";
 import { WorkflowSession } from "./workflow-session.aggregate";
+import { WorkflowSessionBuilder } from "./workflow-session.builder";
 import type { GuardContext } from "./workflow-session.schemas";
 
 const defaultCtx: GuardContext = {
@@ -362,6 +365,96 @@ describe("WorkflowSession", () => {
       });
       expect(session.currentPhase).toBe("executing");
       expect(session.pullEvents()).toHaveLength(0);
+    });
+  });
+
+  describe("shouldAutoTransition getter", () => {
+    it("delegates to pure shouldAutoTransition function for guided mode", () => {
+      const session = new WorkflowSessionBuilder()
+        .withCurrentPhase("discussing")
+        .withAutonomyMode("guided")
+        .build();
+      expect(session.shouldAutoTransition).toBe(false);
+      expect(session.shouldAutoTransition).toBe(
+        shouldAutoTransition("discussing", "guided").autoTransition,
+      );
+    });
+
+    it("returns true for non-gate phase in plan-to-pr mode", () => {
+      const session = new WorkflowSessionBuilder()
+        .withCurrentPhase("discussing")
+        .withAutonomyMode("plan-to-pr")
+        .build();
+      expect(session.shouldAutoTransition).toBe(true);
+    });
+
+    it("returns false for gate phase in plan-to-pr mode", () => {
+      const session = new WorkflowSessionBuilder()
+        .withCurrentPhase("planning")
+        .withAutonomyMode("plan-to-pr")
+        .build();
+      expect(session.shouldAutoTransition).toBe(false);
+    });
+  });
+
+  describe("escalation on blocked transition", () => {
+    it("emits WorkflowEscalationRaisedEvent when transitioning to blocked", () => {
+      const sliceId = faker.string.uuid();
+      const session = new WorkflowSessionBuilder()
+        .withCurrentPhase("executing")
+        .withSliceId(sliceId)
+        .withRetryCount(2)
+        .build();
+
+      const ctx: GuardContext = {
+        complexityTier: "F-lite",
+        retryCount: 2,
+        maxRetries: 2,
+        allSlicesClosed: false,
+        lastError: "Test failed: expected 1 but got 2",
+      };
+
+      const result = session.trigger("fail", ctx, new Date());
+      expect(result.ok).toBe(true);
+      expect(session.currentPhase).toBe("blocked");
+
+      const events = session.pullEvents();
+      const phaseEvent = events.find((e) => e.eventName === "workflow.phase-changed");
+      const escalationEvent = events.find(
+        (e): e is WorkflowEscalationRaisedEvent => e.eventName === "workflow.escalation-raised",
+      );
+
+      expect(phaseEvent).toBeDefined();
+      expect(escalationEvent).toBeDefined();
+      expect(escalationEvent?.escalation.sliceId).toBe(sliceId);
+      expect(escalationEvent?.escalation.phase).toBe("executing");
+      expect(escalationEvent?.escalation.attempts).toBe(2);
+      expect(escalationEvent?.escalation.lastError).toBe("Test failed: expected 1 but got 2");
+    });
+
+    it("stores escalation on aggregate accessible via lastEscalation", () => {
+      const sliceId = faker.string.uuid();
+      const session = new WorkflowSessionBuilder()
+        .withCurrentPhase("executing")
+        .withSliceId(sliceId)
+        .withRetryCount(2)
+        .build();
+
+      expect(session.lastEscalation).toBeNull();
+
+      const ctx: GuardContext = {
+        complexityTier: "F-lite",
+        retryCount: 2,
+        maxRetries: 2,
+        allSlicesClosed: false,
+        lastError: null,
+      };
+
+      session.trigger("fail", ctx, new Date());
+
+      expect(session.lastEscalation).not.toBeNull();
+      expect(session.lastEscalation?.sliceId).toBe(sliceId);
+      expect(session.lastEscalation?.phase).toBe("executing");
     });
   });
 });
