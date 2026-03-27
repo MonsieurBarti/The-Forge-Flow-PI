@@ -14,9 +14,7 @@ export class AgentResultBuilder {
     modelId: "claude-sonnet-4-6",
     inputTokens: faker.number.int({ min: 100, max: 10000 }),
     outputTokens: faker.number.int({ min: 50, max: 5000 }),
-    costUsd: Number.parseFloat(
-      faker.finance.amount({ min: 0.001, max: 1, dec: 4 }),
-    ),
+    costUsd: Number.parseFloat(faker.finance.amount({ min: 0.001, max: 1, dec: 4 })),
   };
   private _durationMs: number = faker.number.int({ min: 1000, max: 120000 });
   private _error?: string;

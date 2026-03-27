@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { AgentResultSchema } from "./agent-result.schema";
 import { AgentResultBuilder } from "./agent-result.builder";
+import { AgentResultSchema } from "./agent-result.schema";
 
 describe("AgentResultBuilder", () => {
   it("builds valid result with defaults", () => {
@@ -10,24 +10,18 @@ describe("AgentResultBuilder", () => {
   });
 
   it("builds failure result with withFailure()", () => {
-    const result = new AgentResultBuilder()
-      .withFailure("Test suite failed")
-      .build();
+    const result = new AgentResultBuilder().withFailure("Test suite failed").build();
     expect(result.success).toBe(false);
     expect(result.error).toBe("Test suite failed");
   });
 
   it("overrides agentType", () => {
-    const result = new AgentResultBuilder()
-      .withAgentType("security-auditor")
-      .build();
+    const result = new AgentResultBuilder().withAgentType("security-auditor").build();
     expect(result.agentType).toBe("security-auditor");
   });
 
   it("overrides filesChanged", () => {
-    const result = new AgentResultBuilder()
-      .withFilesChanged(["src/a.ts", "src/b.ts"])
-      .build();
+    const result = new AgentResultBuilder().withFilesChanged(["src/a.ts", "src/b.ts"]).build();
     expect(result.filesChanged).toEqual(["src/a.ts", "src/b.ts"]);
   });
 

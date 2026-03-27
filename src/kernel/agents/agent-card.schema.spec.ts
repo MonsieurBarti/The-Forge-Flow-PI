@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  AgentCapabilitySchema,
-  AgentCardSchema,
-  AgentTypeSchema,
-} from "./agent-card.schema";
+import { AgentCapabilitySchema, AgentCardSchema, AgentTypeSchema } from "./agent-card.schema";
 
 describe("AgentTypeSchema", () => {
   it("accepts valid agent types", () => {

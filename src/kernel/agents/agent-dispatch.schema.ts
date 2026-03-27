@@ -1,5 +1,5 @@
-import { z } from "zod";
 import { IdSchema } from "@kernel/schemas";
+import { z } from "zod";
 import { AgentTypeSchema } from "./agent-card.schema";
 
 export const ResolvedModelSchema = z.object({

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { AgentDispatchConfigSchema } from "./agent-dispatch.schema";
 import { AgentDispatchConfigBuilder } from "./agent-dispatch.builder";
+import { AgentDispatchConfigSchema } from "./agent-dispatch.schema";
 
 describe("AgentDispatchConfigBuilder", () => {
   it("builds valid config with defaults", () => {
@@ -15,9 +15,7 @@ describe("AgentDispatchConfigBuilder", () => {
   });
 
   it("overrides agentType", () => {
-    const config = new AgentDispatchConfigBuilder()
-      .withAgentType("code-reviewer")
-      .build();
+    const config = new AgentDispatchConfigBuilder().withAgentType("code-reviewer").build();
     expect(config.agentType).toBe("code-reviewer");
   });
 

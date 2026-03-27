@@ -1,5 +1,5 @@
 import { DomainEvent, DomainEventPropsSchema, EVENT_NAMES, type EventName } from "@kernel";
-import { z } from "zod";
+import type { z } from "zod";
 import { EscalationPropsSchema } from "../workflow-session.schemas";
 
 const WorkflowEscalationRaisedEventPropsSchema = DomainEventPropsSchema.extend({

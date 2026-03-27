@@ -1,20 +1,12 @@
-import type {
-  AgentCapability,
-  AgentCard,
-  AgentType,
-} from "./agent-card.schema";
+import type { AgentCapability, AgentCard, AgentType } from "./agent-card.schema";
 
-export const AGENT_REGISTRY: ReadonlyMap<AgentType, AgentCard> = new Map<
-  AgentType,
-  AgentCard
->([
+export const AGENT_REGISTRY: ReadonlyMap<AgentType, AgentCard> = new Map<AgentType, AgentCard>([
   [
     "spec-reviewer",
     {
       type: "spec-reviewer",
       displayName: "Spec Reviewer",
-      description:
-        "Reviews specifications for completeness, buildability, and correctness",
+      description: "Reviews specifications for completeness, buildability, and correctness",
       capabilities: ["review"],
       defaultModelProfile: "quality",
       requiredTools: ["Read", "Glob", "Grep"],
@@ -38,8 +30,7 @@ export const AGENT_REGISTRY: ReadonlyMap<AgentType, AgentCard> = new Map<
     {
       type: "security-auditor",
       displayName: "Security Auditor",
-      description:
-        "Audits code for security vulnerabilities and OWASP compliance",
+      description: "Audits code for security vulnerabilities and OWASP compliance",
       capabilities: ["review"],
       defaultModelProfile: "quality",
       requiredTools: ["Read", "Glob", "Grep"],
@@ -51,8 +42,7 @@ export const AGENT_REGISTRY: ReadonlyMap<AgentType, AgentCard> = new Map<
     {
       type: "fixer",
       displayName: "Fixer",
-      description:
-        "Diagnoses and fixes bugs, test failures, and review feedback",
+      description: "Diagnoses and fixes bugs, test failures, and review feedback",
       capabilities: ["fix"],
       defaultModelProfile: "budget",
       requiredTools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
@@ -71,9 +61,7 @@ export function getAgentCard(type: AgentType): AgentCard {
   return card;
 }
 
-export function findAgentsByCapability(
-  capability: AgentCapability,
-): AgentCard[] {
+export function findAgentsByCapability(capability: AgentCapability): AgentCard[] {
   const result: AgentCard[] = [];
   for (const card of AGENT_REGISTRY.values()) {
     if (card.capabilities.includes(capability)) {
