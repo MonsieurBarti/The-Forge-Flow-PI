@@ -6,6 +6,7 @@ import type { ExtensionAPI } from "@infrastructure/pi";
 import { createZodTool } from "@infrastructure/pi";
 import type { DateProviderPort, EventBusPort } from "@kernel";
 import { z } from "zod";
+import type { ContextStagingPort } from "../../domain/ports/context-staging.port";
 import type { SliceTransitionPort } from "../../domain/ports/slice-transition.port";
 import { GetStatusUseCase, type StatusReport } from "../../use-cases/get-status.use-case";
 
@@ -17,6 +18,7 @@ export interface WorkflowExtensionDeps {
   sliceTransitionPort: SliceTransitionPort;
   eventBus: EventBusPort;
   dateProvider: DateProviderPort;
+  contextStaging: ContextStagingPort;
 }
 
 function formatStatusReport(report: StatusReport): string {
