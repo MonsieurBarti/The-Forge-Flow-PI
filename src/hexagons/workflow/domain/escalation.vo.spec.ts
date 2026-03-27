@@ -44,6 +44,12 @@ describe("Escalation", () => {
       const escalation = Escalation.fromRetryExhaustion(sliceId, "planning", 3, null);
       expect(escalation.summary).toBe(`Slice ${sliceId}: blocked at planning after 3 attempts`);
     });
+
+    it("handles zero attempts (immediate escalation)", () => {
+      const escalation = Escalation.fromRetryExhaustion(faker.string.uuid(), "executing", 0, null);
+      expect(escalation.attempts).toBe(0);
+      expect(escalation.summary).toContain("after 0 attempts");
+    });
   });
 
   describe("toProps", () => {

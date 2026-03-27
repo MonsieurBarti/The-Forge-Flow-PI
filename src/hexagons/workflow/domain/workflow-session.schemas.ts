@@ -35,7 +35,7 @@ export const EscalationPropsSchema = z.object({
   sliceId: IdSchema,
   phase: WorkflowPhaseSchema,
   reason: z.string(),
-  attempts: z.number().int().min(1),
+  attempts: z.number().int().min(0),
   lastError: z.string().nullable(),
   occurredAt: TimestampSchema,
 });
