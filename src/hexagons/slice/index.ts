@@ -19,3 +19,4 @@ export {
   SlicePropsSchema,
   SliceStatusSchema,
 } from "./domain/slice.schemas";
+export { WorkflowSliceTransitionAdapter } from "./infrastructure/workflow-slice-transition.adapter";

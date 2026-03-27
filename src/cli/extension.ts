@@ -4,6 +4,7 @@ import { InMemoryProjectRepository } from "@hexagons/project/infrastructure/in-m
 import { NodeProjectFileSystemAdapter } from "@hexagons/project/infrastructure/node-project-filesystem.adapter";
 import { MergeSettingsUseCase } from "@hexagons/settings";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
+import { WorkflowSliceTransitionAdapter } from "@hexagons/slice/infrastructure/workflow-slice-transition.adapter";
 import { InMemoryTaskRepository } from "@hexagons/task/infrastructure/in-memory-task.repository";
 import { registerWorkflowExtension } from "@hexagons/workflow";
 import type { ExtensionAPI } from "@infrastructure/pi";
@@ -35,10 +36,15 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     dateProvider,
   });
 
+  const sliceTransitionPort = new WorkflowSliceTransitionAdapter(sliceRepo, dateProvider);
+
   registerWorkflowExtension(api, {
     projectRepo,
     milestoneRepo,
     sliceRepo,
     taskRepo,
+    sliceTransitionPort,
+    eventBus,
+    dateProvider,
   });
 }
