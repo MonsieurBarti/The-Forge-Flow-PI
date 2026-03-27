@@ -28,6 +28,7 @@ export {
   InvalidPhaseForStagingError,
 } from "./domain/errors/context-staging.error";
 // Domain — Errors
+export { FileIOError } from "./domain/errors/file-io.error";
 export { GuardRejectedError } from "./domain/errors/guard-rejected.error";
 export { NoMatchingTransitionError } from "./domain/errors/no-matching-transition.error";
 export { NoSliceAssignedError } from "./domain/errors/no-slice-assigned.error";
@@ -47,6 +48,14 @@ export {
 } from "./domain/phase-skill-map";
 // Domain — Phase-Status Mapping
 export { mapPhaseToSliceStatus } from "./domain/phase-status-mapping";
+// Domain — Ports
+export {
+  ARTIFACT_FILENAMES,
+  ArtifactFilePort,
+  type ArtifactType,
+  ArtifactTypeSchema,
+} from "./domain/ports/artifact-file.port";
+export { AutonomyModeProvider } from "./domain/ports/autonomy-mode.provider";
 // Domain — Context Staging Ports
 export type { ContextStagingRequest } from "./domain/ports/context-staging.port";
 export {
@@ -54,7 +63,6 @@ export {
   ContextStagingRequestSchema,
 } from "./domain/ports/context-staging.port";
 export { ModelProfileResolverPort } from "./domain/ports/model-profile-resolver.port";
-// Domain — Ports
 export { SliceTransitionPort } from "./domain/ports/slice-transition.port";
 export { WorkflowSessionRepositoryPort } from "./domain/ports/workflow-session.repository.port";
 // Domain — Transition Table
@@ -91,15 +99,30 @@ export {
   WorkflowSessionPropsSchema,
   WorkflowTriggerSchema,
 } from "./domain/workflow-session.schemas";
-// Infrastructure — Context Staging
+// Infrastructure — Adapters
+export { InMemoryArtifactFileAdapter } from "./infrastructure/in-memory-artifact-file.adapter";
 export { InMemoryContextStagingAdapter } from "./infrastructure/in-memory-context-staging.adapter";
-// Infrastructure
 export { InMemoryWorkflowSessionRepository } from "./infrastructure/in-memory-workflow-session.repository";
-// Extensions
+// Infrastructure — PI Tools & Commands
+export { createClassifyComplexityTool } from "./infrastructure/pi/classify-complexity.tool";
+export {
+  type DiscussCommandDeps,
+  registerDiscussCommand,
+} from "./infrastructure/pi/discuss.command";
+export {
+  buildDiscussProtocolMessage,
+  type DiscussProtocolParams,
+} from "./infrastructure/pi/discuss-protocol";
 export type { WorkflowExtensionDeps } from "./infrastructure/pi/workflow.extension";
 export { registerWorkflowExtension } from "./infrastructure/pi/workflow.extension";
+export {
+  createWorkflowTransitionTool,
+  type WorkflowTransitionToolDeps,
+} from "./infrastructure/pi/workflow-transition.tool";
+export { createWriteSpecTool } from "./infrastructure/pi/write-spec.tool";
 
 // Use Cases
+export { ClassifyComplexityUseCase } from "./use-cases/classify-complexity.use-case";
 export type { StatusReport } from "./use-cases/get-status.use-case";
 export { GetStatusUseCase, StatusReportSchema } from "./use-cases/get-status.use-case";
 export type {
@@ -110,3 +133,9 @@ export {
   OrchestratePhaseTransitionUseCase,
   WorkflowSessionNotFoundError,
 } from "./use-cases/orchestrate-phase-transition.use-case";
+export {
+  type StartDiscussInput,
+  type StartDiscussOutput,
+  StartDiscussUseCase,
+} from "./use-cases/start-discuss.use-case";
+export { WriteSpecUseCase } from "./use-cases/write-spec.use-case";

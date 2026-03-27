@@ -6,9 +6,20 @@ import type { ExtensionAPI } from "@infrastructure/pi";
 import { createZodTool } from "@infrastructure/pi";
 import type { DateProviderPort, EventBusPort } from "@kernel";
 import { z } from "zod";
+import type { ArtifactFilePort } from "../../domain/ports/artifact-file.port";
+import type { AutonomyModeProvider } from "../../domain/ports/autonomy-mode.provider";
 import type { ContextStagingPort } from "../../domain/ports/context-staging.port";
 import type { SliceTransitionPort } from "../../domain/ports/slice-transition.port";
+import type { WorkflowSessionRepositoryPort } from "../../domain/ports/workflow-session.repository.port";
+import { ClassifyComplexityUseCase } from "../../use-cases/classify-complexity.use-case";
 import { GetStatusUseCase, type StatusReport } from "../../use-cases/get-status.use-case";
+import { OrchestratePhaseTransitionUseCase } from "../../use-cases/orchestrate-phase-transition.use-case";
+import { StartDiscussUseCase } from "../../use-cases/start-discuss.use-case";
+import { WriteSpecUseCase } from "../../use-cases/write-spec.use-case";
+import { createClassifyComplexityTool } from "./classify-complexity.tool";
+import { registerDiscussCommand } from "./discuss.command";
+import { createWorkflowTransitionTool } from "./workflow-transition.tool";
+import { createWriteSpecTool } from "./write-spec.tool";
 
 export interface WorkflowExtensionDeps {
   projectRepo: ProjectRepositoryPort;
@@ -19,6 +30,10 @@ export interface WorkflowExtensionDeps {
   eventBus: EventBusPort;
   dateProvider: DateProviderPort;
   contextStaging: ContextStagingPort;
+  artifactFile: ArtifactFilePort;
+  workflowSessionRepo: WorkflowSessionRepositoryPort;
+  autonomyModeProvider: AutonomyModeProvider;
+  maxRetries: number;
 }
 
 function formatStatusReport(report: StatusReport): string {
@@ -61,7 +76,8 @@ function formatStatusReport(report: StatusReport): string {
 }
 
 export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExtensionDeps): void {
-  const useCase = new GetStatusUseCase(
+  // --- Status use case + tool ---
+  const statusUseCase = new GetStatusUseCase(
     deps.projectRepo,
     deps.milestoneRepo,
     deps.sliceRepo,
@@ -83,7 +99,7 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
         "Show project status including milestone progress, slice states, and task counts",
       schema: z.object({}),
       execute: async () => {
-        const result = await useCase.execute();
+        const result = await statusUseCase.execute();
         if (!result.ok) {
           return {
             content: [{ type: "text", text: `Status failed: ${result.error.message}` }],
@@ -95,4 +111,40 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
       },
     }),
   );
+
+  // --- Discuss use cases ---
+  const startDiscuss = new StartDiscussUseCase(
+    deps.sliceRepo,
+    deps.workflowSessionRepo,
+    deps.eventBus,
+    deps.dateProvider,
+    deps.autonomyModeProvider,
+  );
+  const writeSpec = new WriteSpecUseCase(deps.artifactFile, deps.sliceRepo, deps.dateProvider);
+  const classifyComplexity = new ClassifyComplexityUseCase(deps.sliceRepo, deps.dateProvider);
+  const orchestratePhaseTransition = new OrchestratePhaseTransitionUseCase(
+    deps.workflowSessionRepo,
+    deps.sliceTransitionPort,
+    deps.eventBus,
+    deps.dateProvider,
+  );
+
+  // --- Discuss tools ---
+  api.registerTool(createWriteSpecTool(writeSpec));
+  api.registerTool(createClassifyComplexityTool(classifyComplexity));
+  api.registerTool(
+    createWorkflowTransitionTool({
+      orchestratePhaseTransition,
+      sessionRepo: deps.workflowSessionRepo,
+      sliceRepo: deps.sliceRepo,
+      maxRetries: deps.maxRetries,
+    }),
+  );
+
+  // --- Discuss command ---
+  registerDiscussCommand(api, {
+    startDiscuss,
+    sliceRepo: deps.sliceRepo,
+    milestoneRepo: deps.milestoneRepo,
+  });
 }

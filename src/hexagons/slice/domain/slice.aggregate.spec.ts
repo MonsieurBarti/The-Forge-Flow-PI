@@ -216,4 +216,47 @@ describe("Slice", () => {
       });
     });
   });
+
+  describe("setSpecPath", () => {
+    it("should set specPath and update updatedAt", () => {
+      const s = Slice.createNew({ id, milestoneId, label: "M01-S01", title: "Schemas", now });
+
+      s.setSpecPath("/path/to/SPEC.md", later);
+
+      expect(s.specPath).toBe("/path/to/SPEC.md");
+      expect(s.updatedAt).toEqual(later);
+    });
+  });
+
+  describe("setComplexity", () => {
+    it("should set complexity tier directly and update updatedAt", () => {
+      const s = Slice.createNew({ id, milestoneId, label: "M01-S01", title: "Schemas", now });
+
+      s.setComplexity("F-lite", later);
+
+      expect(s.complexity).toBe("F-lite");
+      expect(s.updatedAt).toEqual(later);
+    });
+
+    it("should allow overriding existing complexity", () => {
+      const s = Slice.reconstitute({
+        id,
+        milestoneId,
+        label: "M01-S01",
+        title: "Schemas",
+        description: "",
+        status: "discussing" as const,
+        complexity: "S" as const,
+        specPath: null,
+        planPath: null,
+        researchPath: null,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      s.setComplexity("F-full", later);
+
+      expect(s.complexity).toBe("F-full");
+    });
+  });
 });

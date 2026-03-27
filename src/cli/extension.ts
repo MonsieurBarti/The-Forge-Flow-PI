@@ -10,8 +10,10 @@ import {
   type ContextPackage,
   type ContextStagingError,
   ContextStagingPort,
+  InMemoryWorkflowSessionRepository,
   registerWorkflowExtension,
 } from "@hexagons/workflow";
+import { NodeArtifactFileAdapter } from "@hexagons/workflow/infrastructure/node-artifact-file.adapter";
 import type { ExtensionAPI } from "@infrastructure/pi";
 import type { Result } from "@kernel";
 import { ConsoleLoggerAdapter, InProcessEventBus, SystemDateProvider } from "@kernel";
@@ -49,6 +51,9 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   });
 
   const sliceTransitionPort = new WorkflowSliceTransitionAdapter(sliceRepo, dateProvider);
+  const artifactFile = new NodeArtifactFileAdapter(options.projectRoot);
+  const workflowSessionRepo = new InMemoryWorkflowSessionRepository();
+  const autonomyModeProvider = { getAutonomyMode: () => "plan-to-pr" as const };
 
   registerWorkflowExtension(api, {
     projectRepo,
@@ -59,5 +64,9 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     eventBus,
     dateProvider,
     contextStaging: new NoOpContextStaging(),
+    artifactFile,
+    workflowSessionRepo,
+    autonomyModeProvider,
+    maxRetries: 2,
   });
 }
