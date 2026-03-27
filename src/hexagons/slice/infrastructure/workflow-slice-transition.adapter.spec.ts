@@ -1,13 +1,13 @@
 import { faker } from "@faker-js/faker";
 import { SliceTransitionError } from "@hexagons/workflow/domain/errors/slice-transition.error";
-import { isErr, isOk } from "@kernel";
+import { DateProviderPort, isErr, isOk } from "@kernel";
 import { describe, expect, it } from "vitest";
 import { Slice } from "../domain/slice.aggregate";
 import type { SliceStatus } from "../domain/slice.schemas";
 import { InMemorySliceRepository } from "./in-memory-slice.repository";
 import { WorkflowSliceTransitionAdapter } from "./workflow-slice-transition.adapter";
 
-class StubDateProvider {
+class StubDateProvider extends DateProviderPort {
   private _now = new Date("2026-01-15T10:00:00Z");
   now(): Date {
     return this._now;

@@ -1,16 +1,25 @@
 import { faker } from "@faker-js/faker";
 import { Slice } from "@hexagons/slice/domain/slice.aggregate";
+import type { SliceStatus } from "@hexagons/slice/domain/slice.schemas";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
 import { WorkflowSliceTransitionAdapter } from "@hexagons/slice/infrastructure/workflow-slice-transition.adapter";
-import { EVENT_NAMES, InProcessEventBus, isErr, isOk, SilentLoggerAdapter } from "@kernel";
+import type { DomainEvent } from "@kernel";
+import {
+  DateProviderPort,
+  EVENT_NAMES,
+  InProcessEventBus,
+  isErr,
+  isOk,
+  SilentLoggerAdapter,
+} from "@kernel";
 import { describe, expect, it } from "vitest";
-import type { WorkflowPhaseChangedEvent } from "../domain/events/workflow-phase-changed.event";
+import { WorkflowPhaseChangedEvent } from "../domain/events/workflow-phase-changed.event";
 import { WorkflowSessionBuilder } from "../domain/workflow-session.builder";
 import type { GuardContext } from "../domain/workflow-session.schemas";
 import { InMemoryWorkflowSessionRepository } from "../infrastructure/in-memory-workflow-session.repository";
 import { OrchestratePhaseTransitionUseCase } from "./orchestrate-phase-transition.use-case";
 
-class StubDateProvider {
+class StubDateProvider extends DateProviderPort {
   private _now = new Date("2026-01-15T10:00:00Z");
   now(): Date {
     return this._now;
@@ -40,7 +49,7 @@ function setup() {
   return { useCase, sessionRepo, sliceRepo, sliceTransitionPort, eventBus, dateProvider };
 }
 
-function seedSlice(repo: InMemorySliceRepository, id: string, status: string): void {
+function seedSlice(repo: InMemorySliceRepository, id: string, status: SliceStatus): void {
   repo.seed(
     Slice.reconstitute({
       id,
@@ -48,7 +57,7 @@ function seedSlice(repo: InMemorySliceRepository, id: string, status: string): v
       label: "M01-S01",
       title: "Test",
       description: "",
-      status: status as "discussing",
+      status,
       complexity: null,
       specPath: null,
       planPath: null,
@@ -152,9 +161,9 @@ describe("OrchestratePhaseTransitionUseCase", () => {
     sessionRepo.seed(session);
     seedSlice(sliceRepo, sliceId, "discussing");
 
-    const published: WorkflowPhaseChangedEvent[] = [];
+    const published: DomainEvent[] = [];
     eventBus.subscribe(EVENT_NAMES.WORKFLOW_PHASE_CHANGED, async (e) => {
-      published.push(e as WorkflowPhaseChangedEvent);
+      published.push(e);
     });
 
     await useCase.execute({
@@ -164,8 +173,12 @@ describe("OrchestratePhaseTransitionUseCase", () => {
     });
 
     expect(published).toHaveLength(1);
-    expect(published[0].fromPhase).toBe("discussing");
-    expect(published[0].toPhase).toBe("researching");
+    const event = published[0];
+    expect(event).toBeInstanceOf(WorkflowPhaseChangedEvent);
+    if (event instanceof WorkflowPhaseChangedEvent) {
+      expect(event.fromPhase).toBe("discussing");
+      expect(event.toPhase).toBe("researching");
+    }
   });
 
   it("skips slice transition when no sliceId assigned", async () => {
