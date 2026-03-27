@@ -1,5 +1,5 @@
 import { AutonomyModeSchema } from "@hexagons/settings";
-import { IdSchema, TimestampSchema } from "@kernel";
+import { ComplexityTierSchema, IdSchema, TimestampSchema } from "@kernel";
 import { z } from "zod";
 
 export const WorkflowPhaseSchema = z.enum([
@@ -43,3 +43,37 @@ export const WorkflowSessionPropsSchema = z.object({
   updatedAt: TimestampSchema,
 });
 export type WorkflowSessionProps = z.infer<typeof WorkflowSessionPropsSchema>;
+
+export const GuardNameSchema = z.enum([
+  "notSTier",
+  "isSTier",
+  "allSlicesClosed",
+  "retriesExhausted",
+]);
+export type GuardName = z.infer<typeof GuardNameSchema>;
+
+export const TransitionEffectSchema = z.enum([
+  "incrementRetry",
+  "savePreviousPhase",
+  "restorePreviousPhase",
+  "resetRetryCount",
+  "clearSlice",
+]);
+export type TransitionEffect = z.infer<typeof TransitionEffectSchema>;
+
+export const GuardContextSchema = z.object({
+  complexityTier: ComplexityTierSchema.nullable(),
+  retryCount: z.number().int().min(0),
+  maxRetries: z.number().int().min(0),
+  allSlicesClosed: z.boolean(),
+});
+export type GuardContext = z.infer<typeof GuardContextSchema>;
+
+export const TransitionRuleSchema = z.object({
+  from: WorkflowPhaseSchema.or(z.literal("*active*")),
+  trigger: WorkflowTriggerSchema,
+  to: WorkflowPhaseSchema.or(z.literal("*previousPhase*")),
+  guard: GuardNameSchema.optional(),
+  effects: z.array(TransitionEffectSchema).default([]),
+});
+export type TransitionRule = z.infer<typeof TransitionRuleSchema>;

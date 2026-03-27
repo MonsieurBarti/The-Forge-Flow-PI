@@ -1,6 +1,10 @@
 import { faker } from "@faker-js/faker";
 import { describe, expect, it } from "vitest";
 import {
+  GuardContextSchema,
+  GuardNameSchema,
+  TransitionEffectSchema,
+  TransitionRuleSchema,
   WorkflowPhaseSchema,
   WorkflowSessionPropsSchema,
   WorkflowTriggerSchema,
@@ -98,5 +102,102 @@ describe("WorkflowSessionPropsSchema", () => {
         updatedAt: new Date(),
       }),
     ).toThrow();
+  });
+});
+
+describe("GuardNameSchema", () => {
+  const validGuards = ["notSTier", "isSTier", "allSlicesClosed", "retriesExhausted"];
+
+  it.each(validGuards)("accepts '%s'", (guard) => {
+    expect(GuardNameSchema.parse(guard)).toBe(guard);
+  });
+
+  it("rejects invalid guard name", () => {
+    expect(() => GuardNameSchema.parse("invalidGuard")).toThrow();
+  });
+});
+
+describe("TransitionEffectSchema", () => {
+  const validEffects = [
+    "incrementRetry",
+    "savePreviousPhase",
+    "restorePreviousPhase",
+    "resetRetryCount",
+    "clearSlice",
+  ];
+
+  it.each(validEffects)("accepts '%s'", (effect) => {
+    expect(TransitionEffectSchema.parse(effect)).toBe(effect);
+  });
+
+  it("rejects invalid effect", () => {
+    expect(() => TransitionEffectSchema.parse("doSomething")).toThrow();
+  });
+});
+
+describe("GuardContextSchema", () => {
+  it("parses valid guard context", () => {
+    const ctx = GuardContextSchema.parse({
+      complexityTier: "F-lite",
+      retryCount: 2,
+      maxRetries: 3,
+      allSlicesClosed: false,
+    });
+    expect(ctx.complexityTier).toBe("F-lite");
+    expect(ctx.retryCount).toBe(2);
+    expect(ctx.maxRetries).toBe(3);
+    expect(ctx.allSlicesClosed).toBe(false);
+  });
+
+  it("accepts null complexityTier", () => {
+    const ctx = GuardContextSchema.parse({
+      complexityTier: null,
+      retryCount: 0,
+      maxRetries: 3,
+      allSlicesClosed: true,
+    });
+    expect(ctx.complexityTier).toBeNull();
+  });
+});
+
+describe("TransitionRuleSchema", () => {
+  it("parses a rule with guard and effects", () => {
+    const rule = TransitionRuleSchema.parse({
+      from: "executing",
+      trigger: "fail",
+      to: "blocked",
+      guard: "retriesExhausted",
+      effects: ["incrementRetry", "savePreviousPhase"],
+    });
+    expect(rule.from).toBe("executing");
+    expect(rule.guard).toBe("retriesExhausted");
+    expect(rule.effects).toEqual(["incrementRetry", "savePreviousPhase"]);
+  });
+
+  it("accepts '*active*' as from", () => {
+    const rule = TransitionRuleSchema.parse({
+      from: "*active*",
+      trigger: "pause",
+      to: "paused",
+    });
+    expect(rule.from).toBe("*active*");
+  });
+
+  it("accepts '*previousPhase*' as to", () => {
+    const rule = TransitionRuleSchema.parse({
+      from: "paused",
+      trigger: "resume",
+      to: "*previousPhase*",
+    });
+    expect(rule.to).toBe("*previousPhase*");
+  });
+
+  it("defaults effects to empty array", () => {
+    const rule = TransitionRuleSchema.parse({
+      from: "idle",
+      trigger: "start",
+      to: "discussing",
+    });
+    expect(rule.effects).toEqual([]);
   });
 });
