@@ -5,6 +5,8 @@ import { NodeProjectFileSystemAdapter } from "@hexagons/project/infrastructure/n
 import { MergeSettingsUseCase } from "@hexagons/settings";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
 import { WorkflowSliceTransitionAdapter } from "@hexagons/slice/infrastructure/workflow-slice-transition.adapter";
+import { CreateTasksUseCase } from "@hexagons/task/application/create-tasks.use-case";
+import { DetectWavesUseCase } from "@hexagons/task/domain/detect-waves.use-case";
 import { InMemoryTaskRepository } from "@hexagons/task/infrastructure/in-memory-task.repository";
 import {
   type ContextPackage,
@@ -60,6 +62,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     milestoneRepo,
     sliceRepo,
     taskRepo,
+    createTasksPort: new CreateTasksUseCase(taskRepo, new DetectWavesUseCase(), dateProvider),
     sliceTransitionPort,
     eventBus,
     dateProvider,

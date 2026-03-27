@@ -2,6 +2,8 @@ import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/
 import { InMemoryProjectRepository } from "@hexagons/project/infrastructure/in-memory-project.repository";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
 import { WorkflowSliceTransitionAdapter } from "@hexagons/slice/infrastructure/workflow-slice-transition.adapter";
+import { CreateTasksUseCase } from "@hexagons/task/application/create-tasks.use-case";
+import { DetectWavesUseCase } from "@hexagons/task/domain/detect-waves.use-case";
 import { InMemoryTaskRepository } from "@hexagons/task/infrastructure/in-memory-task.repository";
 import type { Result } from "@kernel";
 import { InProcessEventBus, SilentLoggerAdapter, SystemDateProvider } from "@kernel";
@@ -29,12 +31,14 @@ function makeMockApi() {
 
 function makeDeps(): WorkflowExtensionDeps {
   const sliceRepo = new InMemorySliceRepository();
+  const taskRepo = new InMemoryTaskRepository();
   const dateProvider = new SystemDateProvider();
   return {
     projectRepo: new InMemoryProjectRepository(),
     milestoneRepo: new InMemoryMilestoneRepository(),
     sliceRepo,
-    taskRepo: new InMemoryTaskRepository(),
+    taskRepo,
+    createTasksPort: new CreateTasksUseCase(taskRepo, new DetectWavesUseCase(), dateProvider),
     sliceTransitionPort: new WorkflowSliceTransitionAdapter(sliceRepo, dateProvider),
     eventBus: new InProcessEventBus(new SilentLoggerAdapter()),
     dateProvider,
@@ -94,5 +98,21 @@ describe("registerWorkflowExtension", () => {
     registerWorkflowExtension(api, makeDeps());
     const toolNames = api.registerTool.mock.calls.map((call) => call[0].name);
     expect(toolNames).toContain("tff_write_research");
+  });
+
+  it("registers tff:plan command", () => {
+    const api = makeMockApi();
+    registerWorkflowExtension(api, makeDeps());
+    expect(api.registerCommand).toHaveBeenCalledWith(
+      "tff:plan",
+      expect.objectContaining({ description: expect.any(String) }),
+    );
+  });
+
+  it("registers tff_write_plan tool", () => {
+    const api = makeMockApi();
+    registerWorkflowExtension(api, makeDeps());
+    const toolNames = api.registerTool.mock.calls.map((call) => call[0].name);
+    expect(toolNames).toContain("tff_write_plan");
   });
 });
