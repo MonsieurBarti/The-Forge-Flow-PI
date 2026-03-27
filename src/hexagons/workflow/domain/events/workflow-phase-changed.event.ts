@@ -1,5 +1,6 @@
 import { DomainEvent, DomainEventPropsSchema, EVENT_NAMES, type EventName } from "@kernel";
 import { z } from "zod";
+import type { WorkflowPhase, WorkflowTrigger } from "../workflow-session.schemas";
 import { WorkflowPhaseSchema, WorkflowTriggerSchema } from "../workflow-session.schemas";
 
 const WorkflowPhaseChangedEventPropsSchema = DomainEventPropsSchema.extend({
@@ -17,9 +18,9 @@ export class WorkflowPhaseChangedEvent extends DomainEvent {
   readonly eventName: EventName = EVENT_NAMES.WORKFLOW_PHASE_CHANGED;
   readonly milestoneId: string;
   readonly sliceId?: string;
-  readonly fromPhase: string;
-  readonly toPhase: string;
-  readonly trigger: string;
+  readonly fromPhase: WorkflowPhase;
+  readonly toPhase: WorkflowPhase;
+  readonly trigger: WorkflowTrigger;
   readonly retryCount: number;
 
   constructor(props: WorkflowPhaseChangedEventProps) {

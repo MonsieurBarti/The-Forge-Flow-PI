@@ -1,3 +1,4 @@
+import type { AutonomyMode } from "@hexagons/settings";
 import { AggregateRoot, err, ok, type Result } from "@kernel";
 import { GuardRejectedError } from "./errors/guard-rejected.error";
 import { NoMatchingTransitionError } from "./errors/no-matching-transition.error";
@@ -45,7 +46,7 @@ export class WorkflowSession extends AggregateRoot<WorkflowSessionProps> {
     return this.props.retryCount;
   }
 
-  get autonomyMode(): string {
+  get autonomyMode(): AutonomyMode {
     return this.props.autonomyMode;
   }
 
