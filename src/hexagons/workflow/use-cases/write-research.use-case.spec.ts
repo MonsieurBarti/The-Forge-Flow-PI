@@ -1,6 +1,7 @@
+import { SliceRepositoryPort } from "@hexagons/slice/domain/ports/slice-repository.port";
 import { SliceBuilder } from "@hexagons/slice/domain/slice.builder";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
-import { err, isErr, isOk } from "@kernel";
+import { err, isErr, isOk, ok, PersistenceError } from "@kernel";
 import { describe, expect, it } from "vitest";
 
 import { FileIOError } from "../domain/errors/file-io.error";
@@ -75,5 +76,26 @@ describe("WriteResearchUseCase", () => {
       content: "# Research",
     });
     expect(isErr(result)).toBe(true);
+  });
+
+  it("should return PersistenceError when repo save fails", async () => {
+    const { artifactFile, dateProvider } = setup();
+    const sliceId = crypto.randomUUID();
+    const slice = new SliceBuilder().withId(sliceId).build();
+
+    const failingRepo = Object.assign(Object.create(SliceRepositoryPort.prototype), {
+      findById: async () => ok(slice),
+      save: async () => err(new PersistenceError("DB write failed")),
+    });
+    const failUseCase = new WriteResearchUseCase(artifactFile, failingRepo, dateProvider);
+
+    const result = await failUseCase.execute({
+      milestoneLabel: "M03",
+      sliceLabel: "M03-S06",
+      sliceId,
+      content: "# Research",
+    });
+    expect(isErr(result)).toBe(true);
+    if (isErr(result)) expect(result.error.code).toBe("PERSISTENCE.FAILURE");
   });
 });
