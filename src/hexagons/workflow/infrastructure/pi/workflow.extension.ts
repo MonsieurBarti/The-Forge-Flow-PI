@@ -15,10 +15,13 @@ import { ClassifyComplexityUseCase } from "../../use-cases/classify-complexity.u
 import { GetStatusUseCase, type StatusReport } from "../../use-cases/get-status.use-case";
 import { OrchestratePhaseTransitionUseCase } from "../../use-cases/orchestrate-phase-transition.use-case";
 import { StartDiscussUseCase } from "../../use-cases/start-discuss.use-case";
+import { WriteResearchUseCase } from "../../use-cases/write-research.use-case";
 import { WriteSpecUseCase } from "../../use-cases/write-spec.use-case";
 import { createClassifyComplexityTool } from "./classify-complexity.tool";
 import { registerDiscussCommand } from "./discuss.command";
+import { registerResearchCommand } from "./research.command";
 import { createWorkflowTransitionTool } from "./workflow-transition.tool";
+import { createWriteResearchTool } from "./write-research.tool";
 import { createWriteSpecTool } from "./write-spec.tool";
 
 export interface WorkflowExtensionDeps {
@@ -146,5 +149,21 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
     startDiscuss,
     sliceRepo: deps.sliceRepo,
     milestoneRepo: deps.milestoneRepo,
+  });
+
+  // --- Research use case + tool ---
+  const writeResearch = new WriteResearchUseCase(
+    deps.artifactFile,
+    deps.sliceRepo,
+    deps.dateProvider,
+  );
+  api.registerTool(createWriteResearchTool(writeResearch));
+
+  // --- Research command ---
+  registerResearchCommand(api, {
+    sliceRepo: deps.sliceRepo,
+    milestoneRepo: deps.milestoneRepo,
+    sessionRepo: deps.workflowSessionRepo,
+    artifactFile: deps.artifactFile,
   });
 }

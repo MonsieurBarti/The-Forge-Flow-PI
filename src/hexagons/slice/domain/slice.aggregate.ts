@@ -136,6 +136,11 @@ export class Slice extends AggregateRoot<SliceProps> {
     this.props.updatedAt = now;
   }
 
+  setResearchPath(path: string, now: Date): void {
+    this.props.researchPath = path;
+    this.props.updatedAt = now;
+  }
+
   static reconstitute(props: SliceProps): Slice {
     return new Slice(props);
   }

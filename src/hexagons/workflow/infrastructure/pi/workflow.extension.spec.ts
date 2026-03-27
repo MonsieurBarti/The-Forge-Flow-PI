@@ -79,4 +79,20 @@ describe("registerWorkflowExtension", () => {
     expect(toolNames).toContain("tff_classify_complexity");
     expect(toolNames).toContain("tff_workflow_transition");
   });
+
+  it("registers tff:research command", () => {
+    const api = makeMockApi();
+    registerWorkflowExtension(api, makeDeps());
+    expect(api.registerCommand).toHaveBeenCalledWith(
+      "tff:research",
+      expect.objectContaining({ description: expect.any(String) }),
+    );
+  });
+
+  it("registers tff_write_research tool", () => {
+    const api = makeMockApi();
+    registerWorkflowExtension(api, makeDeps());
+    const toolNames = api.registerTool.mock.calls.map((call) => call[0].name);
+    expect(toolNames).toContain("tff_write_research");
+  });
 });

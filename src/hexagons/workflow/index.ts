@@ -113,12 +113,21 @@ export {
   buildDiscussProtocolMessage,
   type DiscussProtocolParams,
 } from "./infrastructure/pi/discuss-protocol";
+export {
+  type ResearchCommandDeps,
+  registerResearchCommand,
+} from "./infrastructure/pi/research.command";
+export {
+  buildResearchProtocolMessage,
+  type ResearchProtocolParams,
+} from "./infrastructure/pi/research-protocol";
 export type { WorkflowExtensionDeps } from "./infrastructure/pi/workflow.extension";
 export { registerWorkflowExtension } from "./infrastructure/pi/workflow.extension";
 export {
   createWorkflowTransitionTool,
   type WorkflowTransitionToolDeps,
 } from "./infrastructure/pi/workflow-transition.tool";
+export { createWriteResearchTool } from "./infrastructure/pi/write-research.tool";
 export { createWriteSpecTool } from "./infrastructure/pi/write-spec.tool";
 
 // Use Cases
@@ -138,4 +147,5 @@ export {
   type StartDiscussOutput,
   StartDiscussUseCase,
 } from "./use-cases/start-discuss.use-case";
+export { WriteResearchUseCase } from "./use-cases/write-research.use-case";
 export { WriteSpecUseCase } from "./use-cases/write-spec.use-case";
