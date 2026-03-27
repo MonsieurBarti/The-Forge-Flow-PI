@@ -1,15 +1,15 @@
-import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/in-memory-milestone.repository";
 import { MilestoneBuilder } from "@hexagons/milestone/domain/milestone.builder";
+import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/in-memory-milestone.repository";
 import { SliceBuilder } from "@hexagons/slice/domain/slice.builder";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
 import { err } from "@kernel";
 import { describe, expect, it, vi } from "vitest";
+import { FileIOError } from "../../domain/errors/file-io.error";
 import { WorkflowSessionBuilder } from "../../domain/workflow-session.builder";
 import { InMemoryArtifactFileAdapter } from "../in-memory-artifact-file.adapter";
 import { InMemoryWorkflowSessionRepository } from "../in-memory-workflow-session.repository";
 import type { ResearchCommandDeps } from "./research.command";
 import { registerResearchCommand } from "./research.command";
-import { FileIOError } from "../../domain/errors/file-io.error";
 
 function makeMockApi() {
   return {
@@ -53,10 +53,7 @@ describe("registerResearchCommand", () => {
       };
     }
 
-    async function invokeHandler(
-      deps: ReturnType<typeof makeDeps>,
-      args: string,
-    ) {
+    async function invokeHandler(deps: ReturnType<typeof makeDeps>, args: string) {
       const api = makeMockApi();
       registerResearchCommand(api, deps);
       const [, options] = api.registerCommand.mock.calls[0];
@@ -68,25 +65,18 @@ describe("registerResearchCommand", () => {
     it("returns error if no args provided", async () => {
       const deps = makeDeps();
       const ctx = await invokeHandler(deps, "  ");
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith(
-        expect.stringContaining("Usage"),
-      );
+      expect(ctx.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("Usage"));
     });
 
     it("returns error if slice not found", async () => {
       const deps = makeDeps();
       const ctx = await invokeHandler(deps, "M03-S99");
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith(
-        expect.stringContaining("Slice not found"),
-      );
+      expect(ctx.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("Slice not found"));
     });
 
     it("returns error if no workflow session exists for the milestone", async () => {
       const milestone = new MilestoneBuilder().withLabel("M03").build();
-      const slice = new SliceBuilder()
-        .withLabel("M03-S06")
-        .withMilestoneId(milestone.id)
-        .build();
+      const slice = new SliceBuilder().withLabel("M03-S06").withMilestoneId(milestone.id).build();
       const deps = makeDeps();
       deps.milestoneRepo.seed(milestone);
       deps.sliceRepo.seed(slice);
@@ -99,10 +89,7 @@ describe("registerResearchCommand", () => {
 
     it("returns error if session phase is not researching", async () => {
       const milestone = new MilestoneBuilder().withLabel("M03").build();
-      const slice = new SliceBuilder()
-        .withLabel("M03-S06")
-        .withMilestoneId(milestone.id)
-        .build();
+      const slice = new SliceBuilder().withLabel("M03-S06").withMilestoneId(milestone.id).build();
       const session = new WorkflowSessionBuilder()
         .withMilestoneId(milestone.id)
         .withCurrentPhase("discussing")
@@ -113,17 +100,12 @@ describe("registerResearchCommand", () => {
       deps.sessionRepo.seed(session);
 
       const ctx = await invokeHandler(deps, "M03-S06");
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith(
-        "not researching, run /tff:discuss first",
-      );
+      expect(ctx.sendUserMessage).toHaveBeenCalledWith("not researching, run /tff:discuss first");
     });
 
     it("returns error if SPEC.md not found", async () => {
       const milestone = new MilestoneBuilder().withLabel("M03").build();
-      const slice = new SliceBuilder()
-        .withLabel("M03-S06")
-        .withMilestoneId(milestone.id)
-        .build();
+      const slice = new SliceBuilder().withLabel("M03-S06").withMilestoneId(milestone.id).build();
       const session = new WorkflowSessionBuilder()
         .withMilestoneId(milestone.id)
         .withCurrentPhase("researching")
@@ -135,17 +117,12 @@ describe("registerResearchCommand", () => {
       // artifactFile is empty — no SPEC.md written
 
       const ctx = await invokeHandler(deps, "M03-S06");
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith(
-        "No SPEC.md found, run /tff:discuss first",
-      );
+      expect(ctx.sendUserMessage).toHaveBeenCalledWith("No SPEC.md found, run /tff:discuss first");
     });
 
     it("returns error if ArtifactFilePort.read returns FileIOError", async () => {
       const milestone = new MilestoneBuilder().withLabel("M03").build();
-      const slice = new SliceBuilder()
-        .withLabel("M03-S06")
-        .withMilestoneId(milestone.id)
-        .build();
+      const slice = new SliceBuilder().withLabel("M03-S06").withMilestoneId(milestone.id).build();
       const session = new WorkflowSessionBuilder()
         .withMilestoneId(milestone.id)
         .withCurrentPhase("researching")
@@ -155,14 +132,10 @@ describe("registerResearchCommand", () => {
       deps.sliceRepo.seed(slice);
       deps.sessionRepo.seed(session);
       // Override read to simulate FileIOError
-      deps.artifactFile.read = vi.fn().mockResolvedValue(
-        err(new FileIOError("disk read failed")),
-      );
+      deps.artifactFile.read = vi.fn().mockResolvedValue(err(new FileIOError("disk read failed")));
 
       const ctx = await invokeHandler(deps, "M03-S06");
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith(
-        "Failed to read SPEC.md",
-      );
+      expect(ctx.sendUserMessage).toHaveBeenCalledWith("Failed to read SPEC.md");
     });
 
     it("sends research protocol message when session is in researching phase with SPEC.md", async () => {
@@ -185,17 +158,12 @@ describe("registerResearchCommand", () => {
       await deps.artifactFile.write("M03", "M03-S06", "spec", "# SPEC\n\nsome content");
 
       const ctx = await invokeHandler(deps, "M03-S06");
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith(
-        expect.stringContaining("RESEARCH phase"),
-      );
+      expect(ctx.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("RESEARCH phase"));
     });
 
     it("resolves slice by UUID when label lookup returns null", async () => {
       const milestone = new MilestoneBuilder().withLabel("M03").build();
-      const slice = new SliceBuilder()
-        .withLabel("M03-S06")
-        .withMilestoneId(milestone.id)
-        .build();
+      const slice = new SliceBuilder().withLabel("M03-S06").withMilestoneId(milestone.id).build();
       const session = new WorkflowSessionBuilder()
         .withMilestoneId(milestone.id)
         .withCurrentPhase("researching")
@@ -208,9 +176,7 @@ describe("registerResearchCommand", () => {
       await deps.artifactFile.write("M03", "M03-S06", "spec", "# SPEC content");
 
       const ctx = await invokeHandler(deps, slice.id);
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith(
-        expect.stringContaining("RESEARCH phase"),
-      );
+      expect(ctx.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("RESEARCH phase"));
     });
   });
 });
