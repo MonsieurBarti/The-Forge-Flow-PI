@@ -1,14 +1,14 @@
 import { MilestoneLabelSchema } from "@hexagons/milestone";
 import { SliceLabelSchema } from "@hexagons/slice";
 import { createZodTool, textResult } from "@infrastructure/pi";
-import { isErr } from "@kernel";
+import { IdSchema, isErr } from "@kernel";
 import { z } from "zod";
 import type { WriteSpecUseCase } from "../../use-cases/write-spec.use-case";
 
 const WriteSpecSchema = z.object({
   milestoneLabel: MilestoneLabelSchema.describe("Milestone label, e.g. M03"),
   sliceLabel: SliceLabelSchema.describe("Slice label, e.g. M03-S05"),
-  sliceId: z.string().describe("Slice UUID"),
+  sliceId: IdSchema.describe("Slice UUID"),
   content: z.string().describe("Markdown spec content"),
 });
 
