@@ -259,4 +259,15 @@ describe("Slice", () => {
       expect(s.complexity).toBe("F-full");
     });
   });
+
+  describe("setResearchPath", () => {
+    it("should set researchPath and update updatedAt", () => {
+      const s = Slice.createNew({ id, milestoneId, label: "M01-S01", title: "Schemas", now });
+
+      s.setResearchPath("/path/to/RESEARCH.md", later);
+
+      expect(s.researchPath).toBe("/path/to/RESEARCH.md");
+      expect(s.updatedAt).toEqual(later);
+    });
+  });
 });
