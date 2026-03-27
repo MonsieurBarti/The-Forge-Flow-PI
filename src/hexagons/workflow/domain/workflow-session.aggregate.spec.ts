@@ -8,6 +8,7 @@ const defaultCtx: GuardContext = {
   retryCount: 0,
   maxRetries: 2,
   allSlicesClosed: false,
+  lastError: null,
 };
 
 describe("WorkflowSession", () => {
@@ -357,6 +358,7 @@ describe("WorkflowSession", () => {
         autonomyMode: "plan-to-pr",
         createdAt: now,
         updatedAt: now,
+        lastEscalation: null,
       });
       expect(session.currentPhase).toBe("executing");
       expect(session.pullEvents()).toHaveLength(0);

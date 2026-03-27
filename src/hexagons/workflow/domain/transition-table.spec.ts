@@ -39,6 +39,7 @@ describe("evaluateGuard", () => {
     retryCount: 0,
     maxRetries: 2,
     allSlicesClosed: false,
+    lastError: null,
   };
 
   it("notSTier returns true when tier is not S", () => {

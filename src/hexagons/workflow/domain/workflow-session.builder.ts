@@ -62,6 +62,7 @@ export class WorkflowSessionBuilder {
       autonomyMode: this._autonomyMode,
       createdAt: this._now,
       updatedAt: this._now,
+      lastEscalation: null,
     };
   }
 }

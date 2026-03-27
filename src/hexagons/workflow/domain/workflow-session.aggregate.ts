@@ -72,6 +72,7 @@ export class WorkflowSession extends AggregateRoot<WorkflowSessionProps> {
       autonomyMode: params.autonomyMode,
       createdAt: params.now,
       updatedAt: params.now,
+      lastEscalation: null,
     });
   }
 
