@@ -1,9 +1,12 @@
 import type { AutonomyMode } from "@hexagons/settings";
 import { AggregateRoot, err, ok, type Result } from "@kernel";
+import { shouldAutoTransition as shouldAutoTransitionFn } from "./autonomy-policy";
 import { GuardRejectedError } from "./errors/guard-rejected.error";
 import { NoMatchingTransitionError } from "./errors/no-matching-transition.error";
 import { SliceAlreadyAssignedError } from "./errors/slice-already-assigned.error";
 import type { WorkflowBaseError } from "./errors/workflow-base.error";
+import { Escalation } from "./escalation.vo";
+import { WorkflowEscalationRaisedEvent } from "./events/workflow-escalation-raised.event";
 import { WorkflowPhaseChangedEvent } from "./events/workflow-phase-changed.event";
 import { evaluateGuard, findMatchingRules } from "./transition-table";
 import type {
@@ -58,6 +61,14 @@ export class WorkflowSession extends AggregateRoot<WorkflowSessionProps> {
     return this.props.updatedAt;
   }
 
+  get shouldAutoTransition(): boolean {
+    return shouldAutoTransitionFn(this.props.currentPhase, this.props.autonomyMode).autoTransition;
+  }
+
+  get lastEscalation(): Escalation | null {
+    return this.props.lastEscalation ? Escalation.create(this.props.lastEscalation) : null;
+  }
+
   static createNew(params: {
     id: string;
     milestoneId: string;
@@ -72,6 +83,7 @@ export class WorkflowSession extends AggregateRoot<WorkflowSessionProps> {
       autonomyMode: params.autonomyMode,
       createdAt: params.now,
       updatedAt: params.now,
+      lastEscalation: null,
     });
   }
 
@@ -93,7 +105,7 @@ export class WorkflowSession extends AggregateRoot<WorkflowSessionProps> {
         failedGuards.push(rule.guard);
         continue;
       }
-      return this.applyTransition(rule, fromPhase, trigger, now);
+      return this.applyTransition(rule, fromPhase, trigger, now, ctx);
     }
 
     return err(new GuardRejectedError(fromPhase, trigger, failedGuards));
@@ -124,6 +136,7 @@ export class WorkflowSession extends AggregateRoot<WorkflowSessionProps> {
     fromPhase: WorkflowPhase,
     trigger: WorkflowTrigger,
     now: Date,
+    ctx: GuardContext,
   ): Result<void, WorkflowBaseError> {
     for (const effect of rule.effects) {
       this.applyEffect(effect);
@@ -133,6 +146,25 @@ export class WorkflowSession extends AggregateRoot<WorkflowSessionProps> {
 
     this.props.currentPhase = toPhase;
     this.props.updatedAt = now;
+
+    if (toPhase === "blocked" && this.props.sliceId) {
+      const escalation = Escalation.fromRetryExhaustion(
+        this.props.sliceId,
+        fromPhase,
+        this.props.retryCount,
+        ctx.lastError ?? null,
+      );
+      this.props.lastEscalation = escalation.toProps;
+
+      this.addEvent(
+        new WorkflowEscalationRaisedEvent({
+          id: crypto.randomUUID(),
+          aggregateId: this.props.id,
+          occurredAt: now,
+          escalation: escalation.toProps,
+        }),
+      );
+    }
 
     this.addEvent(
       new WorkflowPhaseChangedEvent({

@@ -1,3 +1,27 @@
+export type {
+  AgentCapability,
+  AgentCard,
+  AgentCost,
+  AgentDispatchConfig,
+  AgentResult,
+  AgentType,
+  ResolvedModel,
+} from "./agents";
+// Agent artifacts
+export {
+  AGENT_REGISTRY,
+  AgentCapabilitySchema,
+  AgentCardSchema,
+  AgentCostSchema,
+  AgentDispatchConfigBuilder,
+  AgentDispatchConfigSchema,
+  AgentResultBuilder,
+  AgentResultSchema,
+  AgentTypeSchema,
+  findAgentsByCapability,
+  getAgentCard,
+  ResolvedModelSchema,
+} from "./agents";
 export { AggregateRoot } from "./aggregate-root.base";
 export type { DomainEventProps } from "./domain-event.base";
 export { DomainEvent, DomainEventPropsSchema } from "./domain-event.base";
@@ -14,6 +38,7 @@ export type { EventName } from "./event-names";
 export { EVENT_NAMES, EventNameSchema } from "./event-names";
 export {
   ConsoleLoggerAdapter,
+  GitCliAdapter,
   InProcessEventBus,
   SilentLoggerAdapter,
   SystemDateProvider,
@@ -49,27 +74,3 @@ export { err, isErr, isOk, match, ok } from "./result";
 export type { ComplexityTier, Id, ModelProfileName, Timestamp } from "./schemas";
 export { ComplexityTierSchema, IdSchema, ModelProfileNameSchema, TimestampSchema } from "./schemas";
 export { ValueObject } from "./value-object.base";
-// Agent artifacts
-export {
-  AGENT_REGISTRY,
-  AgentCapabilitySchema,
-  AgentCardSchema,
-  AgentCostSchema,
-  AgentDispatchConfigBuilder,
-  AgentDispatchConfigSchema,
-  AgentResultBuilder,
-  AgentResultSchema,
-  AgentTypeSchema,
-  findAgentsByCapability,
-  getAgentCard,
-  ResolvedModelSchema,
-} from "./agents";
-export type {
-  AgentCapability,
-  AgentCard,
-  AgentCost,
-  AgentDispatchConfig,
-  AgentResult,
-  AgentType,
-  ResolvedModel,
-} from "./agents";

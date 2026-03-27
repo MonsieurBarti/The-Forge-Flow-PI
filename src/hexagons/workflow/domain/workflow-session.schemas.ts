@@ -31,6 +31,22 @@ export const WorkflowTriggerSchema = z.enum([
 ]);
 export type WorkflowTrigger = z.infer<typeof WorkflowTriggerSchema>;
 
+export const EscalationPropsSchema = z.object({
+  sliceId: IdSchema,
+  phase: WorkflowPhaseSchema,
+  reason: z.string(),
+  attempts: z.number().int().min(0),
+  lastError: z.string().nullable(),
+  occurredAt: TimestampSchema,
+});
+export type EscalationProps = z.infer<typeof EscalationPropsSchema>;
+
+export const AutoTransitionDecisionSchema = z.object({
+  autoTransition: z.boolean(),
+  isHumanGate: z.boolean(),
+});
+export type AutoTransitionDecision = z.infer<typeof AutoTransitionDecisionSchema>;
+
 export const WorkflowSessionPropsSchema = z.object({
   id: IdSchema,
   milestoneId: IdSchema,
@@ -41,6 +57,7 @@ export const WorkflowSessionPropsSchema = z.object({
   autonomyMode: AutonomyModeSchema,
   createdAt: TimestampSchema,
   updatedAt: TimestampSchema,
+  lastEscalation: EscalationPropsSchema.nullable().default(null),
 });
 export type WorkflowSessionProps = z.infer<typeof WorkflowSessionPropsSchema>;
 
@@ -66,6 +83,7 @@ export const GuardContextSchema = z.object({
   retryCount: z.number().int().min(0),
   maxRetries: z.number().int().min(0),
   allSlicesClosed: z.boolean(),
+  lastError: z.string().nullable().default(null),
 });
 export type GuardContext = z.infer<typeof GuardContextSchema>;
 

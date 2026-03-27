@@ -13,6 +13,7 @@ export const EVENT_NAMES = {
   REVIEW_RECORDED: "review.recorded",
   SKILL_REFINED: "intelligence.skill-refined",
   WORKFLOW_PHASE_CHANGED: "workflow.phase-changed",
+  WORKFLOW_ESCALATION_RAISED: "workflow.escalation-raised",
 } as const;
 
 export type EventName = (typeof EVENT_NAMES)[keyof typeof EVENT_NAMES];
@@ -30,4 +31,5 @@ export const EventNameSchema = z.enum([
   EVENT_NAMES.REVIEW_RECORDED,
   EVENT_NAMES.SKILL_REFINED,
   EVENT_NAMES.WORKFLOW_PHASE_CHANGED,
+  EVENT_NAMES.WORKFLOW_ESCALATION_RAISED,
 ]);

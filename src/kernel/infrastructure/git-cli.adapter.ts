@@ -16,12 +16,20 @@ export class GitCliAdapter extends GitPort {
     super();
   }
 
+  private cleanGitEnv(): Record<string, string> {
+    const env: Record<string, string> = {};
+    for (const [k, v] of Object.entries(process.env)) {
+      if (v !== undefined && !k.startsWith("GIT_")) env[k] = v;
+    }
+    return env;
+  }
+
   private runGit(args: string[]): Promise<Result<string, GitError>> {
     return new Promise((resolve) => {
       execFile(
         "git",
         ["--no-pager", "-c", "color.ui=never", ...args],
-        { cwd: this.cwd, encoding: "utf-8" },
+        { cwd: this.cwd, encoding: "utf-8", env: this.cleanGitEnv() },
         (error, stdout, stderr) => {
           if (error) {
             resolve(err(this.mapError(error, stderr)));
