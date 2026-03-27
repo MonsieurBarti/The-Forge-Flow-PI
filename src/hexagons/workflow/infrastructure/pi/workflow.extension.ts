@@ -4,7 +4,9 @@ import type { SliceRepositoryPort } from "@hexagons/slice";
 import type { TaskRepositoryPort } from "@hexagons/task";
 import type { ExtensionAPI } from "@infrastructure/pi";
 import { createZodTool } from "@infrastructure/pi";
+import type { DateProviderPort, EventBusPort } from "@kernel";
 import { z } from "zod";
+import type { SliceTransitionPort } from "../../domain/ports/slice-transition.port";
 import { GetStatusUseCase, type StatusReport } from "../../use-cases/get-status.use-case";
 
 export interface WorkflowExtensionDeps {
@@ -12,6 +14,9 @@ export interface WorkflowExtensionDeps {
   milestoneRepo: MilestoneRepositoryPort;
   sliceRepo: SliceRepositoryPort;
   taskRepo: TaskRepositoryPort;
+  sliceTransitionPort: SliceTransitionPort;
+  eventBus: EventBusPort;
+  dateProvider: DateProviderPort;
 }
 
 function formatStatusReport(report: StatusReport): string {
