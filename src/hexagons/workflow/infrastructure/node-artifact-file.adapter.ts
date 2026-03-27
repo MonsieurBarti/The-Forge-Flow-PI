@@ -1,5 +1,5 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, resolve } from "node:path";
 import { err, ok, type Result } from "@kernel";
 import { FileIOError } from "../domain/errors/file-io.error";
 import {
@@ -9,8 +9,11 @@ import {
 } from "../domain/ports/artifact-file.port";
 
 export class NodeArtifactFileAdapter extends ArtifactFilePort {
-  constructor(private readonly projectRoot: string) {
+  private readonly basePath: string;
+
+  constructor(projectRoot: string) {
     super();
+    this.basePath = resolve(projectRoot, ".tff", "milestones");
   }
 
   private resolvePath(
@@ -18,15 +21,17 @@ export class NodeArtifactFileAdapter extends ArtifactFilePort {
     sliceLabel: string,
     artifactType: ArtifactType,
   ): string {
-    return join(
-      this.projectRoot,
-      ".tff",
-      "milestones",
+    const target = resolve(
+      this.basePath,
       milestoneLabel,
       "slices",
       sliceLabel,
       ARTIFACT_FILENAMES[artifactType],
     );
+    if (!target.startsWith(this.basePath)) {
+      throw new FileIOError(`Path traversal detected: resolved path escapes base directory`);
+    }
+    return target;
   }
 
   async write(

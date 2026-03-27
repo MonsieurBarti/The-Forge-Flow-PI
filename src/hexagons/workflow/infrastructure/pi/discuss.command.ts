@@ -43,7 +43,11 @@ export function registerDiscussCommand(api: ExtensionAPI, deps: DiscussCommandDe
 
       // 2. Load milestone
       const msResult = await deps.milestoneRepo.findById(slice.milestoneId);
-      if (isErr(msResult) || !msResult.data) {
+      if (isErr(msResult)) {
+        ctx.sendUserMessage(`Error loading milestone: ${msResult.error.message}`);
+        return;
+      }
+      if (!msResult.data) {
         ctx.sendUserMessage(`Milestone not found for slice ${slice.label}`);
         return;
       }

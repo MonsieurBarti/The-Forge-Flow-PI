@@ -1,6 +1,5 @@
 import { ComplexityTierSchema } from "@hexagons/slice";
-import type { AgentToolResult } from "@infrastructure/pi";
-import { createZodTool } from "@infrastructure/pi";
+import { createZodTool, textResult } from "@infrastructure/pi";
 import { isErr } from "@kernel";
 import { z } from "zod";
 import type { ClassifyComplexityUseCase } from "../../use-cases/classify-complexity.use-case";
@@ -11,10 +10,6 @@ const ClassifyComplexitySchema = z.object({
 });
 
 export function createClassifyComplexityTool(useCase: ClassifyComplexityUseCase) {
-  const textResult = (text: string): AgentToolResult => ({
-    content: [{ type: "text", text }],
-  });
-
   return createZodTool({
     name: "tff_classify_complexity",
     label: "TFF Classify Complexity",

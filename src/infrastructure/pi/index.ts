@@ -9,3 +9,4 @@ export type {
   RegisterCommandOptions,
   ToolDefinition,
 } from "./pi.types";
+export { textResult } from "./tool-result.helper";

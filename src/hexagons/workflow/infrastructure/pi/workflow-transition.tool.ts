@@ -1,6 +1,5 @@
 import { ComplexityTierSchema, type SliceRepositoryPort } from "@hexagons/slice";
-import type { AgentToolResult } from "@infrastructure/pi";
-import { createZodTool } from "@infrastructure/pi";
+import { createZodTool, textResult } from "@infrastructure/pi";
 import { isErr } from "@kernel";
 import { z } from "zod";
 import type { WorkflowSessionRepositoryPort } from "../../domain/ports/workflow-session.repository.port";
@@ -21,10 +20,6 @@ export interface WorkflowTransitionToolDeps {
 }
 
 export function createWorkflowTransitionTool(deps: WorkflowTransitionToolDeps) {
-  const textResult = (text: string): AgentToolResult => ({
-    content: [{ type: "text", text }],
-  });
-
   return createZodTool({
     name: "tff_workflow_transition",
     label: "TFF Workflow Transition",

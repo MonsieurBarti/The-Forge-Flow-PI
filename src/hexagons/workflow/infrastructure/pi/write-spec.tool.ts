@@ -1,21 +1,18 @@
-import type { AgentToolResult } from "@infrastructure/pi";
-import { createZodTool } from "@infrastructure/pi";
+import { MilestoneLabelSchema } from "@hexagons/milestone";
+import { SliceLabelSchema } from "@hexagons/slice";
+import { createZodTool, textResult } from "@infrastructure/pi";
 import { isErr } from "@kernel";
 import { z } from "zod";
 import type { WriteSpecUseCase } from "../../use-cases/write-spec.use-case";
 
 const WriteSpecSchema = z.object({
-  milestoneLabel: z.string().describe("Milestone label, e.g. M03"),
-  sliceLabel: z.string().describe("Slice label, e.g. M03-S05"),
+  milestoneLabel: MilestoneLabelSchema.describe("Milestone label, e.g. M03"),
+  sliceLabel: SliceLabelSchema.describe("Slice label, e.g. M03-S05"),
   sliceId: z.string().describe("Slice UUID"),
   content: z.string().describe("Markdown spec content"),
 });
 
 export function createWriteSpecTool(useCase: WriteSpecUseCase) {
-  const textResult = (text: string): AgentToolResult => ({
-    content: [{ type: "text", text }],
-  });
-
   return createZodTool({
     name: "tff_write_spec",
     label: "TFF Write Spec",
