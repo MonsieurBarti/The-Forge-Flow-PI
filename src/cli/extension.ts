@@ -6,13 +6,15 @@ import { MergeSettingsUseCase } from "@hexagons/settings";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
 import { WorkflowSliceTransitionAdapter } from "@hexagons/slice/infrastructure/workflow-slice-transition.adapter";
 import { InMemoryTaskRepository } from "@hexagons/task/infrastructure/in-memory-task.repository";
-import { registerWorkflowExtension } from "@hexagons/workflow";
+import {
+  type ContextPackage,
+  type ContextStagingError,
+  ContextStagingPort,
+  registerWorkflowExtension,
+} from "@hexagons/workflow";
 import type { ExtensionAPI } from "@infrastructure/pi";
 import type { Result } from "@kernel";
 import { ConsoleLoggerAdapter, InProcessEventBus, SystemDateProvider } from "@kernel";
-import type { ContextPackage } from "../hexagons/workflow/domain/context-package.value-object";
-import type { ContextStagingError } from "../hexagons/workflow/domain/errors/context-staging.error";
-import { ContextStagingPort } from "../hexagons/workflow/domain/ports/context-staging.port";
 
 class NoOpContextStaging extends ContextStagingPort {
   async stage(): Promise<Result<ContextPackage, ContextStagingError>> {
