@@ -10,7 +10,10 @@ export interface DiscussProtocolParams {
   autonomyMode: string;
 }
 
-const template = readFileSync(new URL("./discuss-protocol.template.md", import.meta.url), "utf-8");
+const template = readFileSync(
+  new URL("./templates/protocols/discuss.md", import.meta.url),
+  "utf-8",
+);
 
 function render(tmpl: string, vars: Record<string, string>): string {
   return tmpl.replace(/\{\{(\w+)\}\}/g, (_, key: string) => vars[key] ?? `{{${key}}}`);
