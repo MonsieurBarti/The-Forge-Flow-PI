@@ -131,9 +131,10 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
 
         const report = formatStatusReport(result.data);
         const nextStepLine = nextStep ? `\n\n**Next step:** ${nextStep.displayText}` : "";
+        const nextStepJson = `\n\n<next-step>${JSON.stringify(nextStep)}</next-step>`;
 
         return {
-          content: [{ type: "text", text: report + nextStepLine }],
+          content: [{ type: "text", text: report + nextStepLine + nextStepJson }],
         };
       },
     }),
