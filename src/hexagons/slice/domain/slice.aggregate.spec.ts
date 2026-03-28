@@ -1,6 +1,7 @@
 import { EVENT_NAMES, isErr, isOk } from "@kernel";
 import { describe, expect, it } from "vitest";
 import { Slice } from "./slice.aggregate";
+import { SliceBuilder } from "./slice.builder";
 
 describe("Slice", () => {
   const id = crypto.randomUUID();
@@ -268,6 +269,16 @@ describe("Slice", () => {
 
       expect(s.researchPath).toBe("/path/to/RESEARCH.md");
       expect(s.updatedAt).toEqual(later);
+    });
+  });
+
+  describe("setPlanPath", () => {
+    it("should update planPath and updatedAt", () => {
+      const slice = new SliceBuilder().build();
+      const now = new Date("2026-03-27T15:00:00Z");
+      slice.setPlanPath(".tff/milestones/M03/slices/M03-S07/PLAN.md", now);
+      expect(slice.planPath).toBe(".tff/milestones/M03/slices/M03-S07/PLAN.md");
+      expect(slice.updatedAt).toEqual(now);
     });
   });
 });

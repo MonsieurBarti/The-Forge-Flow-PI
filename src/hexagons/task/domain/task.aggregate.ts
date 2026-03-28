@@ -66,6 +66,7 @@ export class Task extends AggregateRoot<TaskProps> {
     description?: string;
     acceptanceCriteria?: string;
     filePaths?: string[];
+    blockedBy?: string[];
     now: Date;
   }): Task {
     const task = new Task({
@@ -77,7 +78,7 @@ export class Task extends AggregateRoot<TaskProps> {
       acceptanceCriteria: params.acceptanceCriteria ?? "",
       filePaths: params.filePaths ?? [],
       status: "open",
-      blockedBy: [],
+      blockedBy: params.blockedBy ?? [],
       waveIndex: null,
       createdAt: params.now,
       updatedAt: params.now,

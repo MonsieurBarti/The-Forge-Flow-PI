@@ -1,7 +1,7 @@
 import type { MilestoneRepositoryPort } from "@hexagons/milestone";
 import type { ProjectRepositoryPort } from "@hexagons/project";
 import type { SliceRepositoryPort } from "@hexagons/slice";
-import type { TaskRepositoryPort } from "@hexagons/task";
+import type { CreateTasksPort, TaskRepositoryPort } from "@hexagons/task";
 import type { ExtensionAPI } from "@infrastructure/pi";
 import { createZodTool } from "@infrastructure/pi";
 import type { DateProviderPort, EventBusPort } from "@kernel";
@@ -15,12 +15,15 @@ import { ClassifyComplexityUseCase } from "../../use-cases/classify-complexity.u
 import { GetStatusUseCase, type StatusReport } from "../../use-cases/get-status.use-case";
 import { OrchestratePhaseTransitionUseCase } from "../../use-cases/orchestrate-phase-transition.use-case";
 import { StartDiscussUseCase } from "../../use-cases/start-discuss.use-case";
+import { WritePlanUseCase } from "../../use-cases/write-plan.use-case";
 import { WriteResearchUseCase } from "../../use-cases/write-research.use-case";
 import { WriteSpecUseCase } from "../../use-cases/write-spec.use-case";
 import { createClassifyComplexityTool } from "./classify-complexity.tool";
 import { registerDiscussCommand } from "./discuss.command";
+import { registerPlanCommand } from "./plan.command";
 import { registerResearchCommand } from "./research.command";
 import { createWorkflowTransitionTool } from "./workflow-transition.tool";
+import { createWritePlanTool } from "./write-plan.tool";
 import { createWriteResearchTool } from "./write-research.tool";
 import { createWriteSpecTool } from "./write-spec.tool";
 
@@ -29,6 +32,7 @@ export interface WorkflowExtensionDeps {
   milestoneRepo: MilestoneRepositoryPort;
   sliceRepo: SliceRepositoryPort;
   taskRepo: TaskRepositoryPort;
+  createTasksPort: CreateTasksPort;
   sliceTransitionPort: SliceTransitionPort;
   eventBus: EventBusPort;
   dateProvider: DateProviderPort;
@@ -161,6 +165,23 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
 
   // --- Research command ---
   registerResearchCommand(api, {
+    sliceRepo: deps.sliceRepo,
+    milestoneRepo: deps.milestoneRepo,
+    sessionRepo: deps.workflowSessionRepo,
+    artifactFile: deps.artifactFile,
+  });
+
+  // --- Plan use case + tool ---
+  const writePlan = new WritePlanUseCase(
+    deps.artifactFile,
+    deps.sliceRepo,
+    deps.createTasksPort,
+    deps.dateProvider,
+  );
+  api.registerTool(createWritePlanTool(writePlan));
+
+  // --- Plan command ---
+  registerPlanCommand(api, {
     sliceRepo: deps.sliceRepo,
     milestoneRepo: deps.milestoneRepo,
     sessionRepo: deps.workflowSessionRepo,

@@ -64,6 +64,24 @@ describe("Task", () => {
         Task.createNew({ id: "not-a-uuid", sliceId, label: "T01", title: "Schemas", now }),
       ).toThrow();
     });
+
+    it("should accept optional blockedBy in createNew", () => {
+      const blockerId = crypto.randomUUID();
+      const task = Task.createNew({
+        id: crypto.randomUUID(),
+        sliceId: crypto.randomUUID(),
+        label: "T02",
+        title: "Depends on T01",
+        blockedBy: [blockerId],
+        now: new Date(),
+      });
+      expect(task.blockedBy).toEqual([blockerId]);
+    });
+
+    it("defaults blockedBy to [] when not provided", () => {
+      const task = Task.createNew({ id, sliceId, label: "T01", title: "Schemas", now });
+      expect(task.blockedBy).toEqual([]);
+    });
   });
 
   describe("start", () => {
