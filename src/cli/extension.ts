@@ -4,10 +4,27 @@ import { InMemoryProjectRepository } from "@hexagons/project/infrastructure/in-m
 import { NodeProjectFileSystemAdapter } from "@hexagons/project/infrastructure/node-project-filesystem.adapter";
 import { MergeSettingsUseCase } from "@hexagons/settings";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
+import { WorkflowSliceTransitionAdapter } from "@hexagons/slice/infrastructure/workflow-slice-transition.adapter";
+import { CreateTasksUseCase } from "@hexagons/task/application/create-tasks.use-case";
+import { DetectWavesUseCase } from "@hexagons/task/domain/detect-waves.use-case";
 import { InMemoryTaskRepository } from "@hexagons/task/infrastructure/in-memory-task.repository";
-import { registerWorkflowExtension } from "@hexagons/workflow";
+import {
+  type ContextPackage,
+  type ContextStagingError,
+  ContextStagingPort,
+  InMemoryWorkflowSessionRepository,
+  registerWorkflowExtension,
+} from "@hexagons/workflow";
+import { NodeArtifactFileAdapter } from "@hexagons/workflow/infrastructure/node-artifact-file.adapter";
 import type { ExtensionAPI } from "@infrastructure/pi";
+import type { Result } from "@kernel";
 import { ConsoleLoggerAdapter, InProcessEventBus, SystemDateProvider } from "@kernel";
+
+class NoOpContextStaging extends ContextStagingPort {
+  async stage(): Promise<Result<ContextPackage, ContextStagingError>> {
+    throw new Error("ContextStagingPort: not yet implemented");
+  }
+}
 
 export interface TffExtensionOptions {
   projectRoot: string;
@@ -35,10 +52,24 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     dateProvider,
   });
 
+  const sliceTransitionPort = new WorkflowSliceTransitionAdapter(sliceRepo, dateProvider);
+  const artifactFile = new NodeArtifactFileAdapter(options.projectRoot);
+  const workflowSessionRepo = new InMemoryWorkflowSessionRepository();
+  const autonomyModeProvider = { getAutonomyMode: () => "plan-to-pr" as const };
+
   registerWorkflowExtension(api, {
     projectRepo,
     milestoneRepo,
     sliceRepo,
     taskRepo,
+    createTasksPort: new CreateTasksUseCase(taskRepo, new DetectWavesUseCase(), dateProvider),
+    sliceTransitionPort,
+    eventBus,
+    dateProvider,
+    contextStaging: new NoOpContextStaging(),
+    artifactFile,
+    workflowSessionRepo,
+    autonomyModeProvider,
+    maxRetries: 2,
   });
 }

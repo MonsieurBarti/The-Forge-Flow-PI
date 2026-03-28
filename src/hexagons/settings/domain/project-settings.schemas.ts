@@ -1,5 +1,5 @@
-import { z } from "zod";
 import { ModelProfileNameSchema } from "@kernel/schemas";
+import { z } from "zod";
 
 // ---------------------------------------------------------------------------
 // Primitive schemas

@@ -19,3 +19,5 @@ export {
   SlicePropsSchema,
   SliceStatusSchema,
 } from "./domain/slice.schemas";
+export { InMemoryWorkflowSliceTransitionAdapter } from "./infrastructure/in-memory-workflow-slice-transition.adapter";
+export { WorkflowSliceTransitionAdapter } from "./infrastructure/workflow-slice-transition.adapter";

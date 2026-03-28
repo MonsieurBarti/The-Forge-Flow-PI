@@ -1,6 +1,7 @@
 import { EVENT_NAMES, isErr, isOk } from "@kernel";
 import { describe, expect, it } from "vitest";
 import { Slice } from "./slice.aggregate";
+import { SliceBuilder } from "./slice.builder";
 
 describe("Slice", () => {
   const id = crypto.randomUUID();
@@ -214,6 +215,70 @@ describe("Slice", () => {
         createdAt: now,
         updatedAt: now,
       });
+    });
+  });
+
+  describe("setSpecPath", () => {
+    it("should set specPath and update updatedAt", () => {
+      const s = Slice.createNew({ id, milestoneId, label: "M01-S01", title: "Schemas", now });
+
+      s.setSpecPath("/path/to/SPEC.md", later);
+
+      expect(s.specPath).toBe("/path/to/SPEC.md");
+      expect(s.updatedAt).toEqual(later);
+    });
+  });
+
+  describe("setComplexity", () => {
+    it("should set complexity tier directly and update updatedAt", () => {
+      const s = Slice.createNew({ id, milestoneId, label: "M01-S01", title: "Schemas", now });
+
+      s.setComplexity("F-lite", later);
+
+      expect(s.complexity).toBe("F-lite");
+      expect(s.updatedAt).toEqual(later);
+    });
+
+    it("should allow overriding existing complexity", () => {
+      const s = Slice.reconstitute({
+        id,
+        milestoneId,
+        label: "M01-S01",
+        title: "Schemas",
+        description: "",
+        status: "discussing" as const,
+        complexity: "S" as const,
+        specPath: null,
+        planPath: null,
+        researchPath: null,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      s.setComplexity("F-full", later);
+
+      expect(s.complexity).toBe("F-full");
+    });
+  });
+
+  describe("setResearchPath", () => {
+    it("should set researchPath and update updatedAt", () => {
+      const s = Slice.createNew({ id, milestoneId, label: "M01-S01", title: "Schemas", now });
+
+      s.setResearchPath("/path/to/RESEARCH.md", later);
+
+      expect(s.researchPath).toBe("/path/to/RESEARCH.md");
+      expect(s.updatedAt).toEqual(later);
+    });
+  });
+
+  describe("setPlanPath", () => {
+    it("should update planPath and updatedAt", () => {
+      const slice = new SliceBuilder().build();
+      const now = new Date("2026-03-27T15:00:00Z");
+      slice.setPlanPath(".tff/milestones/M03/slices/M03-S07/PLAN.md", now);
+      expect(slice.planPath).toBe(".tff/milestones/M03/slices/M03-S07/PLAN.md");
+      expect(slice.updatedAt).toEqual(now);
     });
   });
 });

@@ -1,9 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { describe, expect, it } from "vitest";
-import {
-  AgentDispatchConfigSchema,
-  ResolvedModelSchema,
-} from "./agent-dispatch.schema";
+import { AgentDispatchConfigSchema, ResolvedModelSchema } from "./agent-dispatch.schema";
 
 describe("ResolvedModelSchema", () => {
   it("parses valid model", () => {
