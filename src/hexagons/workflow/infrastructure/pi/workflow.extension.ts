@@ -6,6 +6,7 @@ import type { ExtensionAPI } from "@infrastructure/pi";
 import { createZodTool } from "@infrastructure/pi";
 import type { DateProviderPort, EventBusPort } from "@kernel";
 import { z } from "zod";
+import type { NextStepSuggestionProps } from "../../domain/next-step-suggestion.vo";
 import type { ArtifactFilePort } from "../../domain/ports/artifact-file.port";
 import type { AutonomyModeProvider } from "../../domain/ports/autonomy-mode.provider";
 import type { ContextStagingPort } from "../../domain/ports/context-staging.port";
@@ -15,6 +16,7 @@ import { ClassifyComplexityUseCase } from "../../use-cases/classify-complexity.u
 import { GetStatusUseCase, type StatusReport } from "../../use-cases/get-status.use-case";
 import { OrchestratePhaseTransitionUseCase } from "../../use-cases/orchestrate-phase-transition.use-case";
 import { StartDiscussUseCase } from "../../use-cases/start-discuss.use-case";
+import { SuggestNextStepUseCase } from "../../use-cases/suggest-next-step.use-case";
 import { WritePlanUseCase } from "../../use-cases/write-plan.use-case";
 import { WriteResearchUseCase } from "../../use-cases/write-research.use-case";
 import { WriteSpecUseCase } from "../../use-cases/write-spec.use-case";
@@ -91,6 +93,8 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
     deps.taskRepo,
   );
 
+  const suggestNextStep = new SuggestNextStepUseCase(deps.workflowSessionRepo, deps.sliceRepo);
+
   api.registerCommand("tff:status", {
     description: "Show current TFF project status",
     handler: async (_args, ctx) => {
@@ -112,8 +116,24 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
             content: [{ type: "text", text: `Status failed: ${result.error.message}` }],
           };
         }
+
+        let nextStep: NextStepSuggestionProps | null = null;
+        if (result.data.activeMilestone) {
+          const msLabel = result.data.activeMilestone.label;
+          const msResult = await deps.milestoneRepo.findByLabel(msLabel);
+          if (msResult.ok && msResult.data) {
+            const nsResult = await suggestNextStep.execute({
+              milestoneId: msResult.data.id,
+            });
+            if (nsResult.ok) nextStep = nsResult.data;
+          }
+        }
+
+        const report = formatStatusReport(result.data);
+        const nextStepLine = nextStep ? `\n\n**Next step:** ${nextStep.displayText}` : "";
+
         return {
-          content: [{ type: "text", text: formatStatusReport(result.data) }],
+          content: [{ type: "text", text: report + nextStepLine }],
         };
       },
     }),
@@ -153,6 +173,7 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
     startDiscuss,
     sliceRepo: deps.sliceRepo,
     milestoneRepo: deps.milestoneRepo,
+    suggestNextStep,
   });
 
   // --- Research use case + tool ---
@@ -169,6 +190,7 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
     milestoneRepo: deps.milestoneRepo,
     sessionRepo: deps.workflowSessionRepo,
     artifactFile: deps.artifactFile,
+    suggestNextStep,
   });
 
   // --- Plan use case + tool ---
@@ -186,5 +208,6 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
     milestoneRepo: deps.milestoneRepo,
     sessionRepo: deps.workflowSessionRepo,
     artifactFile: deps.artifactFile,
+    suggestNextStep,
   });
 }

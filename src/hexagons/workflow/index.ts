@@ -40,6 +40,14 @@ export { Escalation } from "./domain/escalation.vo";
 // Domain — Events
 export { WorkflowEscalationRaisedEvent } from "./domain/events/workflow-escalation-raised.event";
 export { WorkflowPhaseChangedEvent } from "./domain/events/workflow-phase-changed.event";
+// Domain — Next Step Suggestion
+export {
+  type NextStepContext,
+  NextStepContextSchema,
+  NextStepSuggestion,
+  type NextStepSuggestionProps,
+  NextStepSuggestionPropsSchema,
+} from "./domain/next-step-suggestion.vo";
 // Domain — Phase Skill Map
 export {
   PHASE_SKILL_MAP,
@@ -156,6 +164,10 @@ export {
   type StartDiscussOutput,
   StartDiscussUseCase,
 } from "./use-cases/start-discuss.use-case";
+export {
+  type SuggestNextStepInput,
+  SuggestNextStepUseCase,
+} from "./use-cases/suggest-next-step.use-case";
 export type { WritePlanInput } from "./use-cases/write-plan.use-case";
 export { WritePlanUseCase } from "./use-cases/write-plan.use-case";
 export { WriteResearchUseCase } from "./use-cases/write-research.use-case";

@@ -1,9 +1,10 @@
 import type { MilestoneRepositoryPort } from "@hexagons/milestone";
 import type { SliceRepositoryPort } from "@hexagons/slice";
 import type { ExtensionAPI, ExtensionCommandContext } from "@infrastructure/pi";
-import { isErr } from "@kernel";
+import { isErr, isOk } from "@kernel";
 import type { ArtifactFilePort } from "../../domain/ports/artifact-file.port";
 import type { WorkflowSessionRepositoryPort } from "../../domain/ports/workflow-session.repository.port";
+import type { SuggestNextStepUseCase } from "../../use-cases/suggest-next-step.use-case";
 import { buildResearchProtocolMessage } from "./research-protocol";
 
 export interface ResearchCommandDeps {
@@ -11,6 +12,7 @@ export interface ResearchCommandDeps {
   milestoneRepo: MilestoneRepositoryPort;
   sessionRepo: WorkflowSessionRepositoryPort;
   artifactFile: ArtifactFilePort;
+  suggestNextStep: SuggestNextStepUseCase;
 }
 
 export function registerResearchCommand(api: ExtensionAPI, deps: ResearchCommandDeps): void {
@@ -85,12 +87,14 @@ export function registerResearchCommand(api: ExtensionAPI, deps: ResearchCommand
         return;
       }
 
-      // 6. Send research protocol message
+      // 6. Get next-step suggestion
+      const nextStepResult = await deps.suggestNextStep.execute({
+        milestoneId: milestone.id,
+      });
       const nextStep =
-        session.autonomyMode === "plan-to-pr"
-          ? `Invoke the next phase command automatically: \`/tff:plan ${slice.label}\`.`
-          : `Suggest the next step to the user: "Next: \`/tff:plan ${slice.label}\`."`;
+        isOk(nextStepResult) && nextStepResult.data ? nextStepResult.data.displayText : "";
 
+      // 7. Send research protocol message
       ctx.sendUserMessage(
         buildResearchProtocolMessage({
           sliceId: slice.id,

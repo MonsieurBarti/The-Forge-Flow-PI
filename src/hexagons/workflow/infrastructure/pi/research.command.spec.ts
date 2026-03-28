@@ -6,6 +6,7 @@ import { err } from "@kernel";
 import { describe, expect, it, vi } from "vitest";
 import { FileIOError } from "../../domain/errors/file-io.error";
 import { WorkflowSessionBuilder } from "../../domain/workflow-session.builder";
+import { SuggestNextStepUseCase } from "../../use-cases/suggest-next-step.use-case";
 import { InMemoryArtifactFileAdapter } from "../in-memory-artifact-file.adapter";
 import { InMemoryWorkflowSessionRepository } from "../in-memory-workflow-session.repository";
 import type { ResearchCommandDeps } from "./research.command";
@@ -30,11 +31,14 @@ function makeMockCtx() {
 describe("registerResearchCommand", () => {
   it("registers tff:research command", () => {
     const api = makeMockApi();
+    const sessionRepo = new InMemoryWorkflowSessionRepository();
+    const sliceRepo = new InMemorySliceRepository();
     const deps: ResearchCommandDeps = {
-      sliceRepo: new InMemorySliceRepository(),
+      sliceRepo,
       milestoneRepo: new InMemoryMilestoneRepository(),
-      sessionRepo: new InMemoryWorkflowSessionRepository(),
+      sessionRepo,
       artifactFile: new InMemoryArtifactFileAdapter(),
+      suggestNextStep: new SuggestNextStepUseCase(sessionRepo, sliceRepo),
     };
     registerResearchCommand(api, deps);
     expect(api.registerCommand).toHaveBeenCalledWith(
@@ -45,11 +49,14 @@ describe("registerResearchCommand", () => {
 
   describe("command handler", () => {
     function makeDeps() {
+      const sessionRepo = new InMemoryWorkflowSessionRepository();
+      const sliceRepo = new InMemorySliceRepository();
       return {
-        sliceRepo: new InMemorySliceRepository(),
+        sliceRepo,
         milestoneRepo: new InMemoryMilestoneRepository(),
-        sessionRepo: new InMemoryWorkflowSessionRepository(),
+        sessionRepo,
         artifactFile: new InMemoryArtifactFileAdapter(),
+        suggestNextStep: new SuggestNextStepUseCase(sessionRepo, sliceRepo),
       };
     }
 

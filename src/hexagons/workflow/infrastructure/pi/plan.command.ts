@@ -4,6 +4,7 @@ import type { ExtensionAPI, ExtensionCommandContext } from "@infrastructure/pi";
 import { isErr, isOk } from "@kernel";
 import type { ArtifactFilePort } from "../../domain/ports/artifact-file.port";
 import type { WorkflowSessionRepositoryPort } from "../../domain/ports/workflow-session.repository.port";
+import type { SuggestNextStepUseCase } from "../../use-cases/suggest-next-step.use-case";
 import { buildPlanProtocolMessage } from "./plan-protocol";
 
 export interface PlanCommandDeps {
@@ -11,6 +12,7 @@ export interface PlanCommandDeps {
   milestoneRepo: MilestoneRepositoryPort;
   sessionRepo: WorkflowSessionRepositoryPort;
   artifactFile: ArtifactFilePort;
+  suggestNextStep: SuggestNextStepUseCase;
 }
 
 export function registerPlanCommand(api: ExtensionAPI, deps: PlanCommandDeps): void {
@@ -91,12 +93,14 @@ export function registerPlanCommand(api: ExtensionAPI, deps: PlanCommandDeps): v
         researchContent = researchResult.data;
       }
 
-      // 7. Send plan protocol message
+      // 7. Get next-step suggestion
+      const nextStepResult = await deps.suggestNextStep.execute({
+        milestoneId: milestone.id,
+      });
       const nextStep =
-        session.autonomyMode === "plan-to-pr"
-          ? `After approval, invoke the next phase: \`/tff:execute ${slice.label}\`.`
-          : `After approval, suggest: "Next: \`/tff:execute ${slice.label}\`."`;
+        isOk(nextStepResult) && nextStepResult.data ? nextStepResult.data.displayText : "";
 
+      // 8. Send plan protocol message
       ctx.sendUserMessage(
         buildPlanProtocolMessage({
           sliceId: slice.id,

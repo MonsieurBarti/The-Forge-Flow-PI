@@ -1,14 +1,16 @@
 import type { MilestoneRepositoryPort } from "@hexagons/milestone";
 import type { SliceRepositoryPort } from "@hexagons/slice";
 import type { ExtensionAPI, ExtensionCommandContext } from "@infrastructure/pi";
-import { isErr } from "@kernel";
+import { isErr, isOk } from "@kernel";
 import type { StartDiscussUseCase } from "../../use-cases/start-discuss.use-case";
+import type { SuggestNextStepUseCase } from "../../use-cases/suggest-next-step.use-case";
 import { buildDiscussProtocolMessage } from "./discuss-protocol";
 
 export interface DiscussCommandDeps {
   startDiscuss: StartDiscussUseCase;
   sliceRepo: SliceRepositoryPort;
   milestoneRepo: MilestoneRepositoryPort;
+  suggestNextStep: SuggestNextStepUseCase;
 }
 
 export function registerDiscussCommand(api: ExtensionAPI, deps: DiscussCommandDeps): void {
@@ -64,12 +66,14 @@ export function registerDiscussCommand(api: ExtensionAPI, deps: DiscussCommandDe
         return;
       }
 
-      // 4. Send protocol message
+      // 4. Get next-step suggestion
+      const nextStepResult = await deps.suggestNextStep.execute({
+        milestoneId: milestone.id,
+      });
       const nextStep =
-        result.data.autonomyMode === "plan-to-pr"
-          ? "Invoke the next phase command automatically."
-          : "Suggest the next step: `/tff:research` (if F-lite/F-full) or `/tff:plan` (if S-tier or research skipped).";
+        isOk(nextStepResult) && nextStepResult.data ? nextStepResult.data.displayText : "";
 
+      // 5. Send protocol message
       ctx.sendUserMessage(
         buildDiscussProtocolMessage({
           sliceId: slice.id,
