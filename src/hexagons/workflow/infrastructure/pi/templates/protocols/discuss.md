@@ -33,4 +33,4 @@ Present the detailed design section by section. For each section, get user confi
 3. Ask the user to approve the final spec.
 4. Call `tff_classify_complexity` with sliceId="{{sliceId}}" and the user-confirmed tier (S, F-lite, or F-full).
 5. Call `tff_workflow_transition` with milestoneId="{{milestoneId}}", trigger="next" (or "skip" if user wants to skip research), and the confirmed complexityTier.
-6. {{autonomyInstruction}}
+6. {{nextStep}}

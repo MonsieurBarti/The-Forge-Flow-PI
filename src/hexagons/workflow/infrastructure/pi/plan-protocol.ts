@@ -10,6 +10,7 @@ export interface PlanProtocolParams {
   specContent: string;
   researchContent: string | null;
   autonomyMode: string;
+  nextStep: string;
 }
 
 const template = readFileSync(new URL("./templates/protocols/plan.md", import.meta.url), "utf-8");
@@ -19,11 +20,6 @@ function render(tmpl: string, vars: Record<string, string>): string {
 }
 
 export function buildPlanProtocolMessage(params: PlanProtocolParams): string {
-  const autonomyInstruction =
-    params.autonomyMode === "plan-to-pr"
-      ? `After approval, invoke the next phase: \`/tff:execute ${params.sliceLabel}\`.`
-      : `After approval, suggest: "Next: \`/tff:execute ${params.sliceLabel}\`."`;
-
   const researchSection = params.researchContent
     ? `## RESEARCH.md\n\n${params.researchContent}`
     : "";
@@ -31,7 +27,7 @@ export function buildPlanProtocolMessage(params: PlanProtocolParams): string {
   return render(template, {
     ...params,
     researchContent: params.researchContent ?? "",
-    autonomyInstruction,
     researchSection,
+    nextStep: params.nextStep,
   });
 }

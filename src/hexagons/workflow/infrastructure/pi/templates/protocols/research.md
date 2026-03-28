@@ -37,4 +37,4 @@ Conduct codebase research to inform the planning phase. Follow these three phase
 8. Ask: "Research complete. Approve to proceed to planning, or request deeper investigation on specific areas?"
 9. If the user requests more investigation: dispatch another Explore agent for the specific area (max 2 total investigation rounds), update RESEARCH.md via `tff_write_research`, and ask again.
 10. On approval: call `tff_workflow_transition` with milestoneId="{{milestoneId}}", trigger="next".
-11. {{autonomyInstruction}}
+11. {{nextStep}}

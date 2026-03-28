@@ -92,6 +92,11 @@ export function registerPlanCommand(api: ExtensionAPI, deps: PlanCommandDeps): v
       }
 
       // 7. Send plan protocol message
+      const nextStep =
+        session.autonomyMode === "plan-to-pr"
+          ? `After approval, invoke the next phase: \`/tff:execute ${slice.label}\`.`
+          : `After approval, suggest: "Next: \`/tff:execute ${slice.label}\`."`;
+
       ctx.sendUserMessage(
         buildPlanProtocolMessage({
           sliceId: slice.id,
@@ -103,6 +108,7 @@ export function registerPlanCommand(api: ExtensionAPI, deps: PlanCommandDeps): v
           specContent: specResult.data,
           researchContent,
           autonomyMode: session.autonomyMode,
+          nextStep,
         }),
       );
     },

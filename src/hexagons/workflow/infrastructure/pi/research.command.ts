@@ -86,6 +86,11 @@ export function registerResearchCommand(api: ExtensionAPI, deps: ResearchCommand
       }
 
       // 6. Send research protocol message
+      const nextStep =
+        session.autonomyMode === "plan-to-pr"
+          ? `Invoke the next phase command automatically: \`/tff:plan ${slice.label}\`.`
+          : `Suggest the next step to the user: "Next: \`/tff:plan ${slice.label}\`."`;
+
       ctx.sendUserMessage(
         buildResearchProtocolMessage({
           sliceId: slice.id,
@@ -96,6 +101,7 @@ export function registerResearchCommand(api: ExtensionAPI, deps: ResearchCommand
           milestoneId: milestone.id,
           specContent: specResult.data,
           autonomyMode: session.autonomyMode,
+          nextStep,
         }),
       );
     },

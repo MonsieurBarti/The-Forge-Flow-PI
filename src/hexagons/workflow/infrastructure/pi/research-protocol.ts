@@ -9,6 +9,7 @@ export interface ResearchProtocolParams {
   milestoneId: string;
   specContent: string;
   autonomyMode: string;
+  nextStep: string;
 }
 
 const template = readFileSync(
@@ -21,13 +22,8 @@ function render(tmpl: string, vars: Record<string, string>): string {
 }
 
 export function buildResearchProtocolMessage(params: ResearchProtocolParams): string {
-  const autonomyInstruction =
-    params.autonomyMode === "plan-to-pr"
-      ? `Invoke the next phase command automatically: \`/tff:plan ${params.sliceLabel}\`.`
-      : `Suggest the next step to the user: "Next: \`/tff:plan ${params.sliceLabel}\`."`;
-
   return render(template, {
     ...params,
-    autonomyInstruction,
+    nextStep: params.nextStep,
   });
 }

@@ -8,6 +8,7 @@ export interface DiscussProtocolParams {
   milestoneLabel: string;
   milestoneId: string;
   autonomyMode: string;
+  nextStep: string;
 }
 
 const template = readFileSync(
@@ -20,13 +21,8 @@ function render(tmpl: string, vars: Record<string, string>): string {
 }
 
 export function buildDiscussProtocolMessage(params: DiscussProtocolParams): string {
-  const autonomyInstruction =
-    params.autonomyMode === "plan-to-pr"
-      ? "Invoke the next phase command automatically."
-      : "Suggest the next step: `/tff:research` (if F-lite/F-full) or `/tff:plan` (if S-tier or research skipped).";
-
   return render(template, {
     ...params,
-    autonomyInstruction,
+    nextStep: params.nextStep,
   });
 }

@@ -11,6 +11,7 @@ describe("buildResearchProtocolMessage", () => {
     milestoneId: "ms-uuid",
     specContent: "# Spec Content\n\nSome spec...",
     autonomyMode: "plan-to-pr",
+    nextStep: "Auto-invoke /tff:plan M03-S06",
   };
 
   it("should include slice context", () => {
@@ -52,14 +53,11 @@ describe("buildResearchProtocolMessage", () => {
     expect(msg).toContain("tff_workflow_transition");
   });
 
-  it("should auto-invoke next command for plan-to-pr mode", () => {
-    const msg = buildResearchProtocolMessage(params);
-    expect(msg).toContain("/tff:plan");
-  });
-
-  it("should suggest next step for guided mode", () => {
-    const msg = buildResearchProtocolMessage({ ...params, autonomyMode: "guided" });
-    expect(msg).toContain("/tff:plan");
-    expect(msg).toContain("suggest");
+  it("includes nextStep text in output", () => {
+    const msg = buildResearchProtocolMessage({
+      ...params,
+      nextStep: "Next: /tff:plan M03-S06",
+    });
+    expect(msg).toContain("Next: /tff:plan M03-S06");
   });
 });

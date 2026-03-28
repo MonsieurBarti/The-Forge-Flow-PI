@@ -41,4 +41,4 @@ PLANNING phase — {{sliceLabel}}: {{sliceTitle}}.
 12. Ask: "Plan written to PLAN.md. **Approve** ⇒ execution, **reject** ⇒ revise?"
 13. reject ⇒ revise per feedback, rewrite via `tff_write_plan` (max 2 iterations), ask again
 14. approve ⇒ `tff_workflow_transition` milestoneId="{{milestoneId}}", trigger="approve"
-15. {{autonomyInstruction}}
+15. {{nextStep}}

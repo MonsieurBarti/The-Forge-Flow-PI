@@ -65,6 +65,11 @@ export function registerDiscussCommand(api: ExtensionAPI, deps: DiscussCommandDe
       }
 
       // 4. Send protocol message
+      const nextStep =
+        result.data.autonomyMode === "plan-to-pr"
+          ? "Invoke the next phase command automatically."
+          : "Suggest the next step: `/tff:research` (if F-lite/F-full) or `/tff:plan` (if S-tier or research skipped).";
+
       ctx.sendUserMessage(
         buildDiscussProtocolMessage({
           sliceId: slice.id,
@@ -74,6 +79,7 @@ export function registerDiscussCommand(api: ExtensionAPI, deps: DiscussCommandDe
           milestoneLabel: milestone.label,
           milestoneId: milestone.id,
           autonomyMode: result.data.autonomyMode,
+          nextStep,
         }),
       );
     },
