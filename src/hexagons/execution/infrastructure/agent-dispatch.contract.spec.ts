@@ -19,10 +19,24 @@ export interface TestConfigurator {
   reset(): void;
 }
 
+export interface ContractTestOptions {
+  /** Test names to skip (matched by substring). Useful when the adapter cannot simulate delays. */
+  skip?: string[];
+}
+
 export function runContractTests(
   name: string,
   factory: () => { adapter: AgentDispatchPort; configurator: TestConfigurator },
+  options?: ContractTestOptions,
 ) {
+  const skipSet = options?.skip ?? [];
+  const testFn = (title: string, fn: () => Promise<void> | void) => {
+    if (skipSet.some((s) => title.includes(s))) {
+      it.skip(title, fn);
+    } else {
+      it(title, fn);
+    }
+  };
   describe(`${name} contract`, () => {
     let adapter: AgentDispatchPort;
     let configurator: TestConfigurator;
@@ -35,7 +49,7 @@ export function runContractTests(
     });
 
     describe("dispatch", () => {
-      it("returns ok result for successful dispatch", async () => {
+      testFn("returns ok result for successful dispatch", async () => {
         const config = new AgentDispatchConfigBuilder().withTaskId(TASK_1).build();
         configurator.givenSuccess(TASK_1);
         const result = await adapter.dispatch(config);
@@ -46,7 +60,7 @@ export function runContractTests(
         }
       });
 
-      it("returns error result for failed dispatch", async () => {
+      testFn("returns error result for failed dispatch", async () => {
         const config = new AgentDispatchConfigBuilder().withTaskId(TASK_1).build();
         configurator.givenFailure(TASK_1, AgentDispatchError.unexpectedFailure(TASK_1, "boom"));
         const result = await adapter.dispatch(config);
@@ -56,7 +70,7 @@ export function runContractTests(
         }
       });
 
-      it("creates isolated sessions — no bleed between tasks (AC1)", async () => {
+      testFn("creates isolated sessions — no bleed between tasks (AC1)", async () => {
         const config1 = new AgentDispatchConfigBuilder().withTaskId(TASK_1).build();
         const config2 = new AgentDispatchConfigBuilder().withTaskId(TASK_2).build();
         configurator.givenSuccess(TASK_1);
@@ -73,7 +87,7 @@ export function runContractTests(
         }
       });
 
-      it("includes cost tracking data in result (AC2)", async () => {
+      testFn("includes cost tracking data in result (AC2)", async () => {
         const config = new AgentDispatchConfigBuilder().withTaskId(TASK_1).build();
         configurator.givenSuccess(TASK_1);
         const result = await adapter.dispatch(config);
@@ -87,7 +101,7 @@ export function runContractTests(
         }
       });
 
-      it("includes duration in result", async () => {
+      testFn("includes duration in result", async () => {
         const config = new AgentDispatchConfigBuilder().withTaskId(TASK_1).build();
         configurator.givenSuccess(TASK_1);
         const result = await adapter.dispatch(config);
@@ -99,7 +113,7 @@ export function runContractTests(
     });
 
     describe("abort", () => {
-      it("aborts a running agent by taskId (AC3)", async () => {
+      testFn("aborts a running agent by taskId (AC3)", async () => {
         const config = new AgentDispatchConfigBuilder().withTaskId(TASK_1).build();
         configurator.givenDelayed(TASK_1, 5000);
 
@@ -116,11 +130,11 @@ export function runContractTests(
         }
       });
 
-      it("is no-op for unknown taskId", async () => {
+      testFn("is no-op for unknown taskId", async () => {
         await expect(adapter.abort(NONEXISTENT)).resolves.toBeUndefined();
       });
 
-      it("isRunning returns false after abort", async () => {
+      testFn("isRunning returns false after abort", async () => {
         const config = new AgentDispatchConfigBuilder().withTaskId(TASK_1).build();
         configurator.givenDelayed(TASK_1, 5000);
 
@@ -134,7 +148,7 @@ export function runContractTests(
     });
 
     describe("isRunning", () => {
-      it("returns true while agent is dispatched (AC4)", async () => {
+      testFn("returns true while agent is dispatched (AC4)", async () => {
         const config = new AgentDispatchConfigBuilder().withTaskId(TASK_1).build();
         configurator.givenDelayed(TASK_1, 5000);
 
@@ -146,14 +160,14 @@ export function runContractTests(
         await dispatchPromise;
       });
 
-      it("returns false after agent completes", async () => {
+      testFn("returns false after agent completes", async () => {
         const config = new AgentDispatchConfigBuilder().withTaskId(TASK_1).build();
         configurator.givenSuccess(TASK_1);
         await adapter.dispatch(config);
         expect(adapter.isRunning(TASK_1)).toBe(false);
       });
 
-      it("returns false for never-dispatched taskId", () => {
+      testFn("returns false for never-dispatched taskId", () => {
         expect(adapter.isRunning(NONEXISTENT)).toBe(false);
       });
     });
