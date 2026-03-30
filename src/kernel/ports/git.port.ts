@@ -1,6 +1,6 @@
 import type { GitError } from "@kernel/errors";
 import type { Result } from "@kernel/result";
-import type { GitLogEntry, GitStatus } from "./git.schemas";
+import type { GitLogEntry, GitStatus, GitWorktreeEntry } from "./git.schemas";
 
 export abstract class GitPort {
   abstract listBranches(pattern: string): Promise<Result<string[], GitError>>;
@@ -11,4 +11,13 @@ export abstract class GitPort {
   abstract commit(message: string, paths: string[]): Promise<Result<string, GitError>>;
   abstract revert(commitHash: string): Promise<Result<void, GitError>>;
   abstract isAncestor(ancestor: string, descendant: string): Promise<Result<boolean, GitError>>;
+  abstract worktreeAdd(
+    path: string,
+    branch: string,
+    baseBranch: string,
+  ): Promise<Result<void, GitError>>;
+  abstract worktreeRemove(path: string): Promise<Result<void, GitError>>;
+  abstract worktreeList(): Promise<Result<GitWorktreeEntry[], GitError>>;
+  abstract deleteBranch(name: string, force?: boolean): Promise<Result<void, GitError>>;
+  abstract statusAt(cwd: string): Promise<Result<GitStatus, GitError>>;
 }

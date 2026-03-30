@@ -24,3 +24,11 @@ export const GitStatusSchema = z.object({
   entries: z.array(GitStatusEntrySchema),
 });
 export type GitStatus = z.infer<typeof GitStatusSchema>;
+
+export const GitWorktreeEntrySchema = z.object({
+  path: z.string(),
+  branch: z.string().optional(),
+  head: z.string(),
+  bare: z.boolean(),
+});
+export type GitWorktreeEntry = z.infer<typeof GitWorktreeEntrySchema>;
