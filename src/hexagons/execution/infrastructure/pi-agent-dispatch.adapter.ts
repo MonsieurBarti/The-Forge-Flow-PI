@@ -1,5 +1,13 @@
 import { err, ok, type Result } from "@kernel";
 import type { AgentDispatchConfig, AgentResult } from "@kernel/agents";
+import type {
+  AgentConcern,
+  AgentStatus,
+  SelfReviewChecklist,
+} from "@kernel/agents/agent-status.schema";
+import { crossCheckAgentResult } from "@kernel/agents/agent-status-cross-checker";
+import { parseAgentStatusReport } from "@kernel/agents/agent-status-parser";
+import { AGENT_STATUS_PROMPT } from "@kernel/agents/agent-status-prompt";
 import type { Api, KnownProvider, Model } from "@mariozechner/pi-ai";
 import { getModels, getProviders } from "@mariozechner/pi-ai";
 import {
@@ -31,6 +39,16 @@ const TOOL_MAP: Record<string, PiTool> = {
   Grep: grepTool,
   Find: findTool,
   Ls: lsTool,
+};
+
+const FAILED_SELF_REVIEW: SelfReviewChecklist = {
+  dimensions: [
+    { dimension: "completeness", passed: false },
+    { dimension: "quality", passed: false },
+    { dimension: "discipline", passed: false },
+    { dimension: "verification", passed: false },
+  ],
+  overallConfidence: "low",
 };
 
 function resolveTools(toolNames: string[]): PiTool[] {
@@ -104,9 +122,10 @@ export class PiAgentDispatchAdapter extends AgentDispatchPort {
       this.running.set(config.taskId, session);
 
       const startTime = Date.now();
-      const prompt = config.systemPrompt
-        ? `${config.systemPrompt}\n\n---\n\n${config.taskPrompt}`
-        : config.taskPrompt;
+      const fullSystemPrompt = config.systemPrompt
+        ? `${config.systemPrompt}\n\n${AGENT_STATUS_PROMPT}`
+        : AGENT_STATUS_PROMPT;
+      const prompt = `${fullSystemPrompt}\n\n---\n\n${config.taskPrompt}`;
 
       await session.prompt(prompt);
 
@@ -122,30 +141,51 @@ export class PiAgentDispatchAdapter extends AgentDispatchPort {
         return err(AgentDispatchError.unexpectedFailure(config.taskId, stateError));
       }
 
-      // NOTE: status/selfReview parsing integrated in S06/T06 (PI adapter integration)
+      const cost = {
+        provider: config.model.provider,
+        modelId: config.model.modelId,
+        inputTokens: stats.tokens.input,
+        outputTokens: stats.tokens.output,
+        costUsd: stats.cost,
+      };
+
+      const parseResult = parseAgentStatusReport(output);
+      let status: AgentStatus;
+      let concerns: AgentConcern[];
+      let selfReview: SelfReviewChecklist;
+
+      if (parseResult.ok) {
+        status = parseResult.data.status;
+        concerns = [...parseResult.data.concerns];
+        selfReview = parseResult.data.selfReview;
+      } else {
+        status = "BLOCKED";
+        concerns = [
+          {
+            area: "status-protocol",
+            description: `Failed to parse status report: ${parseResult.error.message}`,
+            severity: "critical",
+          },
+        ];
+        selfReview = FAILED_SELF_REVIEW;
+      }
+
+      const crossCheck = crossCheckAgentResult(
+        { status, concerns, selfReview },
+        { filesChanged: [], durationMs, cost },
+        config.agentType,
+      );
+      concerns.push(...crossCheck.discrepancies);
+
       return ok({
         taskId: config.taskId,
         agentType: config.agentType,
-        status: "DONE" as const,
-        concerns: [],
-        selfReview: {
-          dimensions: [
-            { dimension: "completeness" as const, passed: true },
-            { dimension: "quality" as const, passed: true },
-            { dimension: "discipline" as const, passed: true },
-            { dimension: "verification" as const, passed: true },
-          ],
-          overallConfidence: "high" as const,
-        },
+        status,
         output,
         filesChanged: [], // Git diff deferred to execution engine (S07)
-        cost: {
-          provider: config.model.provider,
-          modelId: config.model.modelId,
-          inputTokens: stats.tokens.input,
-          outputTokens: stats.tokens.output,
-          costUsd: stats.cost,
-        },
+        concerns,
+        selfReview,
+        cost,
         durationMs,
       } satisfies AgentResult);
     } catch (e) {

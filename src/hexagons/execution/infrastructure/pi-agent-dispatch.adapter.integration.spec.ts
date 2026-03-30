@@ -44,9 +44,27 @@ function createAdapter(ctx: FauxTestContext): PiAgentDispatchAdapter {
   });
 }
 
+const VALID_STATUS_REPORT_RESPONSE = `Task completed.
+
+<!-- TFF_STATUS_REPORT -->
+{
+  "status": "DONE",
+  "concerns": [],
+  "selfReview": {
+    "dimensions": [
+      { "dimension": "completeness", "passed": true },
+      { "dimension": "quality", "passed": true },
+      { "dimension": "discipline", "passed": true },
+      { "dimension": "verification", "passed": true }
+    ],
+    "overallConfidence": "high"
+  }
+}
+<!-- /TFF_STATUS_REPORT -->`;
+
 const createTestConfigurator = (ctx: FauxTestContext): TestConfigurator => ({
   givenSuccess(_taskId: string) {
-    ctx.faux.appendResponses([fauxAssistantMessage("Task completed")]);
+    ctx.faux.appendResponses([fauxAssistantMessage(VALID_STATUS_REPORT_RESPONSE)]);
   },
   givenFailure(_taskId: string, _error: AgentDispatchError) {
     ctx.faux.appendResponses([
@@ -59,7 +77,7 @@ const createTestConfigurator = (ctx: FauxTestContext): TestConfigurator => ({
   givenDelayed(_taskId: string, _delayMs: number) {
     // Faux provider responds instantly; delay cannot be simulated.
     // Abort-related contract tests are skipped below.
-    ctx.faux.appendResponses([fauxAssistantMessage("Task completed")]);
+    ctx.faux.appendResponses([fauxAssistantMessage(VALID_STATUS_REPORT_RESPONSE)]);
   },
   reset() {
     ctx.faux.unregister();
