@@ -9,9 +9,7 @@ import type {
 export class AggregateMetricsUseCase {
   constructor(private readonly metricsRepo: MetricsRepositoryPort) {}
 
-  async aggregateBySlice(
-    sliceId: string,
-  ): Promise<Result<AggregatedMetrics, PersistenceError>> {
+  async aggregateBySlice(sliceId: string): Promise<Result<AggregatedMetrics, PersistenceError>> {
     const result = await this.metricsRepo.readBySlice(sliceId);
     if (!result.ok) return result;
     return ok(this.aggregate(result.data, { sliceId }));
@@ -31,10 +29,7 @@ export class AggregateMetricsUseCase {
   ): AggregatedMetrics {
     const totalCostUsd = entries.reduce((sum, e) => sum + e.costUsd, 0);
     const totalInputTokens = entries.reduce((sum, e) => sum + e.tokens.input, 0);
-    const totalOutputTokens = entries.reduce(
-      (sum, e) => sum + e.tokens.output,
-      0,
-    );
+    const totalOutputTokens = entries.reduce((sum, e) => sum + e.tokens.output, 0);
     const totalDurationMs = entries.reduce((sum, e) => sum + e.durationMs, 0);
     const taskCount = entries.length;
     const successCount = entries.filter((e) => e.success).length;
