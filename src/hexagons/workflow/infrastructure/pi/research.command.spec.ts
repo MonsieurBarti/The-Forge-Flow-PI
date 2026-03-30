@@ -165,7 +165,7 @@ describe("registerResearchCommand", () => {
       await deps.artifactFile.write("M03", "M03-S06", "spec", "# SPEC\n\nsome content");
 
       const ctx = await invokeHandler(deps, "M03-S06");
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("RESEARCH phase"));
+      expect(ctx.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("RESEARCHING —"));
     });
 
     it("resolves slice by UUID when label lookup returns null", async () => {
@@ -183,7 +183,7 @@ describe("registerResearchCommand", () => {
       await deps.artifactFile.write("M03", "M03-S06", "spec", "# SPEC content");
 
       const ctx = await invokeHandler(deps, slice.id);
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("RESEARCH phase"));
+      expect(ctx.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("RESEARCHING —"));
     });
   });
 });
