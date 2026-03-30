@@ -86,7 +86,7 @@ export class GitWorktreeAdapter extends WorktreePort {
         sliceId,
         branch: entry.branch ?? `slice/${sliceId}`,
         path: resolvedPath,
-        baseBranch: "",
+        baseBranch: this.baseBranchFor(sliceId),
       });
     }
 
