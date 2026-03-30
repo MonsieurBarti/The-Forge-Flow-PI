@@ -1,4 +1,4 @@
-import type { ComplexityTier, ResolvedModel } from "@kernel";
+import type { AgentDispatchConfig, ComplexityTier, ResolvedModel } from "@kernel";
 import type { DomainRouter } from "./domain-router";
 
 export interface PromptBuilderConfig {
@@ -27,17 +27,7 @@ export class PromptBuilder {
     private readonly templateContent: string,
   ) {}
 
-  build(task: PromptBuilderTask): {
-    taskId: string;
-    sliceId: string;
-    agentType: "executor";
-    workingDirectory: string;
-    systemPrompt: string;
-    taskPrompt: string;
-    model: ResolvedModel;
-    tools: string[];
-    filePaths: string[];
-  } {
+  build(task: PromptBuilderTask): AgentDispatchConfig {
     const skills = this.router.resolve(task.filePaths);
     return {
       taskId: task.id,

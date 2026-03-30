@@ -21,19 +21,6 @@ describe("ExecutionError", () => {
     expect(e.metadata?.sliceId).toBe("slice-1");
   });
 
-  it("waveFailed includes waveIndex and failedTaskIds", () => {
-    const e = ExecutionError.waveFailed("slice-1", 2, ["t1", "t2"]);
-    expect(e.code).toBe("EXECUTION.WAVE_FAILED");
-    expect(e.metadata?.waveIndex).toBe(2);
-    expect(e.metadata?.failedTaskIds).toEqual(["t1", "t2"]);
-  });
-
-  it("staleClaim includes taskId", () => {
-    const e = ExecutionError.staleClaim("task-1");
-    expect(e.code).toBe("EXECUTION.STALE_CLAIM");
-    expect(e.metadata?.taskId).toBe("task-1");
-  });
-
   it("extends Error", () => {
     expect(ExecutionError.noTasks("x")).toBeInstanceOf(Error);
   });

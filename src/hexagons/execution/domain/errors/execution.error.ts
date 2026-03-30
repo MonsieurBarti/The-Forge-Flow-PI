@@ -29,20 +29,4 @@ export class ExecutionError extends BaseDomainError {
       { sliceId },
     );
   }
-
-  static waveFailed(sliceId: string, waveIndex: number, failedTaskIds: string[]): ExecutionError {
-    return new ExecutionError(
-      "EXECUTION.WAVE_FAILED",
-      `Wave ${waveIndex} failed: ${failedTaskIds.length} task(s)`,
-      { sliceId, waveIndex, failedTaskIds },
-    );
-  }
-
-  static staleClaim(taskId: string): ExecutionError {
-    return new ExecutionError(
-      "EXECUTION.STALE_CLAIM",
-      `Task ${taskId} has stale in_progress claim`,
-      { taskId },
-    );
-  }
 }
