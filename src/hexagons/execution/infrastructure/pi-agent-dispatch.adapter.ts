@@ -152,6 +152,7 @@ export class PiAgentDispatchAdapter extends AgentDispatchPort {
     if (session) {
       await session.abort();
       this.running.delete(taskId);
+      session.dispose();
     }
   }
 
