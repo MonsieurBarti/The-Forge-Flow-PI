@@ -156,11 +156,15 @@ describe("FileWrittenEntrySchema", () => {
   });
 
   it("parses operation 'modified'", () => {
-    expect(FileWrittenEntrySchema.parse({ ...valid, operation: "modified" }).operation).toBe("modified");
+    expect(FileWrittenEntrySchema.parse({ ...valid, operation: "modified" }).operation).toBe(
+      "modified",
+    );
   });
 
   it("parses operation 'deleted'", () => {
-    expect(FileWrittenEntrySchema.parse({ ...valid, operation: "deleted" }).operation).toBe("deleted");
+    expect(FileWrittenEntrySchema.parse({ ...valid, operation: "deleted" }).operation).toBe(
+      "deleted",
+    );
   });
 
   it("rejects invalid operation value", () => {
@@ -255,15 +259,21 @@ describe("ArtifactWrittenEntrySchema", () => {
   });
 
   it("parses artifactType 'plan'", () => {
-    expect(ArtifactWrittenEntrySchema.parse({ ...valid, artifactType: "plan" }).artifactType).toBe("plan");
+    expect(ArtifactWrittenEntrySchema.parse({ ...valid, artifactType: "plan" }).artifactType).toBe(
+      "plan",
+    );
   });
 
   it("parses artifactType 'research'", () => {
-    expect(ArtifactWrittenEntrySchema.parse({ ...valid, artifactType: "research" }).artifactType).toBe("research");
+    expect(
+      ArtifactWrittenEntrySchema.parse({ ...valid, artifactType: "research" }).artifactType,
+    ).toBe("research");
   });
 
   it("parses artifactType 'checkpoint'", () => {
-    expect(ArtifactWrittenEntrySchema.parse({ ...valid, artifactType: "checkpoint" }).artifactType).toBe("checkpoint");
+    expect(
+      ArtifactWrittenEntrySchema.parse({ ...valid, artifactType: "checkpoint" }).artifactType,
+    ).toBe("checkpoint");
   });
 
   it("rejects invalid artifactType", () => {
