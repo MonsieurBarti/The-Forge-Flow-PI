@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { TaskMetricsSchema } from "./task-metrics.schemas";
 import { TaskMetricsBuilder } from "./task-metrics.builder";
+import { TaskMetricsSchema } from "./task-metrics.schemas";
 
 describe("TaskMetricsBuilder", () => {
   it("builds valid TaskMetrics with defaults", () => {
