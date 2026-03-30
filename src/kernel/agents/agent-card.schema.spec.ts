@@ -7,6 +7,7 @@ describe("AgentTypeSchema", () => {
     expect(AgentTypeSchema.parse("code-reviewer")).toBe("code-reviewer");
     expect(AgentTypeSchema.parse("security-auditor")).toBe("security-auditor");
     expect(AgentTypeSchema.parse("fixer")).toBe("fixer");
+    expect(AgentTypeSchema.parse("executor")).toBe("executor");
   });
 
   it("rejects unknown agent type", () => {
@@ -18,6 +19,7 @@ describe("AgentCapabilitySchema", () => {
   it("accepts valid capabilities", () => {
     expect(AgentCapabilitySchema.parse("review")).toBe("review");
     expect(AgentCapabilitySchema.parse("fix")).toBe("fix");
+    expect(AgentCapabilitySchema.parse("execute")).toBe("execute");
   });
 
   it("rejects unknown capability", () => {

@@ -166,7 +166,7 @@ describe("registerPlanCommand", () => {
       await deps.artifactFile.write("M03", "M03-S07", "research", "# RESEARCH\n\nsome research");
 
       const ctx = await invokeHandler(deps, "M03-S07");
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("PLANNING phase"));
+      expect(ctx.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("PLANNING —"));
     });
 
     it("proceeds without RESEARCH.md when not present", async () => {
@@ -190,7 +190,7 @@ describe("registerPlanCommand", () => {
       // No RESEARCH.md written
 
       const ctx = await invokeHandler(deps, "M03-S07");
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("PLANNING phase"));
+      expect(ctx.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("PLANNING —"));
     });
 
     it("resolves slice by UUID when label lookup returns null", async () => {
@@ -208,7 +208,7 @@ describe("registerPlanCommand", () => {
       await deps.artifactFile.write("M03", "M03-S07", "spec", "# SPEC content");
 
       const ctx = await invokeHandler(deps, slice.id);
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("PLANNING phase"));
+      expect(ctx.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("PLANNING —"));
     });
   });
 });

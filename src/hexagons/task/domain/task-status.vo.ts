@@ -11,7 +11,7 @@ export class TaskStatusVO extends ValueObject<TaskStatusVOProps> {
     ReadonlySet<TaskStatus>
   >([
     ["open", new Set(["in_progress", "blocked"])],
-    ["in_progress", new Set(["closed"])],
+    ["in_progress", new Set(["closed", "blocked"])],
     ["blocked", new Set(["open", "blocked"])],
   ]);
 

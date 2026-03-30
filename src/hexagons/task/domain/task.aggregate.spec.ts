@@ -161,12 +161,15 @@ describe("Task", () => {
       expect(t.pullEvents()).toEqual([]);
     });
 
-    it("rejects from in_progress", () => {
+    it("allows from in_progress (execution failure path)", () => {
       const t = Task.createNew({ id, sliceId, label: "T01", title: "Schemas", now });
       t.start(now);
-      const result = t.block([crypto.randomUUID()], later);
+      const blockerId = crypto.randomUUID();
+      const result = t.block([blockerId], later);
 
-      expect(isErr(result)).toBe(true);
+      expect(isOk(result)).toBe(true);
+      expect(t.status).toBe("blocked");
+      expect(t.blockedBy).toContain(blockerId);
     });
   });
 

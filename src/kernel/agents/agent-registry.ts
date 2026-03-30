@@ -49,6 +49,18 @@ export const AGENT_REGISTRY: ReadonlyMap<AgentType, AgentCard> = new Map<AgentTy
       optionalTools: [],
     },
   ],
+  [
+    "executor",
+    {
+      type: "executor",
+      displayName: "Executor",
+      description: "Executes slice tasks via wave-based parallelism with agent dispatch",
+      capabilities: ["execute"],
+      defaultModelProfile: "budget",
+      requiredTools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      optionalTools: [],
+    },
+  ],
 ]);
 
 export function getAgentCard(type: AgentType): AgentCard {

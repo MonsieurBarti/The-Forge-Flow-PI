@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { loadResource } from "@resources";
 
 export interface ResearchProtocolParams {
   sliceId: string;
@@ -12,10 +12,7 @@ export interface ResearchProtocolParams {
   nextStep: string;
 }
 
-const template = readFileSync(
-  new URL("./templates/protocols/research.md", import.meta.url),
-  "utf-8",
-);
+const template = loadResource("protocols/research.md");
 
 function render(tmpl: string, vars: Record<string, string>): string {
   return tmpl.replace(/\{\{(\w+)\}\}/g, (_, key: string) => vars[key] ?? `{{${key}}}`);

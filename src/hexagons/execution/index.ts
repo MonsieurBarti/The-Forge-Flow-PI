@@ -1,7 +1,18 @@
 // Application -- Use Cases
 export { AggregateMetricsUseCase } from "./application/aggregate-metrics.use-case";
 export { CleanupOrphanedWorktreesUseCase } from "./application/cleanup-orphaned-worktrees.use-case";
+// Application -- Collaborators
+export { DomainRouter } from "./application/domain-router";
+export type { ExecuteSliceInput, ExecuteSliceResult } from "./application/execute-slice.schemas";
+// Application -- Schemas
+export {
+  ExecuteSliceInputSchema,
+  ExecuteSliceResultSchema,
+} from "./application/execute-slice.schemas";
+export { ExecuteSliceUseCase } from "./application/execute-slice.use-case";
 export { JournalEventHandler } from "./application/journal-event-handler";
+export type { PromptBuilderConfig, PromptBuilderTask } from "./application/prompt-builder";
+export { PromptBuilder } from "./application/prompt-builder";
 export { RecordTaskMetricsUseCase } from "./application/record-task-metrics.use-case";
 export { ReplayJournalUseCase, type ReplayResult } from "./application/replay-journal.use-case";
 export {
@@ -15,6 +26,7 @@ export { CheckpointPropsSchema, ExecutorLogEntrySchema } from "./domain/checkpoi
 // Domain -- Errors
 export { AgentDispatchError } from "./domain/errors/agent-dispatch.error";
 export { CheckpointNotFoundError } from "./domain/errors/checkpoint-not-found.error";
+export { ExecutionError } from "./domain/errors/execution.error";
 export { InvalidCheckpointStateError } from "./domain/errors/invalid-checkpoint-state.error";
 export { JournalReadError } from "./domain/errors/journal-read.error";
 export { JournalReplayError } from "./domain/errors/journal-replay.error";
@@ -22,6 +34,7 @@ export { JournalWriteError } from "./domain/errors/journal-write.error";
 export { RollbackError } from "./domain/errors/rollback.error";
 export { WorktreeError } from "./domain/errors/worktree.error";
 // Domain -- Events
+export { AllTasksCompletedEvent } from "./domain/events/all-tasks-completed.event";
 export { CheckpointSavedEvent } from "./domain/events/checkpoint-saved.event";
 export { TaskExecutionCompletedEvent } from "./domain/events/task-execution-completed.event";
 export type {

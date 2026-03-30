@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { loadResource } from "@resources";
 
 export interface PlanProtocolParams {
   sliceId: string;
@@ -13,7 +13,7 @@ export interface PlanProtocolParams {
   nextStep: string;
 }
 
-const template = readFileSync(new URL("./templates/protocols/plan.md", import.meta.url), "utf-8");
+const template = loadResource("protocols/plan.md");
 
 function render(tmpl: string, vars: Record<string, string>): string {
   return tmpl.replace(/\{\{(\w+)\}\}/g, (_, key: string) => vars[key] ?? `{{${key}}}`);
