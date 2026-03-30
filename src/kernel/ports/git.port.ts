@@ -9,4 +9,6 @@ export abstract class GitPort {
   abstract log(branch: string, limit?: number): Promise<Result<GitLogEntry[], GitError>>;
   abstract status(): Promise<Result<GitStatus, GitError>>;
   abstract commit(message: string, paths: string[]): Promise<Result<string, GitError>>;
+  abstract revert(commitHash: string): Promise<Result<void, GitError>>;
+  abstract isAncestor(ancestor: string, descendant: string): Promise<Result<boolean, GitError>>;
 }

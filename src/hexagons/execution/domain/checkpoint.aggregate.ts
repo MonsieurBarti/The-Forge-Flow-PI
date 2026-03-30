@@ -125,6 +125,7 @@ export class Checkpoint extends AggregateRoot<CheckpointProps> {
         occurredAt: now,
         sliceId: this.props.sliceId,
         waveIndex: this.props.currentWaveIndex,
+        completedTaskCount: this.props.completedTasks.length,
       }),
     );
     return ok(undefined);
@@ -149,6 +150,7 @@ export class Checkpoint extends AggregateRoot<CheckpointProps> {
         occurredAt: now,
         sliceId: this.props.sliceId,
         waveIndex: this.props.currentWaveIndex - 1,
+        completedTaskCount: this.props.completedTasks.length,
       }),
     );
     return ok(undefined);
