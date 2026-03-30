@@ -1,4 +1,5 @@
 import { type DomainEvent, EVENT_NAMES, type EventBusPort } from "@kernel";
+import { isSuccessfulStatus } from "@kernel/agents";
 import { TaskExecutionCompletedEvent } from "../domain/events/task-execution-completed.event";
 import type { MetricsRepositoryPort } from "../domain/ports/metrics-repository.port";
 import type { TaskMetrics } from "../domain/task-metrics.schemas";
@@ -30,8 +31,7 @@ export class RecordTaskMetricsUseCase {
       },
       costUsd: event.agentResult.cost.costUsd,
       durationMs: event.agentResult.durationMs,
-      success:
-        event.agentResult.status === "DONE" || event.agentResult.status === "DONE_WITH_CONCERNS",
+      success: isSuccessfulStatus(event.agentResult.status),
       retries: 0,
       downshifted: false,
       reflectionPassed: undefined,
