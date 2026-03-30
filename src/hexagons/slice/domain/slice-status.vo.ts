@@ -13,7 +13,7 @@ export class SliceStatusVO extends ValueObject<SliceStatusVOProps> {
     ["discussing", new Set(["researching"])],
     ["researching", new Set(["planning"])],
     ["planning", new Set(["planning", "executing"])],
-    ["executing", new Set(["verifying"])],
+    ["executing", new Set(["verifying", "planning"])],
     ["verifying", new Set(["executing", "reviewing"])],
     ["reviewing", new Set(["executing", "completing"])],
     ["completing", new Set(["closed"])],
