@@ -97,8 +97,9 @@ export class Slice extends AggregateRoot<SliceProps> {
   }
 
   transitionTo(target: SliceStatus, now: Date): Result<void, InvalidTransitionError> {
-    const currentVO = SliceStatusVO.create(this.props.status);
-    const isSelfTransition = this.props.status === target;
+    const from = this.props.status;
+    const currentVO = SliceStatusVO.create(from);
+    const isSelfTransition = from === target;
     const result = currentVO.transitionTo(target);
 
     if (!result.ok) {
@@ -114,6 +115,8 @@ export class Slice extends AggregateRoot<SliceProps> {
           id: crypto.randomUUID(),
           aggregateId: this.props.id,
           occurredAt: now,
+          from,
+          to: target,
         }),
       );
     }

@@ -160,4 +160,19 @@ export class GitCliAdapter extends GitPort {
     const match = commitResult.data.match(/\[\S+\s+(?:\(root-commit\)\s+)?([a-f0-9]+)\]/);
     return ok(match ? match[1] : commitResult.data.trim());
   }
+
+  async revert(commitHash: string): Promise<Result<void, GitError>> {
+    const result = await this.runGit(["revert", "--no-edit", commitHash]);
+    if (!result.ok) return result;
+    return ok(undefined);
+  }
+
+  async isAncestor(ancestor: string, descendant: string): Promise<Result<boolean, GitError>> {
+    const result = await this.runGit(["merge-base", "--is-ancestor", ancestor, descendant]);
+    if (result.ok) return ok(true);
+    // REF_NOT_FOUND means an invalid hash was supplied — propagate the error
+    if (result.error.code === "GIT.REF_NOT_FOUND") return result;
+    // COMMAND_FAILED with exit code 1 means "not an ancestor" — not an error condition
+    return ok(false);
+  }
 }
