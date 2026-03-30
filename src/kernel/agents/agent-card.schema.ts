@@ -6,10 +6,11 @@ export const AgentTypeSchema = z.enum([
   "code-reviewer",
   "security-auditor",
   "fixer",
+  "executor",
 ]);
 export type AgentType = z.infer<typeof AgentTypeSchema>;
 
-export const AgentCapabilitySchema = z.enum(["review", "fix"]);
+export const AgentCapabilitySchema = z.enum(["review", "fix", "execute"]);
 export type AgentCapability = z.infer<typeof AgentCapabilitySchema>;
 
 export const AgentCardSchema = z.object({
