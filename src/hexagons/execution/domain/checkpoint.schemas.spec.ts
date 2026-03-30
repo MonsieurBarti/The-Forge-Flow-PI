@@ -38,9 +38,9 @@ describe("CheckpointPropsSchema", () => {
     sliceId: crypto.randomUUID(),
     baseCommit: "abc123f",
     currentWaveIndex: 0,
-    completedWaves: [] as number[],
-    completedTasks: [] as string[],
-    executorLog: [] as unknown[],
+    completedWaves: [],
+    completedTasks: [],
+    executorLog: [],
     createdAt: new Date(),
     updatedAt: new Date(),
   };
