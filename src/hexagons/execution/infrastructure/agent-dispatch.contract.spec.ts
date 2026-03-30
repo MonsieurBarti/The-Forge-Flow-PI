@@ -56,7 +56,9 @@ export function runContractTests(
         expect(isOk(result)).toBe(true);
         if (isOk(result)) {
           expect(result.data.taskId).toBe(TASK_1);
-          expect(result.data.success).toBe(true);
+          expect(result.data.status === "DONE" || result.data.status === "DONE_WITH_CONCERNS").toBe(
+            true,
+          );
         }
       });
 

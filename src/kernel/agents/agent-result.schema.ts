@@ -1,6 +1,11 @@
 import { IdSchema } from "@kernel/schemas";
 import { z } from "zod";
 import { AgentTypeSchema } from "./agent-card.schema";
+import {
+  AgentConcernSchema,
+  AgentStatusSchema,
+  SelfReviewChecklistSchema,
+} from "./agent-status.schema";
 
 export const AgentCostSchema = z.object({
   provider: z.string().min(1),
@@ -14,9 +19,11 @@ export type AgentCost = z.infer<typeof AgentCostSchema>;
 export const AgentResultSchema = z.object({
   taskId: IdSchema,
   agentType: AgentTypeSchema,
-  success: z.boolean(),
+  status: AgentStatusSchema,
   output: z.string(),
   filesChanged: z.array(z.string()).default([]),
+  concerns: z.array(AgentConcernSchema).default([]),
+  selfReview: SelfReviewChecklistSchema,
   cost: AgentCostSchema,
   durationMs: z.number().int().nonnegative(),
   error: z.string().optional(),

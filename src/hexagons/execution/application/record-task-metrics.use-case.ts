@@ -30,7 +30,8 @@ export class RecordTaskMetricsUseCase {
       },
       costUsd: event.agentResult.cost.costUsd,
       durationMs: event.agentResult.durationMs,
-      success: event.agentResult.success,
+      success:
+        event.agentResult.status === "DONE" || event.agentResult.status === "DONE_WITH_CONCERNS",
       retries: 0,
       downshifted: false,
       reflectionPassed: undefined,

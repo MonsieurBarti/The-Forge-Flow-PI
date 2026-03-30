@@ -122,10 +122,21 @@ export class PiAgentDispatchAdapter extends AgentDispatchPort {
         return err(AgentDispatchError.unexpectedFailure(config.taskId, stateError));
       }
 
+      // NOTE: status/selfReview parsing integrated in S06/T06 (PI adapter integration)
       return ok({
         taskId: config.taskId,
         agentType: config.agentType,
-        success: true,
+        status: "DONE" as const,
+        concerns: [],
+        selfReview: {
+          dimensions: [
+            { dimension: "completeness" as const, passed: true },
+            { dimension: "quality" as const, passed: true },
+            { dimension: "discipline" as const, passed: true },
+            { dimension: "verification" as const, passed: true },
+          ],
+          overallConfidence: "high" as const,
+        },
         output,
         filesChanged: [], // Git diff deferred to execution engine (S07)
         cost: {
@@ -136,7 +147,7 @@ export class PiAgentDispatchAdapter extends AgentDispatchPort {
           costUsd: stats.cost,
         },
         durationMs,
-      });
+      } satisfies AgentResult);
     } catch (e) {
       this.running.delete(config.taskId);
       if (session) {

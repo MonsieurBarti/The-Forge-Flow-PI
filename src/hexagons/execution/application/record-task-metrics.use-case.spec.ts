@@ -58,7 +58,9 @@ describe("RecordTaskMetricsUseCase", () => {
       expect(metrics.tokens.input).toBe(1000);
       expect(metrics.tokens.output).toBe(500);
       expect(metrics.costUsd).toBe(0.05);
-      expect(metrics.success).toBe(agentResult.success);
+      expect(metrics.success).toBe(
+        agentResult.status === "DONE" || agentResult.status === "DONE_WITH_CONCERNS",
+      );
       expect(metrics.durationMs).toBe(agentResult.durationMs);
       expect(metrics.retries).toBe(0);
       expect(metrics.downshifted).toBe(false);
@@ -66,7 +68,7 @@ describe("RecordTaskMetricsUseCase", () => {
   });
 
   it("records failed dispatches too (AC1)", async () => {
-    const agentResult = new AgentResultBuilder().withFailure("timeout").build();
+    const agentResult = new AgentResultBuilder().asBlocked("timeout").build();
 
     await bus.publish(
       new TaskExecutionCompletedEvent({
@@ -86,7 +88,7 @@ describe("RecordTaskMetricsUseCase", () => {
     expect(isOk(result)).toBe(true);
     if (isOk(result)) {
       expect(result.data).toHaveLength(1);
-      expect(result.data[0].success).toBe(false);
+      expect(result.data[0].success).toBe(false); // BLOCKED maps to success=false
     }
   });
 });
