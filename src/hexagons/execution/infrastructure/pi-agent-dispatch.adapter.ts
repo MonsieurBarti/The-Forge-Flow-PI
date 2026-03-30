@@ -8,6 +8,7 @@ import type {
 import { crossCheckAgentResult } from "@kernel/agents/agent-status-cross-checker";
 import { parseAgentStatusReport } from "@kernel/agents/agent-status-parser";
 import { AGENT_STATUS_PROMPT } from "@kernel/agents/agent-status-prompt";
+import { GUARDRAIL_PROMPT } from "@kernel/agents/guardrail-prompt";
 import type { Api, KnownProvider, Model } from "@mariozechner/pi-ai";
 import { getModels, getProviders } from "@mariozechner/pi-ai";
 import {
@@ -123,8 +124,8 @@ export class PiAgentDispatchAdapter extends AgentDispatchPort {
 
       const startTime = Date.now();
       const fullSystemPrompt = config.systemPrompt
-        ? `${config.systemPrompt}\n\n${AGENT_STATUS_PROMPT}`
-        : AGENT_STATUS_PROMPT;
+        ? `${config.systemPrompt}\n\n${AGENT_STATUS_PROMPT}\n\n${GUARDRAIL_PROMPT}`
+        : `${AGENT_STATUS_PROMPT}\n\n${GUARDRAIL_PROMPT}`;
       const prompt = `${fullSystemPrompt}\n\n---\n\n${config.taskPrompt}`;
 
       await session.prompt(prompt);
