@@ -1,4 +1,10 @@
-import { DomainEvent, DomainEventPropsSchema, EVENT_NAMES, type EventName, IdSchema } from "@kernel";
+import {
+  DomainEvent,
+  DomainEventPropsSchema,
+  EVENT_NAMES,
+  type EventName,
+  IdSchema,
+} from "@kernel";
 import { z } from "zod";
 
 const TaskBlockedEventPropsSchema = DomainEventPropsSchema.extend({
