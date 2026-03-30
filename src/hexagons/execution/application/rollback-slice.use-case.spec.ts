@@ -1,6 +1,6 @@
 import { err, GitError, ok, type Result } from "@kernel";
 import { GitPort } from "@kernel/ports/git.port";
-import type { GitLogEntry, GitStatus } from "@kernel/ports/git.schemas";
+import type { GitLogEntry, GitStatus, GitWorktreeEntry } from "@kernel/ports/git.schemas";
 import { describe, expect, it } from "vitest";
 import { JournalEntryBuilder } from "../domain/journal-entry.builder";
 import { JournalEntrySchema } from "../domain/journal-entry.schemas";
@@ -50,6 +50,26 @@ class MockGitPort extends GitPort {
 
   async commit(): Promise<Result<string, GitError>> {
     return ok("abc123");
+  }
+
+  async worktreeAdd(): Promise<Result<void, GitError>> {
+    return ok(undefined);
+  }
+
+  async worktreeRemove(): Promise<Result<void, GitError>> {
+    return ok(undefined);
+  }
+
+  async worktreeList(): Promise<Result<GitWorktreeEntry[], GitError>> {
+    return ok([]);
+  }
+
+  async deleteBranch(): Promise<Result<void, GitError>> {
+    return ok(undefined);
+  }
+
+  async statusAt(): Promise<Result<GitStatus, GitError>> {
+    return ok({ branch: "test", clean: true, entries: [] });
   }
 }
 
