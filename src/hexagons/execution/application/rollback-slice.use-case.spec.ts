@@ -71,6 +71,18 @@ class MockGitPort extends GitPort {
   async statusAt(): Promise<Result<GitStatus, GitError>> {
     return ok({ branch: "test", clean: true, entries: [] });
   }
+
+  async diffNameOnly(): Promise<Result<string[], GitError>> {
+    return ok([]);
+  }
+
+  async diff(): Promise<Result<string, GitError>> {
+    return ok("");
+  }
+
+  async restoreWorktree(): Promise<Result<void, GitError>> {
+    return ok(undefined);
+  }
 }
 
 // ---------------------------------------------------------------------------
