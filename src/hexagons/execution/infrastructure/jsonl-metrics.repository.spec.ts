@@ -1,18 +1,16 @@
-import { isOk } from "@kernel";
-import { mkdtemp, rm, appendFile, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { appendFile, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { isOk } from "@kernel";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { TaskMetricsBuilder } from "../domain/task-metrics.builder";
 import { JsonlMetricsRepository } from "./jsonl-metrics.repository";
 import { runMetricsContractTests } from "./metrics-repository.contract.spec";
 
 let basePath: string;
-let filePath: string;
 
 beforeAll(async () => {
   basePath = await mkdtemp(join(tmpdir(), "tff-metrics-"));
-  filePath = join(basePath, "metrics.jsonl");
 });
 afterAll(async () => {
   await rm(basePath, { recursive: true, force: true });
