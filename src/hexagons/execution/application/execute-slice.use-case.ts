@@ -208,6 +208,12 @@ export class ExecuteSliceUseCase {
               if (completeResult.ok) {
                 checkpoint.recordTaskComplete(task.id, this.deps.dateProvider.now());
                 await this.deps.taskRepository.save(task);
+
+                // Publish task-hex events (TaskCompletedEvent)
+                for (const taskEvent of task.pullEvents()) {
+                  await this.deps.eventBus.publish(taskEvent);
+                }
+
                 await this.deps.checkpointRepository.save(checkpoint);
 
                 // Publish checkpoint events
@@ -222,6 +228,12 @@ export class ExecuteSliceUseCase {
               // BLOCKED or NEEDS_CONTEXT
               task.block([task.id], this.deps.dateProvider.now());
               await this.deps.taskRepository.save(task);
+
+              // Publish task-hex events (TaskBlockedEvent)
+              for (const taskEvent of task.pullEvents()) {
+                await this.deps.eventBus.publish(taskEvent);
+              }
+
               waveFailedTasks.push(task.id);
             }
           } else {

@@ -315,6 +315,50 @@ describe("ExecuteSliceUseCase", () => {
   });
 
   // -------------------------------------------------------------------------
+  // 5a. publishes TaskCompletedEvent to EventBus on success (AC5)
+  // -------------------------------------------------------------------------
+  it("publishes TaskCompletedEvent to EventBus on success (AC5)", async () => {
+    const t1 = makeTask(T1_ID, "T01");
+    taskRepo.seed(t1);
+
+    agentDispatch.givenResult(
+      T1_ID,
+      ok(new AgentResultBuilder().withTaskId(T1_ID).asDone().build()),
+    );
+
+    const events: DomainEvent[] = [];
+    eventBus.subscribe(EVENT_NAMES.TASK_COMPLETED, async (e) => {
+      events.push(e);
+    });
+
+    await useCase.execute(makeInput());
+
+    expect(events.length).toBe(1);
+  });
+
+  // -------------------------------------------------------------------------
+  // 5b. publishes TaskBlockedEvent to EventBus on failure (AC5)
+  // -------------------------------------------------------------------------
+  it("publishes TaskBlockedEvent to EventBus on failure (AC5)", async () => {
+    const t1 = makeTask(T1_ID, "T01");
+    taskRepo.seed(t1);
+
+    agentDispatch.givenResult(
+      T1_ID,
+      ok(new AgentResultBuilder().withTaskId(T1_ID).asBlocked("Missing dep").build()),
+    );
+
+    const events: DomainEvent[] = [];
+    eventBus.subscribe(EVENT_NAMES.TASK_BLOCKED, async (e) => {
+      events.push(e);
+    });
+
+    await useCase.execute(makeInput());
+
+    expect(events.length).toBe(1);
+  });
+
+  // -------------------------------------------------------------------------
   // 6. emits TaskExecutionCompletedEvent on success (AC5)
   // -------------------------------------------------------------------------
   it("emits TaskExecutionCompletedEvent on success (AC5)", async () => {
