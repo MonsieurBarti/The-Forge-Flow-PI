@@ -91,6 +91,7 @@ describe("ExecuteSliceUseCase", () => {
   let journalRepo: InMemoryJournalRepository;
   let metricsRepo: InMemoryMetricsRepository;
   let dateProvider: StubDateProvider;
+  let logger: SilentLoggerAdapter;
   let useCase: ExecuteSliceUseCase;
 
   beforeEach(() => {
@@ -103,6 +104,7 @@ describe("ExecuteSliceUseCase", () => {
     journalRepo = new InMemoryJournalRepository();
     metricsRepo = new InMemoryMetricsRepository();
     dateProvider = new StubDateProvider();
+    logger = new SilentLoggerAdapter();
 
     // Seed worktree for non-S tier by default
     worktreeAdapter.seed({
@@ -122,6 +124,7 @@ describe("ExecuteSliceUseCase", () => {
       journalRepository: journalRepo,
       metricsRepository: metricsRepo,
       dateProvider,
+      logger,
       templateContent: TEMPLATE_CONTENT,
     });
   });

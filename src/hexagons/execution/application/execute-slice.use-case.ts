@@ -2,7 +2,14 @@ import type { TaskRepositoryPort } from "@hexagons/task/domain/ports/task-reposi
 import type { WaveDetectionPort } from "@hexagons/task/domain/ports/wave-detection.port";
 import type { Task } from "@hexagons/task/domain/task.aggregate";
 import type { TaskDependencyInput, Wave } from "@hexagons/task/domain/wave.schemas";
-import { type DateProviderPort, type EventBusPort, err, ok, type Result } from "@kernel";
+import {
+  type DateProviderPort,
+  type EventBusPort,
+  err,
+  type LoggerPort,
+  ok,
+  type Result,
+} from "@kernel";
 import { isSuccessfulStatus } from "@kernel/agents";
 import { Checkpoint } from "../domain/checkpoint.aggregate";
 import { ExecutionError } from "../domain/errors/execution.error";
@@ -31,6 +38,7 @@ interface ExecuteSliceUseCaseDeps {
   readonly journalRepository: JournalRepositoryPort;
   readonly metricsRepository: MetricsRepositoryPort;
   readonly dateProvider: DateProviderPort;
+  readonly logger: LoggerPort;
   readonly templateContent: string;
 }
 
@@ -143,6 +151,7 @@ export class ExecuteSliceUseCase {
           task.status === "in_progress" &&
           now.getTime() - task.updatedAt.getTime() > STALE_CLAIM_THRESHOLD_MS
         ) {
+          this.deps.logger.warn(`Stale claim detected for task ${taskId} — skipping dispatch`);
           skippedTasks.push(taskId);
           continue;
         }
