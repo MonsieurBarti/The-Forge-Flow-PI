@@ -25,6 +25,11 @@ export class GitWorktreeAdapter extends WorktreePort {
     return join(this.resolvedRoot, ".tff", "worktrees", sliceId);
   }
 
+  private baseBranchFor(sliceId: string): string {
+    const milestone = sliceId.split("-")[0];
+    return `milestone/${milestone}`;
+  }
+
   async create(sliceId: string, baseBranch: string): Promise<Result<WorktreeInfo, WorktreeError>> {
     const branch = this.branchFor(sliceId);
     const wtPath = this.pathFor(sliceId);
@@ -120,7 +125,14 @@ export class GitWorktreeAdapter extends WorktreePort {
       }
     }
 
-    const reachable = true;
+    let reachable = true;
+    if (branchValid) {
+      const baseBranch = this.baseBranchFor(sliceId);
+      const ancestorResult = await this.gitPort.isAncestor(baseBranch, branch);
+      if (isOk(ancestorResult)) {
+        reachable = ancestorResult.data;
+      }
+    }
 
     return ok({ sliceId, exists: dirExists, branchValid, clean, reachable });
   }

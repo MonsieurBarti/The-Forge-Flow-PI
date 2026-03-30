@@ -60,5 +60,29 @@ describe("GitWorktreeAdapter", () => {
       await exec("git", ["-C", repoDir, "worktree", "prune"]);
       await exec("git", ["-C", repoDir, "branch", "-D", "slice/M04-S99"]);
     });
+
+    it("validate detects unreachable base (AC4)", async () => {
+      const adapter = new GitWorktreeAdapter(gitPort, repoDir);
+      // Create worktree on milestone/M04
+      await adapter.create("M04-S98", "milestone/M04");
+
+      // Reset the slice branch to an orphan commit unreachable from milestone/M04
+      const wtPath = join(repoDir, ".tff", "worktrees", "M04-S98");
+      await exec("git", ["-C", wtPath, "checkout", "--orphan", "orphan-tmp"]);
+      await exec("git", ["-C", wtPath, "commit", "--allow-empty", "-m", "orphan"]);
+      // Replace slice branch with the orphan
+      await exec("git", ["-C", repoDir, "branch", "-M", "orphan-tmp", "slice/M04-S98"]);
+      // Point worktree back to the renamed branch
+      await exec("git", ["-C", wtPath, "checkout", "slice/M04-S98"]);
+
+      const result = await adapter.validate("M04-S98");
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        expect(result.data.reachable).toBe(false);
+      }
+
+      // cleanup
+      await adapter.delete("M04-S98");
+    });
   });
 });
