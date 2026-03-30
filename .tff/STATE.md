@@ -1,7 +1,7 @@
 # State — M04
 
 ## Progress
-- Slices: 0/6 completed
+- Slices: 0/7 completed
 - Tasks: 0/0 completed
 
 ## Slices
@@ -13,3 +13,4 @@
 | Cost tracking | open | 0/0 | 0% |
 | Agent status protocol | open | 0/0 | 0% |
 | Wave-based execution engine | open | 0/0 | 0% |
+| Worktree management | reviewing | 0/0 | 0% |
