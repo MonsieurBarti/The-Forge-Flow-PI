@@ -6,13 +6,30 @@ describe("AgentResultBuilder", () => {
   it("builds valid result with defaults", () => {
     const result = new AgentResultBuilder().build();
     expect(() => AgentResultSchema.parse(result)).not.toThrow();
-    expect(result.success).toBe(true);
+    expect(result.status).toBe("DONE");
+    expect(result.concerns).toEqual([]);
+    expect(result.selfReview.overallConfidence).toBe("high");
   });
 
-  it("builds failure result with withFailure()", () => {
-    const result = new AgentResultBuilder().withFailure("Test suite failed").build();
-    expect(result.success).toBe(false);
+  it("builds BLOCKED result with asBlocked()", () => {
+    const result = new AgentResultBuilder().asBlocked("Test suite failed").build();
+    expect(result.status).toBe("BLOCKED");
     expect(result.error).toBe("Test suite failed");
+  });
+
+  it("builds DONE_WITH_CONCERNS with asDoneWithConcerns()", () => {
+    const concerns = [
+      { area: "tests", description: "Missing edge case", severity: "warning" as const },
+    ];
+    const result = new AgentResultBuilder().asDoneWithConcerns(concerns).build();
+    expect(result.status).toBe("DONE_WITH_CONCERNS");
+    expect(result.concerns).toEqual(concerns);
+  });
+
+  it("builds NEEDS_CONTEXT with asNeedsContext()", () => {
+    const result = new AgentResultBuilder().asNeedsContext("Need DB schema").build();
+    expect(result.status).toBe("NEEDS_CONTEXT");
+    expect(result.error).toBe("Need DB schema");
   });
 
   it("overrides agentType", () => {

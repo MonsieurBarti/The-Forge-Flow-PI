@@ -40,7 +40,7 @@ describe("TaskExecutionCompletedEvent", () => {
     expect(event.agentResult.cost.inputTokens).toBe(agentResult.cost.inputTokens);
     expect(event.agentResult.cost.outputTokens).toBe(agentResult.cost.outputTokens);
     expect(event.agentResult.cost.costUsd).toBe(agentResult.cost.costUsd);
-    expect(event.agentResult.success).toBe(agentResult.success);
+    expect(event.agentResult.status).toBe(agentResult.status);
   });
 
   it("rejects invalid waveIndex", () => {

@@ -2,6 +2,13 @@ import { faker } from "@faker-js/faker";
 import { describe, expect, it } from "vitest";
 import { AgentCostSchema, AgentResultSchema } from "./agent-result.schema";
 
+const ALL_PASSED_DIMS = [
+  { dimension: "completeness" as const, passed: true },
+  { dimension: "quality" as const, passed: true },
+  { dimension: "discipline" as const, passed: true },
+  { dimension: "verification" as const, passed: true },
+];
+
 describe("AgentCostSchema", () => {
   it("parses valid cost", () => {
     const cost = AgentCostSchema.parse({
@@ -40,12 +47,13 @@ describe("AgentCostSchema", () => {
 });
 
 describe("AgentResultSchema", () => {
-  it("parses valid result", () => {
+  it("parses valid result with DONE status", () => {
     const result = AgentResultSchema.parse({
       taskId: faker.string.uuid(),
       agentType: "code-reviewer",
-      success: true,
+      status: "DONE",
       output: "Review complete. No issues found.",
+      selfReview: { dimensions: ALL_PASSED_DIMS, overallConfidence: "high" },
       cost: {
         provider: "anthropic",
         modelId: "claude-opus-4-6",
@@ -56,15 +64,21 @@ describe("AgentResultSchema", () => {
       durationMs: 45000,
     });
     expect(result.filesChanged).toEqual([]);
+    expect(result.concerns).toEqual([]);
+    expect(result.status).toBe("DONE");
     expect(result.error).toBeUndefined();
   });
 
-  it("parses failed result with error", () => {
+  it("parses BLOCKED result with error", () => {
     const result = AgentResultSchema.parse({
       taskId: faker.string.uuid(),
       agentType: "fixer",
-      success: false,
+      status: "BLOCKED",
       output: "",
+      selfReview: {
+        dimensions: ALL_PASSED_DIMS.map((d) => ({ ...d, passed: false })),
+        overallConfidence: "low",
+      },
       cost: {
         provider: "anthropic",
         modelId: "claude-sonnet-4-6",
@@ -75,7 +89,7 @@ describe("AgentResultSchema", () => {
       durationMs: 1000,
       error: "Test suite failed after fix attempt",
     });
-    expect(result.success).toBe(false);
+    expect(result.status).toBe("BLOCKED");
     expect(result.error).toBe("Test suite failed after fix attempt");
   });
 
@@ -84,8 +98,9 @@ describe("AgentResultSchema", () => {
       AgentResultSchema.parse({
         taskId: faker.string.uuid(),
         agentType: "fixer",
-        success: true,
+        status: "DONE",
         output: "Done",
+        selfReview: { dimensions: ALL_PASSED_DIMS, overallConfidence: "high" },
         cost: {
           provider: "anthropic",
           modelId: "claude-sonnet-4-6",
