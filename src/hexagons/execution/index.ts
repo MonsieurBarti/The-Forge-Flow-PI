@@ -11,6 +11,7 @@ export {
 export type { CheckpointDTO, CheckpointProps, ExecutorLogEntry } from "./domain/checkpoint.schemas";
 export { CheckpointPropsSchema, ExecutorLogEntrySchema } from "./domain/checkpoint.schemas";
 // Domain -- Errors
+export { AgentDispatchError } from "./domain/errors/agent-dispatch.error";
 export { CheckpointNotFoundError } from "./domain/errors/checkpoint-not-found.error";
 export { InvalidCheckpointStateError } from "./domain/errors/invalid-checkpoint-state.error";
 export { JournalReadError } from "./domain/errors/journal-read.error";
@@ -40,10 +41,13 @@ export {
   TaskStartedEntrySchema,
 } from "./domain/journal-entry.schemas";
 // Domain -- Ports
+export { AgentDispatchPort } from "./domain/ports/agent-dispatch.port";
 export { CheckpointRepositoryPort } from "./domain/ports/checkpoint-repository.port";
 export { JournalRepositoryPort } from "./domain/ports/journal-repository.port";
 export { PhaseTransitionPort } from "./domain/ports/phase-transition.port";
 
 // Infrastructure -- Adapters (exported for downstream test wiring)
+export { InMemoryAgentDispatchAdapter } from "./infrastructure/in-memory-agent-dispatch.adapter";
 export { InMemoryCheckpointRepository } from "./infrastructure/in-memory-checkpoint.repository";
 export { InMemoryJournalRepository } from "./infrastructure/in-memory-journal.repository";
+export { PiAgentDispatchAdapter } from "./infrastructure/pi-agent-dispatch.adapter";
