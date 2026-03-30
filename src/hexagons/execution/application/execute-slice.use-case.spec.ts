@@ -6,22 +6,84 @@ import {
   DateProviderPort,
   type DomainEvent,
   EVENT_NAMES,
+  type GitError,
   InProcessEventBus,
   ok,
+  type Result,
   SilentLoggerAdapter,
 } from "@kernel";
 import { AgentResultBuilder, isSuccessfulStatus } from "@kernel/agents";
+import { GitPort } from "@kernel/ports/git.port";
+import type { GitLogEntry, GitStatus, GitWorktreeEntry } from "@kernel/ports/git.schemas";
 import { beforeEach, describe, expect, it } from "vitest";
 import { Checkpoint } from "../domain/checkpoint.aggregate";
 import { AllTasksCompletedEvent } from "../domain/events/all-tasks-completed.event";
 import { TaskExecutionCompletedEvent } from "../domain/events/task-execution-completed.event";
 import { InMemoryAgentDispatchAdapter } from "../infrastructure/in-memory-agent-dispatch.adapter";
 import { InMemoryCheckpointRepository } from "../infrastructure/in-memory-checkpoint.repository";
+import { InMemoryGuardrailAdapter } from "../infrastructure/in-memory-guardrail.adapter";
 import { InMemoryJournalRepository } from "../infrastructure/in-memory-journal.repository";
 import { InMemoryMetricsRepository } from "../infrastructure/in-memory-metrics.repository";
 import { InMemoryWorktreeAdapter } from "../infrastructure/in-memory-worktree.adapter";
 import type { ExecuteSliceInput } from "./execute-slice.schemas";
 import { ExecuteSliceUseCase } from "./execute-slice.use-case";
+
+// ---------------------------------------------------------------------------
+// MockGitPort
+// ---------------------------------------------------------------------------
+class MockGitPort extends GitPort {
+  restoreWorktreeCalls: string[] = [];
+
+  async listBranches(): Promise<Result<string[], GitError>> {
+    return ok([]);
+  }
+  async createBranch(): Promise<Result<void, GitError>> {
+    return ok(undefined);
+  }
+  async showFile(): Promise<Result<string | null, GitError>> {
+    return ok(null);
+  }
+  async log(): Promise<Result<GitLogEntry[], GitError>> {
+    return ok([]);
+  }
+  async status(): Promise<Result<GitStatus, GitError>> {
+    return ok({ branch: "test", clean: true, entries: [] });
+  }
+  async commit(): Promise<Result<string, GitError>> {
+    return ok("abc");
+  }
+  async revert(): Promise<Result<void, GitError>> {
+    return ok(undefined);
+  }
+  async isAncestor(): Promise<Result<boolean, GitError>> {
+    return ok(true);
+  }
+  async worktreeAdd(): Promise<Result<void, GitError>> {
+    return ok(undefined);
+  }
+  async worktreeRemove(): Promise<Result<void, GitError>> {
+    return ok(undefined);
+  }
+  async worktreeList(): Promise<Result<GitWorktreeEntry[], GitError>> {
+    return ok([]);
+  }
+  async deleteBranch(): Promise<Result<void, GitError>> {
+    return ok(undefined);
+  }
+  async statusAt(): Promise<Result<GitStatus, GitError>> {
+    return ok({ branch: "test", clean: true, entries: [] });
+  }
+  async diffNameOnly(): Promise<Result<string[], GitError>> {
+    return ok([]);
+  }
+  async diff(): Promise<Result<string, GitError>> {
+    return ok("");
+  }
+  async restoreWorktree(cwd: string): Promise<Result<void, GitError>> {
+    this.restoreWorktreeCalls.push(cwd);
+    return ok(undefined);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // StubDateProvider
@@ -92,6 +154,8 @@ describe("ExecuteSliceUseCase", () => {
   let metricsRepo: InMemoryMetricsRepository;
   let dateProvider: StubDateProvider;
   let logger: SilentLoggerAdapter;
+  let guardrailAdapter: InMemoryGuardrailAdapter;
+  let mockGitPort: MockGitPort;
   let useCase: ExecuteSliceUseCase;
 
   beforeEach(() => {
@@ -105,6 +169,8 @@ describe("ExecuteSliceUseCase", () => {
     metricsRepo = new InMemoryMetricsRepository();
     dateProvider = new StubDateProvider();
     logger = new SilentLoggerAdapter();
+    guardrailAdapter = new InMemoryGuardrailAdapter();
+    mockGitPort = new MockGitPort();
 
     // Seed worktree for non-S tier by default
     worktreeAdapter.seed({
@@ -126,6 +192,8 @@ describe("ExecuteSliceUseCase", () => {
       dateProvider,
       logger,
       templateContent: TEMPLATE_CONTENT,
+      guardrail: guardrailAdapter,
+      gitPort: mockGitPort,
     });
   });
 
@@ -605,5 +673,169 @@ describe("ExecuteSliceUseCase", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.data.completedTasks).toContain(T1_ID);
+  });
+
+  // -------------------------------------------------------------------------
+  // Guardrail validation
+  // -------------------------------------------------------------------------
+  describe("guardrail validation", () => {
+    it("blocks wave when guardrail returns error violations", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(
+          new AgentResultBuilder()
+            .withTaskId(T1_ID)
+            .asDone()
+            .withFilesChanged(["src/T01.ts"])
+            .build(),
+        ),
+      );
+
+      guardrailAdapter.givenReport({
+        violations: [
+          { ruleId: "dangerous-commands", severity: "error", message: "rm -rf detected" },
+        ],
+        passed: false,
+        summary: "1 error",
+      });
+
+      const result = await useCase.execute(makeInput());
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.failedTasks).toContain(T1_ID);
+      expect(result.data.aborted).toBe(true);
+    });
+
+    it("proceeds with warnings attached as concerns", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(
+          new AgentResultBuilder()
+            .withTaskId(T1_ID)
+            .asDone()
+            .withFilesChanged(["src/T01.ts"])
+            .build(),
+        ),
+      );
+
+      guardrailAdapter.givenReport({
+        violations: [{ ruleId: "file-scope", severity: "warning", message: "File outside scope" }],
+        passed: true,
+        summary: "1 warning",
+      });
+
+      const result = await useCase.execute(makeInput());
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.completedTasks).toContain(T1_ID);
+      expect(result.data.aborted).toBe(false);
+    });
+
+    it("skips guardrails for S-tier complexity", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      // Reset worktree so S-tier doesn't fail on worktree check
+      worktreeAdapter.reset();
+
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(
+          new AgentResultBuilder()
+            .withTaskId(T1_ID)
+            .asDone()
+            .withFilesChanged(["src/T01.ts"])
+            .build(),
+        ),
+      );
+
+      guardrailAdapter.givenReport({
+        violations: [
+          { ruleId: "dangerous-commands", severity: "error", message: "rm -rf detected" },
+        ],
+        passed: false,
+        summary: "1 error",
+      });
+
+      const result = await useCase.execute(makeInput({ complexity: "S" }));
+
+      expect(guardrailAdapter.wasValidated()).toBe(false);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.completedTasks).toContain(T1_ID);
+    });
+
+    it("journals guardrail-violation entries on block", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(
+          new AgentResultBuilder()
+            .withTaskId(T1_ID)
+            .asDone()
+            .withFilesChanged(["src/T01.ts"])
+            .build(),
+        ),
+      );
+
+      guardrailAdapter.givenReport({
+        violations: [
+          { ruleId: "credential-exposure", severity: "error", message: "API key found" },
+        ],
+        passed: false,
+        summary: "1 error",
+      });
+
+      await useCase.execute(makeInput());
+
+      const journalResult = await journalRepo.readAll(SLICE_ID);
+      expect(journalResult.ok).toBe(true);
+      if (!journalResult.ok) return;
+
+      const guardrailEntries = journalResult.data.filter((e) => e.type === "guardrail-violation");
+      expect(guardrailEntries.length).toBeGreaterThanOrEqual(1);
+      const entry = guardrailEntries[0];
+      if (entry?.type !== "guardrail-violation") return;
+      expect(entry.action).toBe("blocked");
+      expect(entry.taskId).toBe(T1_ID);
+    });
+
+    it("reverts worktree when guardrail blocks", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(
+          new AgentResultBuilder()
+            .withTaskId(T1_ID)
+            .asDone()
+            .withFilesChanged(["src/T01.ts"])
+            .build(),
+        ),
+      );
+
+      guardrailAdapter.givenReport({
+        violations: [
+          { ruleId: "destructive-git", severity: "error", message: "Force push detected" },
+        ],
+        passed: false,
+        summary: "1 error",
+      });
+
+      await useCase.execute(makeInput());
+
+      expect(mockGitPort.restoreWorktreeCalls).toContain("/mock/worktree");
+    });
   });
 });
