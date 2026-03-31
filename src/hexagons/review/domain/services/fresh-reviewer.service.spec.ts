@@ -65,8 +65,8 @@ describe("FreshReviewerService", () => {
     const result = await service.enforce(sliceId, "agent-a");
     expect(isErr(result)).toBe(true);
     if (isErr(result)) {
-      const error = result.error as FreshReviewerViolationError;
-      expect(error.metadata?.executors).toEqual(["agent-a", "agent-b"]);
+      expect(result.error).toBeInstanceOf(FreshReviewerViolationError);
+      expect(result.error.metadata?.executors).toEqual(["agent-a", "agent-b"]);
     }
   });
 });

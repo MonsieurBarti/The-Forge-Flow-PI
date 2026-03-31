@@ -1,6 +1,6 @@
-import { isOk, ok, type Result } from "@kernel";
+import { err, isErr, isOk, ok, type Result } from "@kernel";
 import { describe, expect, it, vi } from "vitest";
-import type { ExecutorQueryError } from "../domain/errors/executor-query.error";
+import { ExecutorQueryError } from "../domain/errors/executor-query.error";
 import { CachedExecutorQueryAdapter } from "./cached-executor-query.adapter";
 
 describe("CachedExecutorQueryAdapter", () => {
@@ -52,5 +52,22 @@ describe("CachedExecutorQueryAdapter", () => {
     if (isOk(result)) {
       expect(result.data).toEqual(new Set(["agent-b"]));
     }
+  });
+
+  it("does not cache error results — retries on next call", async () => {
+    let callCount = 0;
+    const queryFn = vi.fn(async (): Promise<Result<ReadonlySet<string>, ExecutorQueryError>> => {
+      callCount++;
+      if (callCount === 1) return err(new ExecutorQueryError("transient"));
+      return ok(new Set(["agent-a"]));
+    });
+    const adapter = new CachedExecutorQueryAdapter(queryFn);
+
+    const r1 = await adapter.getSliceExecutors("s1");
+    expect(isErr(r1)).toBe(true);
+
+    const r2 = await adapter.getSliceExecutors("s1");
+    expect(isOk(r2)).toBe(true);
+    expect(queryFn).toHaveBeenCalledTimes(2);
   });
 });
