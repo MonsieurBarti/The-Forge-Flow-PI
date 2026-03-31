@@ -1,19 +1,19 @@
-# State — M04
+# State — M05
 
 ## Progress
-- Slices: 10/10 completed
-- Tasks: 80/80 completed
+- Slices: 0/10 completed
+- Tasks: 0/0 completed
 
 ## Slices
 | Slice | Status | Tasks | Progress |
 |---|---|---|---|
-| Checkpoint entity + repository | closed | 8/8 | 100% |
-| Journal entity + replay | closed | 10/10 | 100% |
-| Agent dispatch port + PI adapter | closed | 8/8 | 100% |
-| Worktree management | closed | 8/8 | 100% |
-| Cost tracking | closed | 6/6 | 100% |
-| Agent status protocol | closed | 6/6 | 100% |
-| Wave-based execution engine | closed | 10/10 | 100% |
-| Output safety guardrails | closed | 6/6 | 100% |
-| Async overseer / watchdog | closed | 4/4 | 100% |
-| Execute/pause/resume commands | closed | 14/14 | 100% |
+| Review entity + repository | open | 0/0 | 0% |
+| Fresh-reviewer enforcement | open | 0/0 | 0% |
+| Critique-then-reflection | open | 0/0 | 0% |
+| Multi-stage review pipeline | open | 0/0 | 0% |
+| Review UI port | open | 0/0 | 0% |
+| Agent authoring protocol | open | 0/0 | 0% |
+| Fixer behavior | open | 0/0 | 0% |
+| Verify command | open | 0/0 | 0% |
+| Ship command | open | 0/0 | 0% |
+| Complete milestone command | open | 0/0 | 0% |
