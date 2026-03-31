@@ -1,8 +1,8 @@
-# State — Milestone
+# State — M05
 
 ## Progress
-- Slices: 0/8 completed
-- Tasks: 0/11 completed
+- Slices: 0/7 completed
+- Tasks: 0/0 completed
 
 ## Slices
 | Slice | Status | Tasks | Progress |
@@ -13,5 +13,4 @@
 | M05-S08: Verify command | open | 0/0 | 0% |
 | M05-S05: Review UI port | open | 0/0 | 0% |
 | M05-S06: Agent authoring protocol | open | 0/0 | 0% |
-| M05-S03: Critique-then-reflection | executing | 0/11 | 0% |
 | M05-S04: Multi-stage review pipeline | open | 0/0 | 0% |
