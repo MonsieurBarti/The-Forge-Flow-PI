@@ -11,8 +11,8 @@ Build the review hexagon with fresh-reviewer enforcement, multi-stage review pip
 - `Review` aggregate with `ReviewPropsSchema` (id, sliceId, role, agentIdentity, verdict, findings, createdAt)
 - `ReviewVerdictSchema`: approved, changes_requested, rejected
 - `ReviewRoleSchema`: code-reviewer, spec-reviewer, security-auditor
-- Findings: severity (critical, major, minor, suggestion), description, filePath, lineRange
-- `record()` business method
+- Findings: severity (critical, high, medium, low, info), message, filePath, lineStart, lineEnd
+- `recordFindings()` business method
 - `ReviewRepositoryPort`, SQLite + in-memory adapters
 - `ReviewBuilder`
 
