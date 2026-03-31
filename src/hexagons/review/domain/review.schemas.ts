@@ -18,6 +18,12 @@ export const SEVERITY_RANK: Record<ReviewSeverity, number> = {
   info: 4,
 };
 
+export const FindingImpactSchema = z.enum(["must-fix", "should-fix", "nice-to-have"]);
+export type FindingImpact = z.infer<typeof FindingImpactSchema>;
+
+export const ReviewStrategySchema = z.enum(["standard", "critique-then-reflection"]);
+export type ReviewStrategy = z.infer<typeof ReviewStrategySchema>;
+
 export const FindingPropsSchema = z.object({
   id: IdSchema,
   severity: ReviewSeveritySchema,
@@ -27,6 +33,7 @@ export const FindingPropsSchema = z.object({
   lineEnd: z.number().int().positive().optional(),
   suggestion: z.string().optional(),
   ruleId: z.string().optional(),
+  impact: FindingImpactSchema.optional(),
 });
 export type FindingProps = z.infer<typeof FindingPropsSchema>;
 

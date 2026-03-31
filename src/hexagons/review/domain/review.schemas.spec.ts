@@ -7,10 +7,12 @@ import {
   MergedReviewPropsSchema,
 } from "./merged-review.schemas";
 import {
+  FindingImpactSchema,
   FindingPropsSchema,
   ReviewPropsSchema,
   ReviewRoleSchema,
   ReviewSeveritySchema,
+  ReviewStrategySchema,
   ReviewVerdictSchema,
 } from "./review.schemas";
 
@@ -135,6 +137,61 @@ describe("ConflictPropsSchema", () => {
         ],
       }),
     ).toThrow();
+  });
+});
+
+describe("FindingImpactSchema", () => {
+  it("accepts all 3 valid impact levels", () => {
+    for (const level of ["must-fix", "should-fix", "nice-to-have"]) {
+      expect(FindingImpactSchema.parse(level)).toBe(level);
+    }
+  });
+
+  it("rejects invalid impact", () => {
+    expect(() => FindingImpactSchema.parse("critical")).toThrow();
+    expect(() => FindingImpactSchema.parse("optional")).toThrow();
+  });
+});
+
+describe("ReviewStrategySchema", () => {
+  it("accepts valid strategies", () => {
+    for (const s of ["standard", "critique-then-reflection"]) {
+      expect(ReviewStrategySchema.parse(s)).toBe(s);
+    }
+  });
+
+  it("rejects invalid strategy", () => {
+    expect(() => ReviewStrategySchema.parse("two-pass")).toThrow();
+  });
+});
+
+describe("FindingPropsSchema — impact field", () => {
+  const base = {
+    id: faker.string.uuid(),
+    severity: "high",
+    message: "Test finding",
+    filePath: "src/foo.ts",
+    lineStart: 10,
+  };
+
+  it("accepts finding without impact (backward-compatible)", () => {
+    const result = FindingPropsSchema.parse(base);
+    expect(result.impact).toBeUndefined();
+  });
+
+  it("accepts finding with valid impact", () => {
+    const result = FindingPropsSchema.parse({ ...base, impact: "must-fix" });
+    expect(result.impact).toBe("must-fix");
+  });
+
+  it("allows severity:low + impact:must-fix (independent dimensions)", () => {
+    const result = FindingPropsSchema.parse({ ...base, severity: "low", impact: "must-fix" });
+    expect(result.severity).toBe("low");
+    expect(result.impact).toBe("must-fix");
+  });
+
+  it("rejects invalid impact value", () => {
+    expect(() => FindingPropsSchema.parse({ ...base, impact: "blocker" })).toThrow();
   });
 });
 
