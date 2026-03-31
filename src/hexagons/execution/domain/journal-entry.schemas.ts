@@ -91,6 +91,17 @@ export const OverseerInterventionEntrySchema = JournalEntryBaseSchema.extend({
 });
 export type OverseerInterventionEntry = z.infer<typeof OverseerInterventionEntrySchema>;
 
+export const ExecutionLifecycleEntrySchema = JournalEntryBaseSchema.extend({
+  type: z.literal("execution-lifecycle"),
+  sessionId: IdSchema,
+  action: z.enum(["started", "paused", "resumed", "completed", "failed"]),
+  resumeCount: z.number().int().min(0),
+  failureReason: z.string().optional(),
+  wavesCompleted: z.number().int().min(0).optional(),
+  totalWaves: z.number().int().min(0).optional(),
+});
+export type ExecutionLifecycleEntry = z.infer<typeof ExecutionLifecycleEntrySchema>;
+
 // ---------------------------------------------------------------------------
 // Discriminated union
 // ---------------------------------------------------------------------------
@@ -104,5 +115,6 @@ export const JournalEntrySchema = z.discriminatedUnion("type", [
   ArtifactWrittenEntrySchema,
   GuardrailViolationEntrySchema,
   OverseerInterventionEntrySchema,
+  ExecutionLifecycleEntrySchema,
 ]);
 export type JournalEntry = z.infer<typeof JournalEntrySchema>;
