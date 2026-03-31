@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { isErr, isOk, ok, type PersistenceError, type Result } from "@kernel";
@@ -85,5 +85,37 @@ describe("MarkdownCheckpointRepository -- adapter-specific", () => {
         expect(found.executorLog[0].taskId).toBe(taskId);
       }
     }
+  });
+});
+
+describe("MarkdownCheckpointRepository -- collaborative writer", () => {
+  it("preserves session-data block across checkpoint saves", async () => {
+    const resolver = createResolver(basePath);
+    const repo = new MarkdownCheckpointRepository(basePath, resolver);
+    const cp = new CheckpointBuilder().build();
+
+    // First save
+    await repo.save(cp);
+
+    // Resolve path to get CHECKPOINT.md location
+    const pathResult = await resolver(cp.sliceId);
+    if (!pathResult.ok) throw new Error("resolver failed");
+    const cpPath = join(basePath, pathResult.data, "CHECKPOINT.md");
+
+    // Manually inject session-data block (simulating MarkdownExecutionSessionAdapter)
+    const original = await readFile(cpPath, "utf-8");
+    const sessionBlock =
+      '<!-- session-data: {"id":"session-1","status":"running","resumeCount":0} -->';
+    await writeFile(cpPath, `${original}\n${sessionBlock}\n`, "utf-8");
+
+    // Second save (should preserve session-data)
+    const taskId = crypto.randomUUID();
+    cp.recordTaskStart(taskId, "agent-1", new Date());
+    await repo.save(cp);
+
+    const content = await readFile(cpPath, "utf-8");
+    expect(content).toContain("<!-- CHECKPOINT_JSON");
+    expect(content).toContain("<!-- session-data:");
+    expect(content).toContain('"status":"running"');
   });
 });
