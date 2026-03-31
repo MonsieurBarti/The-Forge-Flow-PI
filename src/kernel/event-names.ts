@@ -16,6 +16,11 @@ export const EVENT_NAMES = {
   WORKFLOW_ESCALATION_RAISED: "workflow.escalation-raised",
   CHECKPOINT_SAVED: "execution.checkpoint-saved",
   TASK_EXECUTION_COMPLETED: "execution.task-execution-completed",
+  EXECUTION_STARTED: "execution.started",
+  EXECUTION_PAUSED: "execution.paused",
+  EXECUTION_RESUMED: "execution.resumed",
+  EXECUTION_COMPLETED: "execution.completed",
+  EXECUTION_FAILED: "execution.failed",
 } as const;
 
 export type EventName = (typeof EVENT_NAMES)[keyof typeof EVENT_NAMES];
@@ -36,4 +41,9 @@ export const EventNameSchema = z.enum([
   EVENT_NAMES.WORKFLOW_ESCALATION_RAISED,
   EVENT_NAMES.CHECKPOINT_SAVED,
   EVENT_NAMES.TASK_EXECUTION_COMPLETED,
+  EVENT_NAMES.EXECUTION_STARTED,
+  EVENT_NAMES.EXECUTION_PAUSED,
+  EVENT_NAMES.EXECUTION_RESUMED,
+  EVENT_NAMES.EXECUTION_COMPLETED,
+  EVENT_NAMES.EXECUTION_FAILED,
 ]);

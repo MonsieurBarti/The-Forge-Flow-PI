@@ -29,4 +29,12 @@ export class ExecutionError extends BaseDomainError {
       { sliceId },
     );
   }
+
+  static invalidState(sliceId: string, reason: string): ExecutionError {
+    return new ExecutionError("EXECUTION.INVALID_STATE", reason, { sliceId });
+  }
+
+  static unexpected(sliceId: string, reason: string): ExecutionError {
+    return new ExecutionError("EXECUTION.UNEXPECTED", reason, { sliceId });
+  }
 }

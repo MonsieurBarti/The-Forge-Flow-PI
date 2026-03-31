@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
-import { DangerousCommandRule } from "./dangerous-command.rule";
-import type { EnrichedGuardrailContext } from "../../domain/enriched-guardrail-context";
 import { AgentResultBuilder } from "@kernel/agents";
+import { describe, expect, it } from "vitest";
+import type { EnrichedGuardrailContext } from "../../domain/enriched-guardrail-context";
+import { DangerousCommandRule } from "./dangerous-command.rule";
 
 function makeContext(fileContents: Record<string, string>): EnrichedGuardrailContext {
   return {

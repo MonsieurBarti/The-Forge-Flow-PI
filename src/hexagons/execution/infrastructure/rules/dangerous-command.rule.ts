@@ -1,6 +1,6 @@
-import type { GuardrailRule } from "../../domain/guardrail-rule";
-import type { GuardrailViolation } from "../../domain/guardrail.schemas";
 import type { EnrichedGuardrailContext } from "../../domain/enriched-guardrail-context";
+import type { GuardrailViolation } from "../../domain/guardrail.schemas";
+import type { GuardrailRule } from "../../domain/guardrail-rule";
 import { shouldSkipFile } from "./skip-filter";
 
 const PATTERNS: readonly { regex: RegExp; label: string }[] = [

@@ -26,7 +26,21 @@ export class MarkdownCheckpointRepository extends CheckpointRepositoryPort {
     const filePath = join(this.basePath, pathResult.data, "CHECKPOINT.md");
     const tmpPath = `${filePath}.tmp`;
     const props = checkpoint.toJSON();
-    const content = this.renderMarkdown(props);
+
+    // Preserve session-data block written by MarkdownExecutionSessionAdapter
+    let sessionBlock = "";
+    try {
+      const existing = await readFile(filePath, "utf-8");
+      const sessionMatch = existing.match(/<!-- session-data: [\s\S]*? -->/);
+      if (sessionMatch) {
+        sessionBlock = sessionMatch[0];
+      }
+    } catch {
+      // File does not exist yet — no session block to preserve
+    }
+
+    const sessionSuffix = sessionBlock ? `\n${sessionBlock}\n` : "";
+    const content = `${this.renderMarkdown(props)}${sessionSuffix}`;
 
     try {
       await writeFile(tmpPath, content, "utf-8");
