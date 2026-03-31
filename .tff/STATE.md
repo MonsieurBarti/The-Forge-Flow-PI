@@ -1,8 +1,8 @@
 # State — M04
 
 ## Progress
-- Slices: 9/10 completed
-- Tasks: 14/14 completed (S10)
+- Slices: 10/10 completed
+- Tasks: 80/80 completed
 
 ## Slices
 | Slice | Status | Tasks | Progress |
@@ -16,4 +16,4 @@
 | Wave-based execution engine | closed | 10/10 | 100% |
 | Output safety guardrails | closed | 6/6 | 100% |
 | Async overseer / watchdog | closed | 4/4 | 100% |
-| Execute/pause/resume commands | reviewing | 14/14 | 100% |
+| Execute/pause/resume commands | closed | 14/14 | 100% |
