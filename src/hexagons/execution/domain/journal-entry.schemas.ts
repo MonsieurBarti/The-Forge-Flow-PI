@@ -1,6 +1,7 @@
 import { IdSchema, TimestampSchema } from "@kernel";
 import { z } from "zod";
 import { GuardrailViolationSchema } from "./guardrail.schemas";
+import { InterventionActionSchema } from "./overseer.schemas";
 
 // ---------------------------------------------------------------------------
 // Base
@@ -80,6 +81,16 @@ export const GuardrailViolationEntrySchema = JournalEntryBaseSchema.extend({
 });
 export type GuardrailViolationEntry = z.infer<typeof GuardrailViolationEntrySchema>;
 
+export const OverseerInterventionEntrySchema = JournalEntryBaseSchema.extend({
+  type: z.literal("overseer-intervention"),
+  taskId: IdSchema,
+  strategy: z.string().min(1),
+  reason: z.string().min(1),
+  action: InterventionActionSchema,
+  retryCount: z.number().int().min(0),
+});
+export type OverseerInterventionEntry = z.infer<typeof OverseerInterventionEntrySchema>;
+
 // ---------------------------------------------------------------------------
 // Discriminated union
 // ---------------------------------------------------------------------------
@@ -92,5 +103,6 @@ export const JournalEntrySchema = z.discriminatedUnion("type", [
   PhaseChangedEntrySchema,
   ArtifactWrittenEntrySchema,
   GuardrailViolationEntrySchema,
+  OverseerInterventionEntrySchema,
 ]);
 export type JournalEntry = z.infer<typeof JournalEntrySchema>;

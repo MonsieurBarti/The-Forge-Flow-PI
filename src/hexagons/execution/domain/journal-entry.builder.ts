@@ -3,6 +3,7 @@ import type {
   ArtifactWrittenEntry,
   CheckpointSavedEntry,
   FileWrittenEntry,
+  OverseerInterventionEntry,
   PhaseChangedEntry,
   TaskCompletedEntry,
   TaskFailedEntry,
@@ -153,6 +154,28 @@ export class JournalEntryBuilder {
       artifactPath:
         overrides?.artifactPath ?? `.tff/milestones/M04/slices/M04-S02/${faker.system.fileName()}`,
       artifactType: overrides?.artifactType ?? "spec",
+    };
+  }
+
+  buildOverseerIntervention(
+    overrides?: Partial<{
+      taskId: string;
+      strategy: string;
+      reason: string;
+      action: "aborted" | "retrying" | "escalated";
+      retryCount: number;
+    }>,
+  ): Omit<OverseerInterventionEntry, "seq"> {
+    return {
+      type: "overseer-intervention",
+      sliceId: this._sliceId,
+      timestamp: this._timestamp,
+      correlationId: this._correlationId,
+      taskId: overrides?.taskId ?? faker.string.uuid(),
+      strategy: overrides?.strategy ?? "timeout",
+      reason: overrides?.reason ?? "Task timed out",
+      action: overrides?.action ?? "aborted",
+      retryCount: overrides?.retryCount ?? 0,
     };
   }
 }
