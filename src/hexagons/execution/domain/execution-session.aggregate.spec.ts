@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { InvalidExecutionSessionStateError } from "./errors/invalid-execution-session-state.error";
 import { ExecutionSession } from "./execution-session.aggregate";
 
 const SLICE_ID = crypto.randomUUID();
@@ -40,11 +41,15 @@ describe("ExecutionSession", () => {
       expect(events[0].eventName).toBe("execution.started");
     });
 
-    it("throws from paused", () => {
+    it("returns err from paused", () => {
       const session = createSession();
       session.start(NOW);
       session.confirmPause(NOW);
-      expect(() => session.start(NOW)).toThrow();
+      const result = session.start(NOW);
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toBeInstanceOf(InvalidExecutionSessionStateError);
+      }
     });
   });
 
@@ -115,10 +120,14 @@ describe("ExecutionSession", () => {
       expect(events[0].eventName).toBe("execution.resumed");
     });
 
-    it("throws from running", () => {
+    it("returns err from running", () => {
       const session = createSession();
       session.start(NOW);
-      expect(() => session.resume(NOW)).toThrow();
+      const result = session.resume(NOW);
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toBeInstanceOf(InvalidExecutionSessionStateError);
+      }
     });
   });
 

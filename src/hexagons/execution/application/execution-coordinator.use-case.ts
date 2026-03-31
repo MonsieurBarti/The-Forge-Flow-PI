@@ -62,7 +62,10 @@ export class ExecutionCoordinator {
       milestoneId: input.milestoneId,
       now: this.deps.dateProvider.now(),
     });
-    session.start(this.deps.dateProvider.now());
+    const startResult = session.start(this.deps.dateProvider.now());
+    if (!startResult.ok) {
+      return err(ExecutionError.invalidState(input.sliceId, startResult.error.message));
+    }
 
     // 3. Save session + publish events
     await this.deps.sessionRepository.save(session);
@@ -121,7 +124,10 @@ export class ExecutionCoordinator {
 
     if (session.status === "running") {
       // Orphaned running session — transition to paused
-      session.confirmPause(this.deps.dateProvider.now());
+      const pauseResult = session.confirmPause(this.deps.dateProvider.now());
+      if (!pauseResult.ok) {
+        return err(ExecutionError.invalidState(sliceId, pauseResult.error.message));
+      }
       await this.deps.sessionRepository.save(session);
       for (const event of session.pullEvents()) {
         await this.deps.eventBus.publish(event);
@@ -163,8 +169,14 @@ export class ExecutionCoordinator {
         milestoneId: input.milestoneId,
         now: this.deps.dateProvider.now(),
       });
-      session.start(this.deps.dateProvider.now());
-      session.confirmPause(this.deps.dateProvider.now());
+      const synthStartResult = session.start(this.deps.dateProvider.now());
+      if (!synthStartResult.ok) {
+        return err(ExecutionError.invalidState(sliceId, synthStartResult.error.message));
+      }
+      const synthPauseResult = session.confirmPause(this.deps.dateProvider.now());
+      if (!synthPauseResult.ok) {
+        return err(ExecutionError.invalidState(sliceId, synthPauseResult.error.message));
+      }
       this.deps.logger.info(`Created synthetic paused session for crash recovery: ${sliceId}`);
     }
 
@@ -181,7 +193,10 @@ export class ExecutionCoordinator {
     }
 
     // 4. Resume session (must be running before we can fail on inconsistency)
-    session.resume(this.deps.dateProvider.now());
+    const resumeResult = session.resume(this.deps.dateProvider.now());
+    if (!resumeResult.ok) {
+      return err(ExecutionError.invalidState(sliceId, resumeResult.error.message));
+    }
     await this.deps.sessionRepository.save(session);
     for (const event of session.pullEvents()) {
       await this.deps.eventBus.publish(event);
@@ -242,7 +257,10 @@ export class ExecutionCoordinator {
     result: Result<ExecuteSliceResult, ExecutionError>,
   ): Promise<Result<ExecutionResult, ExecutionError>> {
     if (!result.ok) {
-      session.fail(result.error.message, this.deps.dateProvider.now());
+      const failResult = session.fail(result.error.message, this.deps.dateProvider.now());
+      if (!failResult.ok) {
+        return err(ExecutionError.invalidState(sliceId, failResult.error.message));
+      }
       await this.deps.sessionRepository.save(session);
       for (const event of session.pullEvents()) {
         await this.deps.eventBus.publish(event);
@@ -254,7 +272,10 @@ export class ExecutionCoordinator {
 
     if (data.aborted && session.isPauseRequested) {
       // Pause path
-      session.confirmPause(this.deps.dateProvider.now());
+      const pauseResult = session.confirmPause(this.deps.dateProvider.now());
+      if (!pauseResult.ok) {
+        return err(ExecutionError.invalidState(sliceId, pauseResult.error.message));
+      }
       await this.deps.sessionRepository.save(session);
       for (const event of session.pullEvents()) {
         await this.deps.eventBus.publish(event);
@@ -276,7 +297,15 @@ export class ExecutionCoordinator {
         data.failedTasks.length > 0
           ? `Tasks failed: ${data.failedTasks.join(", ")}`
           : "Execution aborted";
-      session.fail(reason, this.deps.dateProvider.now(), data.wavesCompleted, data.totalWaves);
+      const failResult = session.fail(
+        reason,
+        this.deps.dateProvider.now(),
+        data.wavesCompleted,
+        data.totalWaves,
+      );
+      if (!failResult.ok) {
+        return err(ExecutionError.invalidState(sliceId, failResult.error.message));
+      }
       await this.deps.sessionRepository.save(session);
       for (const event of session.pullEvents()) {
         await this.deps.eventBus.publish(event);
@@ -294,7 +323,14 @@ export class ExecutionCoordinator {
     }
 
     // Success path
-    session.complete(this.deps.dateProvider.now(), data.wavesCompleted, data.totalWaves);
+    const completeResult = session.complete(
+      this.deps.dateProvider.now(),
+      data.wavesCompleted,
+      data.totalWaves,
+    );
+    if (!completeResult.ok) {
+      return err(ExecutionError.invalidState(sliceId, completeResult.error.message));
+    }
     await this.deps.sessionRepository.save(session);
     for (const event of session.pullEvents()) {
       await this.deps.eventBus.publish(event);

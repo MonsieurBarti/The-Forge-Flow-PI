@@ -1,4 +1,5 @@
-import { AggregateRoot } from "@kernel";
+import { AggregateRoot, err, ok, type Result } from "@kernel";
+import { InvalidExecutionSessionStateError } from "./errors/invalid-execution-session-state.error";
 import { ExecutionCompletedEvent } from "./events/execution-completed.event";
 import { ExecutionFailedEvent } from "./events/execution-failed.event";
 import { ExecutionPausedEvent } from "./events/execution-paused.event";
@@ -7,6 +8,7 @@ import { ExecutionStartedEvent } from "./events/execution-started.event";
 import {
   type ExecutionSessionProps,
   ExecutionSessionPropsSchema,
+  type ExecutionSessionStatus,
 } from "./execution-session.schemas";
 
 export class ExecutionSession extends AggregateRoot<ExecutionSessionProps> {
@@ -50,7 +52,7 @@ export class ExecutionSession extends AggregateRoot<ExecutionSessionProps> {
   get milestoneId(): string {
     return this.props.milestoneId;
   }
-  get status(): string {
+  get status(): ExecutionSessionStatus {
     return this.props.status;
   }
   get resumeCount(): number {
@@ -71,8 +73,9 @@ export class ExecutionSession extends AggregateRoot<ExecutionSessionProps> {
 
   // -- State transitions --
 
-  start(now: Date): void {
-    this.assertStatus("created");
+  start(now: Date): Result<void, InvalidExecutionSessionStateError> {
+    const guard = this.assertStatus("created");
+    if (!guard.ok) return guard;
     this.controller = new AbortController();
     this.props.status = "running";
     this.props.startedAt = now;
@@ -87,6 +90,7 @@ export class ExecutionSession extends AggregateRoot<ExecutionSessionProps> {
         sessionId: this.props.id,
       }),
     );
+    return ok(undefined);
   }
 
   requestPause(): void {
@@ -94,8 +98,9 @@ export class ExecutionSession extends AggregateRoot<ExecutionSessionProps> {
     this.controller.abort();
   }
 
-  confirmPause(now: Date): void {
-    this.assertStatus("running");
+  confirmPause(now: Date): Result<void, InvalidExecutionSessionStateError> {
+    const guard = this.assertStatus("running");
+    if (!guard.ok) return guard;
     this.props.status = "paused";
     this.props.pausedAt = now;
     this.props.updatedAt = now;
@@ -109,10 +114,12 @@ export class ExecutionSession extends AggregateRoot<ExecutionSessionProps> {
         resumeCount: this.props.resumeCount,
       }),
     );
+    return ok(undefined);
   }
 
-  resume(now: Date): void {
-    this.assertStatus("paused");
+  resume(now: Date): Result<void, InvalidExecutionSessionStateError> {
+    const guard = this.assertStatus("paused");
+    if (!guard.ok) return guard;
     this.controller = new AbortController();
     this.props.status = "running";
     this.props.resumeCount += 1;
@@ -129,10 +136,16 @@ export class ExecutionSession extends AggregateRoot<ExecutionSessionProps> {
         resumeCount: this.props.resumeCount,
       }),
     );
+    return ok(undefined);
   }
 
-  complete(now: Date, wavesCompleted: number, totalWaves: number): void {
-    this.assertStatus("running");
+  complete(
+    now: Date,
+    wavesCompleted: number,
+    totalWaves: number,
+  ): Result<void, InvalidExecutionSessionStateError> {
+    const guard = this.assertStatus("running");
+    if (!guard.ok) return guard;
     this.props.status = "completed";
     this.props.completedAt = now;
     this.props.updatedAt = now;
@@ -148,10 +161,17 @@ export class ExecutionSession extends AggregateRoot<ExecutionSessionProps> {
         totalWaves,
       }),
     );
+    return ok(undefined);
   }
 
-  fail(reason: string, now: Date, wavesCompleted?: number, totalWaves?: number): void {
-    this.assertStatus("running");
+  fail(
+    reason: string,
+    now: Date,
+    wavesCompleted?: number,
+    totalWaves?: number,
+  ): Result<void, InvalidExecutionSessionStateError> {
+    const guard = this.assertStatus("running");
+    if (!guard.ok) return guard;
     this.props.status = "failed";
     this.props.failureReason = reason;
     this.props.updatedAt = now;
@@ -168,15 +188,22 @@ export class ExecutionSession extends AggregateRoot<ExecutionSessionProps> {
         totalWaves,
       }),
     );
+    return ok(undefined);
   }
 
   // -- Private --
 
-  private assertStatus(expected: string): void {
+  private assertStatus(
+    expected: ExecutionSessionStatus,
+  ): Result<void, InvalidExecutionSessionStateError> {
     if (this.props.status !== expected) {
-      throw new Error(
-        `Invalid state transition: expected '${expected}', got '${this.props.status}'`,
+      return err(
+        new InvalidExecutionSessionStateError(
+          `Invalid state transition: expected '${expected}', got '${this.props.status}'`,
+          { expected, actual: this.props.status },
+        ),
       );
     }
+    return ok(undefined);
   }
 }
