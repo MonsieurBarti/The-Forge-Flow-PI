@@ -196,7 +196,7 @@ src/hexagons/review/
 - AC6: `Review.getBlockerCount()` counts critical + high; `getAdvisoryCount()` counts medium + low + info
 
 ### MergedReview VO
-- AC7: `MergedReview.merge()` deduplicates findings by (filePath, lineStart, lineEnd); highest severity wins
+- AC7: `MergedReview.merge()` deduplicates findings by (filePath, lineStart); lineEnd ignored for grouping; highest severity wins
 - AC8: `MergedReview.merge()` detects conflicts (same location, severity diff >= 2 levels)
 - AC9: `MergedReview.merge([approved, changes_requested])` → verdict = "changes_requested"
 - AC10: `MergedReview.merge([approved, rejected])` → verdict = "rejected"
@@ -208,7 +208,7 @@ src/hexagons/review/
 ### Repository
 - AC15: Save/findById/delete round-trip on InMemoryReviewRepository
 - AC16: `ReviewRepositoryPort.findBySliceId()` returns all reviews for a slice
-- AC17: `SqliteReviewRepository` persists + loads findings as JSON round-trip
+- AC17: `SqliteReviewRepository` persists + loads findings as JSON round-trip [DEFERRED — stub only, consistent with all other hexagons; real implementation in M07]
 
 ### Schemas ∧ Builders
 - AC18: `ReviewBuilder` + `FindingBuilder` produce valid schema-conformant data
