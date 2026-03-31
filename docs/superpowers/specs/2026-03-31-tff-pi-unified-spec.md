@@ -243,14 +243,14 @@ completing  -> closed
 | InMemory adapters (7 total) | BUILT |
 | Tests: 48 specs | BUILT |
 
-**Planned additions (Design Improvements -- targeting M04):**
+**Design Improvements (deferred from M04 to M07):**
 
 | Improvement | Description | Status |
 |---|---|---|
-| **A. Per-task reflection** | After task completes, same agent re-reads diff vs ACs. Blockers -> retry. Warnings recorded. `ReflectionResultSchema` extends `AgentResultSchema`. | PLANNED |
-| **B. Model downshift fallback** | 3-step chain: retry same model (1x) -> downshift to cheaper (1x) -> escalate. `FallbackStrategySchema` in settings. Checkpoint saved before retry. | PLANNED |
-| **G. Full pre/post-dispatch guardrails** | Pre-dispatch: scope containment, worktree state, budget check. Post-dispatch: file containment, lint, tests, secrets, file size. Auto-retry once with feedback. | PARTIAL (post-dispatch built, pre-dispatch planned) |
-| **I. Compressor notation** | All generated artifacts use formal logic symbols (~50-60% token reduction). Schemas/code uncompressed. | PLANNED |
+| **A. Per-task reflection** | After task completes, same agent re-reads diff vs ACs. Blockers -> retry. Warnings recorded. `ReflectionResultSchema` extends `AgentResultSchema`. | DEFERRED (M07) -- placeholder field in TaskMetrics |
+| **B. Model downshift fallback** | 3-step chain: retry same model (1x) -> downshift to cheaper (1x) -> escalate. `FallbackStrategySchema` in settings. Checkpoint saved before retry. | DEFERRED (M07) -- fallbackChain schema exists, no retry-downshift logic |
+| **G. Full pre/post-dispatch guardrails** | Pre-dispatch: scope containment, worktree state, budget check. Post-dispatch: file containment, lint, tests, secrets, file size. Auto-retry once with feedback. | PARTIAL -- post-dispatch built (M04), pre-dispatch DEFERRED (M07) |
+| **I. Compressor notation** | All generated artifacts use formal logic symbols (~50-60% token reduction). Schemas/code uncompressed. | DEFERRED (M07) -- notation in templates only, no transformation logic |
 
 ### 4.6 Settings Hexagon [BUILT]
 
@@ -627,28 +627,28 @@ The design spec used M01a/M01b/M02-M06. Actual milestones are M01-M08:
 | M01a: Kernel + Entity | **M01** | DDD foundations + first 3 hexagons | CLOSED |
 | M01b: Task + Settings + CLI | **M02** | Complete entity stack, wire CLI | CLOSED |
 | M02: Workflow Engine | **M03** | Orchestrator, phase commands, artifacts | CLOSED |
-| M03: Execution & Recovery | **M04** | Wave dispatch, checkpoints, guardrails | IN PROGRESS (8/10 slices) |
+| M03: Execution & Recovery | **M04** | Wave dispatch, checkpoints, guardrails | CLOSED (10/10 slices) |
 | M04: Review & Ship | **M05** | Fresh-reviewer, 3-stage review, PR creation | PLANNED |
 | M05: Intelligence & Auto-Learn | **M06** | Observations, patterns, skills, auto-learn | PLANNED |
 | M06: Team & Polish | **M07** | Per-branch sync, state reconstruction, remaining commands | PLANNED |
 | (new) Expansion | **M08** | Empty stub | PLANNED |
 
-### M04: Execution & Recovery [IN PROGRESS -- 8/10 slices closed]
+### M04: Execution & Recovery [CLOSED -- 10/10 slices]
 
 | Slice | Content | Status |
 |---|---|---|
 | S01 | Checkpoint entity + repository | CLOSED |
-| S02 | Wave-based parallel dispatch (ExecuteSliceUseCase) | CLOSED |
+| S02 | Journal entity + replay | CLOSED |
 | S03 | Agent dispatch port + PI adapter | CLOSED |
 | S04 | Worktree management | CLOSED |
-| S05 | Journal + crash recovery (ReplayJournal, RollbackSlice) | CLOSED |
-| S06 | Cost tracking (metrics schemas, repositories, aggregation) | CLOSED |
-| S07 | Async watchdog/overseer | CLOSED |
+| S05 | Cost tracking (metrics schemas, repositories, aggregation) | CLOSED |
+| S06 | Agent status protocol | CLOSED |
+| S07 | Wave-based execution engine | CLOSED |
 | S08 | Output safety guardrails (5 composable rules) | CLOSED |
-| S09 | Async overseer/watchdog (extended) | OPEN |
-| S10 | Commands (/tff:execute, /tff:pause, /tff:resume) | OPEN |
+| S09 | Async overseer / watchdog | CLOSED |
+| S10 | Execute/pause/resume commands | CLOSED |
 
-**Design improvements targeting M04:** A (reflection), B (fallback chain), G (full guardrails -- pre-dispatch), I (compressor notation)
+**Design improvements deferred to M07:** A (per-task reflection), B (model downshift fallback), G-pre (pre-dispatch guardrails), I (compressor notation)
 
 ### M05: Review & Ship [PLANNED]
 
@@ -691,6 +691,15 @@ The design spec used M01a/M01b/M02-M06. Actual milestones are M01-M08:
 - Merge-back on ship/complete-milestone
 
 **Remaining commands:** /tff:quick, /tff:debug, /tff:health, /tff:progress, /tff:add-slice, /tff:remove-slice, /tff:insert-slice, /tff:rollback, /tff:audit-milestone, /tff:map-codebase, /tff:sync, /tff:settings, /tff:help
+
+**Deferred from M04 (Design Improvements):**
+
+| ID | Feature | Origin |
+|---|---|---|
+| A | **Per-task reflection** -- same agent re-reads diff vs ACs post-completion. `ReflectionResultSchema`. Blockers -> retry. | M04 R11 |
+| B | **Model downshift fallback** -- 3-step chain: retry same -> downshift -> escalate. `FallbackStrategySchema`. | M04 R12 |
+| G-pre | **Pre-dispatch guardrails** -- scope containment, worktree state, budget check before dispatch. | M04 R13 |
+| I | **Compressor notation** -- formal logic symbols in generated artifacts (~50-60% token reduction). | M04 R14 |
 
 **Gap analysis additions [NEW]:**
 

@@ -128,7 +128,7 @@ Build the execution engine with wave-based parallel dispatch, checkpoint/resume 
 - Pause saves state and can resume from exact point
 - Resume skips completed work
 
-### R11: Per-Task Reflection (Design Improvement A)
+### R11: Per-Task Reflection (Design Improvement A) [DEFERRED → M07]
 
 - After each task completes successfully, the same agent re-reads its diff and checks output against acceptance criteria
 - `ReflectionResultSchema`: passed, issues (criterion, concern, severity: blocker/warning), reflectedAt
@@ -142,7 +142,7 @@ Build the execution engine with wave-based parallel dispatch, checkpoint/resume 
 - Reflection retry counts toward fallback chain
 - No extra agent dispatch cost (same session)
 
-### R12: Model Downshift Fallback Chain (Design Improvement B)
+### R12: Model Downshift Fallback Chain (Design Improvement B) [DEFERRED → M07]
 
 - 3-step recovery chain: retry same model (1x) -> downshift to cheaper (1x) -> escalate
 - `FallbackStrategySchema`: retryCount (default 1, max 3), downshiftChain (quality -> balanced -> budget), checkpointBeforeRetry (default true)
@@ -156,7 +156,7 @@ Build the execution engine with wave-based parallel dispatch, checkpoint/resume 
 - Downshift chain configurable in settings
 - Total attempts bounded (no infinite loops)
 
-### R13: Pre-Dispatch Guardrails (Design Improvement G -- pre-dispatch half)
+### R13: Pre-Dispatch Guardrails (Design Improvement G -- pre-dispatch half) [DEFERRED → M07]
 
 - Extend existing post-dispatch guardrails with pre-dispatch validation
 - Pre-dispatch checks: scope containment (task filePaths subset of slice scope), worktree state (correct branch, clean), no uncommitted changes, budget check (sufficient for estimated cost)
@@ -168,7 +168,7 @@ Build the execution engine with wave-based parallel dispatch, checkpoint/resume 
 - Budget exhaustion detected before wasting tokens
 - Pre-dispatch checks configurable per-project
 
-### R14: Compressor Notation for Artifacts (Design Improvement I)
+### R14: Compressor Notation for Artifacts (Design Improvement I) [DEFERRED → M07]
 
 - All TFF-generated artifacts injected into agent context use formal logic notation
 - Notation: `∀ ∃ ∈ ∧ ∨ ¬ → ⇒ ⟺ ⊆ |`
