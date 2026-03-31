@@ -1,104 +1,13 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import type { GitError, Result } from "@kernel";
+import { InMemoryGitAdapter } from "@kernel";
 import { AgentResultBuilder } from "@kernel/agents";
-import { GitPort } from "@kernel/ports/git.port";
-import type { GitLogEntry, GitStatus, GitWorktreeEntry } from "@kernel/ports/git.schemas";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { GuardrailContext, GuardrailSeverity } from "../domain/guardrail.schemas";
 import { ComposableGuardrailAdapter } from "./composable-guardrail.adapter";
 import { DangerousCommandRule } from "./rules/dangerous-command.rule";
 import { FileScopeRule } from "./rules/file-scope.rule";
-
-// ── MockGitPort ────────────────────────────────────────────────────────────────
-
-class MockGitPort extends GitPort {
-  private _diffFiles: string[] = [];
-  private _diffContent = "";
-
-  givenDiffFiles(files: string[]): void {
-    this._diffFiles = files;
-  }
-
-  givenDiffContent(content: string): void {
-    this._diffContent = content;
-  }
-
-  override diffNameOnly(_cwd: string): Promise<Result<string[], GitError>> {
-    return Promise.resolve({ ok: true, data: this._diffFiles });
-  }
-
-  override diff(_cwd: string): Promise<Result<string, GitError>> {
-    return Promise.resolve({ ok: true, data: this._diffContent });
-  }
-
-  override restoreWorktree(_cwd: string): Promise<Result<void, GitError>> {
-    return Promise.resolve({ ok: true, data: undefined });
-  }
-
-  override listBranches(_pattern: string): Promise<Result<string[], GitError>> {
-    return Promise.resolve({ ok: true, data: [] });
-  }
-
-  override createBranch(_name: string, _base: string): Promise<Result<void, GitError>> {
-    return Promise.resolve({ ok: true, data: undefined });
-  }
-
-  override showFile(_branch: string, _path: string): Promise<Result<string | null, GitError>> {
-    return Promise.resolve({ ok: true, data: null });
-  }
-
-  override log(_branch: string, _limit?: number): Promise<Result<GitLogEntry[], GitError>> {
-    return Promise.resolve({ ok: true, data: [] });
-  }
-
-  override status(): Promise<Result<GitStatus, GitError>> {
-    return Promise.resolve({
-      ok: true,
-      data: { branch: "main", clean: true, entries: [] },
-    });
-  }
-
-  override commit(_message: string, _paths: string[]): Promise<Result<string, GitError>> {
-    return Promise.resolve({ ok: true, data: "abc123" });
-  }
-
-  override revert(_commitHash: string): Promise<Result<void, GitError>> {
-    return Promise.resolve({ ok: true, data: undefined });
-  }
-
-  override isAncestor(_ancestor: string, _descendant: string): Promise<Result<boolean, GitError>> {
-    return Promise.resolve({ ok: true, data: false });
-  }
-
-  override worktreeAdd(
-    _path: string,
-    _branch: string,
-    _baseBranch: string,
-  ): Promise<Result<void, GitError>> {
-    return Promise.resolve({ ok: true, data: undefined });
-  }
-
-  override worktreeRemove(_path: string): Promise<Result<void, GitError>> {
-    return Promise.resolve({ ok: true, data: undefined });
-  }
-
-  override worktreeList(): Promise<Result<GitWorktreeEntry[], GitError>> {
-    return Promise.resolve({ ok: true, data: [] });
-  }
-
-  override deleteBranch(_name: string, _force?: boolean): Promise<Result<void, GitError>> {
-    return Promise.resolve({ ok: true, data: undefined });
-  }
-
-  override statusAt(_cwd: string): Promise<Result<GitStatus, GitError>> {
-    return Promise.resolve({
-      ok: true,
-      data: { branch: "main", clean: true, entries: [] },
-    });
-  }
-}
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -126,10 +35,10 @@ function makeContext(
 // ── Tests ──────────────────────────────────────────────────────────────────────
 
 describe("ComposableGuardrailAdapter", () => {
-  let gitPort: MockGitPort;
+  let gitPort: InMemoryGitAdapter;
 
   beforeEach(() => {
-    gitPort = new MockGitPort();
+    gitPort = new InMemoryGitAdapter();
   });
 
   afterEach(() => {

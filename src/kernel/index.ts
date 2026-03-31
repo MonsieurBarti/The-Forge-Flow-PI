@@ -39,6 +39,7 @@ export { EVENT_NAMES, EventNameSchema } from "./event-names";
 export {
   ConsoleLoggerAdapter,
   GitCliAdapter,
+  InMemoryGitAdapter,
   InProcessEventBus,
   SilentLoggerAdapter,
   SystemDateProvider,
