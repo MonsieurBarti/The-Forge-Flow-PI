@@ -1,198 +1,173 @@
-# M07: Team Collaboration, Polish, and Platform Intelligence
+# M07: Intelligence and Auto-Learn
 
 ## Goal
 
-Build per-branch state persistence for team collaboration, deliver remaining platform commands, and add gap analysis features: stack auto-discovery, failure policies, shared project memory, quality metrics, tool/command rules, and code intelligence.
+Build the intelligence hexagon with the full auto-learn pipeline: observation capture, pattern detection, skill creation/refinement, and cluster detection.
 
 ## Requirements
 
-### R01: State Branch CRUD
+### R01: Skill Entity
 
-- Every code branch gets a mirrored orphan state branch (`tff-state/<branch>`)
-- Root `tff-state/main` is a true git orphan; children forked via `git branch`
-- `BranchMetaSchema`: version, stateId (stable, survives renames), codeBranch, stateBranch, lastSyncedAt, lastJournalOffset, dirty
-- Create: fork from parent state branch on code branch creation
-- Sync: at lifecycle events only (phase transition, milestone open/close, ship, manual sync, shutdown)
-- Uses git plumbing (no temp worktrees): `git hash-object -w`, `git mktree`, `git commit-tree`, `git update-ref`
-- Read via `git archive` or `git cat-file`
-- Serialized via `.tff/.lock` advisory lockfile
+- `Skill` aggregate with `SkillPropsSchema` (id, name, description, type, markdown, enforcerRules, version, driftPct, lastRefinedAt, timestamps)
+- Skill types: rigid (follow exactly) | flexible (adapt to context)
+- Name validation: `[a-z][a-z0-9-]*`, 1-64 chars, no consecutive hyphens
+- `refine()`, `checkDrift()` business methods
+- `SkillRepositoryPort`, SQLite + in-memory adapters
+- `SkillBuilder`
 
 **AC:**
-- State branches created/deleted automatically with code branches
-- Concurrent worktrees sync to different state branches without conflicts
-- Git plumbing used (no temp worktree overhead)
+- Name regex enforced at creation
+- Drift percentage tracked and queryable
 
-### R02: JSON Export/Import (SQLite <-> state-snapshot.json)
+### R02: Observation System
 
-- `StateSnapshotSchema`: version, exportedAt, project, milestones, slices, tasks, workflowSession
-- SQLite `.db` files never committed to git
-- Full export on sync; import on restore
-- Schema evolution: Zod `.default()` for additive fields, migration functions per version bump
-- `MIGRATIONS` map keyed by version number
+- `Observation` entity for capturing tool invocations
+- Storage: `.tff/observations/` as JSONL files (one per session)
+- Dead-letter queue: failed appends go to `dead-letter.jsonl`, replayed on next success
+- Always resilient: observation failures never crash the main process (exit 0 equivalent)
 
 **AC:**
-- Round-trip: export -> import produces identical domain state
-- Schema version tracked; old snapshots migrated automatically
+- Zero data loss from observation capture
+- Dead-letter replay tested
+- Main process unaffected by observation failures
 
-### R03: Post-Checkout Hook + Fallback Detection
+### R03: Pattern Detection Pipeline
 
-- `post-checkout` git hook auto-restores `.tff/` on branch switch via `tff sync --restore`
-- Hook appended to existing hooks (delimited section)
-- Restore: back up `.tff/`, pull from state branch, clear `.tff/`, write artifacts, import snapshot, replay journal
-- Fallback: every TFF command checks `branch-meta.json.codeBranch` vs actual branch, triggers restore on mismatch
-- `tff init` / `tff new` ensures `.tff/` in `.gitignore` and installs hook
-
-**AC:**
-- `git checkout <branch>` auto-restores correct `.tff/` state
-- Hook failure is non-blocking (git ignores post-checkout exit code)
-- Commands self-heal on branch mismatch
-
-### R04: Worktree Isolation Integration
-
-- Each worktree has own `.tff/` tied to own state branch
-- Worktree creation restores `.tff/` from corresponding state branch
-- Zero conflicts: different worktrees -> different state branches -> different git refs
+Three-stage pipeline:
+1. **Extract** (`ExtractNgramsUseCase`): group observations by session, extract n-grams, track count/sessions/projects/lastSeen
+2. **Aggregate** (`AggregateUseCase`): filter by minCount (default 3), remove framework noise (>80% session frequency)
+3. **Rank** (`RankCandidatesUseCase`): weighted scoring:
+   - Frequency: 0.25 (how often the pattern appears)
+   - Breadth: 0.30 (how many projects contain it)
+   - Recency: 0.25 (14-day half-life)
+   - Consistency: 0.20 (fraction of sessions containing it)
 
 **AC:**
-- Two worktrees on different slices sync concurrently without conflicts
+- Weights configurable via settings
+- Framework noise filtered (common tool sequences excluded)
+- Property-based tests for scoring weight stability (fast-check)
 
-### R05: Rename Detection + State Branch Migration
+### R04: Skill Creation and Refinement
 
-- Stable `stateId` survives code branch renames
-- Lazy detection: TFF command checks codeBranch vs HEAD
-- Disambiguate: missed checkout (state branch exists for current HEAD) vs rename (state branch exists for old name) vs fresh
-- Rename: `git branch -m tff-state/<old> tff-state/<new>`, then update branch-meta.json
-- Crash between rename and meta update handled by existing disambiguation
-
-**AC:**
-- Renaming a code branch preserves state linkage via stable stateId
-- No expensive stateId scan needed
-
-### R06: Merge-Back on Ship/Complete-Milestone
-
-- `/tff:ship`: programmatic merge of slice state into parent milestone state by entity ID
-  - Child's owned entities (shipped slice + tasks) win
-  - Parent's other entities win (updated by other shipped slices)
-  - Artifacts: per-slice directories have no overlap by construction
-  - Delete slice state branch after merge
-- `/tff:complete-milestone`: same entity-ID merge into `tff-state/main`, delete milestone state branch
+- `CreateSkillUseCase`: draft skill from candidate (requires >= 3 session evidence)
+- Evidence table required (no speculation)
+- `RefineSkillUseCase`: bounded refinement with guardrails:
+  - Max 20% drift per refinement (character-level diff ratio)
+  - Max 60% cumulative drift
+  - 7-day cooldown between refinements
+  - Min 3 corrections before proposing refinement
+- Drafts saved to drafts dir -- user reviews before promotion
+- Skill validation: name regex, description format, size limits, shell injection detection (allowlist + dangerous pattern blocklist)
 
 **AC:**
-- Ship merges slice state back and deletes slice state branch
-- Journal replay idempotent after merge
+- Cannot create skill with < 3 evidence sessions
+- Drift limits enforced (20% per, 60% cumulative)
+- Cooldown enforced (7-day minimum)
+- Shell injection in skill content detected and blocked
 
-### R07: State Reconstruction
+### R05: Skill Enforcer System
 
-- `ReconstructStateUseCase`: recover full state from git alone
-  1. Check if `tff-state/<branch>` exists -> pull and hydrate
-  2. If not, check parent state branch -> fork from there
-  3. If nothing -> fresh project
-  4. Replay local journal entries on top
-- Crash during restore: detect via missing `branch-meta.json` + existing `.tff.backup.*` -> restore from backup
-
-**AC:**
-- Losing `.tff/` + running any TFF command reconstructs from `tff-state/*`
-- `.tff/` NEVER appears in code branch commits
-
-### R08: Remaining Platform Commands
-
-- `/tff:quick` -- S-tier fast path (skip discuss + research -> plan -> execute -> ship)
-- `/tff:debug` -- 4-phase systematic diagnosis (reproduce -> hypothesize -> test -> fix)
-- `/tff:health` -- cross-hexagon state consistency check
-- `/tff:progress` -- dashboard: milestones, slices, tasks, costs, completion %
-- `/tff:add-slice`, `/tff:remove-slice`, `/tff:insert-slice` -- slice management
-- `/tff:rollback` -- revert execution commits for a slice
-- `/tff:audit-milestone` -- milestone completion audit vs original intent
-- `/tff:map-codebase` -- parallel doc-writer agents for structured documentation
-- `/tff:sync` -- manual bidirectional state sync
-- `/tff:settings` -- view/modify all project settings
-- `/tff:help` -- command reference
+- `SkillEnforcer` classes for programmatic validation alongside markdown guidance
+- Layered approach: markdown for LLM guidance + enforcer for hard gates
+- Enforcer rules defined per skill (name + check function)
 
 **AC:**
-- All commands produce actionable output with next-step suggestions
-- Each command respects autonomy mode
+- Enforcer runs independently of LLM (programmatic check)
+- Failed enforcement blocks the operation (hard gate)
 
-### R09: Stack Auto-Discovery (Gap G04)
+### R06: Knowledge Base Learning
 
-- `DiscoverStackUseCase`: runtime detection of project tech stack
-- Scans project root for: `package.json`, `Cargo.toml`, `pyproject.toml`, `go.mod`, linter configs (`.eslintrc`, `biome.json`), test runner configs (vitest, jest, pytest), CI configs (`.github/workflows/`, `.gitlab-ci.yml`)
-- Auto-populates `settings.yaml` defaults on `tff init`
-- Manual overrides in settings take precedence
-- Re-discovery on `/tff:settings` or explicit trigger
+- Store problem-solution pairs from successful task completions
+- Queryable by semantic similarity for future tasks
+- Indexed by: hexagon, error type, file patterns, skill used
 
 **AC:**
-- Stack detected automatically for supported ecosystems (Node/TS, Rust, Python, Go)
-- Detected stack reflected in default settings
-- Manual overrides not clobbered
+- Successful completions automatically recorded
+- Query returns ranked matches by relevance
 
-### R10: Failure Policy Model (Gap G02)
+### R07: Cluster Detection
 
-- Per-phase configurable failure behavior: `strict | tolerant | lenient`
-- `strict`: any failure blocks progression (execution, security review)
-- `tolerant`: continues on non-critical failures, records them (research, code review minors)
-- `lenient`: best-effort, logs warnings (suggestions, pattern detection)
-- Configurable per phase in `settings.yaml` under `workflow.failurePolicies`
-- Defaults: execution=strict, research=tolerant, review=strict, suggestions=lenient
+- `DetectClustersUseCase`: find co-activated skill bundles
+- Jaccard distance-based clustering
+- Thresholds: min-sessions 3, min-patterns 2, jaccard-threshold 0.3
+- >= 70% co-activation -> propose bundle (meta-skill with skill references)
 
 **AC:**
-- Failure policy checked at each phase transition
-- Tolerant mode records failures without blocking
-- Defaults are sensible out of the box
+- Clusters detected from real activation data
+- Bundle proposals include co-activation percentage
 
-### R11: Shared Memory Per Project (Gap G07)
+### R08: Commands
 
-- `ProjectMemoryPort` with key-value store scoped to project
-- Storage: `.tff/memory/` directory or SQLite table
-- Categories: architecture-decisions, domain-conventions, gotchas, resolved-bugs
-- Read/write from any agent session
-- Auto-populated from successful task completions (links to M06 R06 knowledge base)
-- Injected into agent context based on relevance (file paths, hexagon, phase)
-- Synced via state branches (R01-R06)
-- Eviction: LRU with configurable max entries, staleness detection
-- Distinct from L0-L4 tiered memory (M06 R10) -- this is persistent cross-session, not per-agent promotion
+- `/tff:suggest` -- show detected pattern candidates with summaries
+- `/tff:skill:new` -- draft a new skill from a detected pattern or description
+- `/tff:learn` -- detect corrections to existing skills and propose refinements
+- `/tff:patterns` -- extract, aggregate, and rank patterns from observations
+- `/tff:compose` -- detect skill co-activation clusters and propose bundles
 
 **AC:**
-- Memory persists across sessions and agents
-- Relevant memories injected into agent context
-- Stale entries evicted automatically
+- All commands produce human-readable output with actionable next steps
+- Skill drafts require user approval before promotion
 
-### R12: Per-Stage Quality Metrics (Gap G03)
+### R09: Metrics-Informed Suggestions (Design Improvement C)
 
-- `QualitySnapshotSchema`: lintErrors, testsPassed, testsFailed, testsSkipped, toolInvocations, toolFailures, reviewScore, filesChanged, linesAdded, linesRemoved
-- Captured per stage (executing, verifying, reviewing)
-- Stored alongside TaskMetrics (M06 R09)
-- Feeds into metrics-informed suggestions
-- Enables trend analysis across slices/milestones
+- `TaskMetricsSchema` replaces `CostEntrySchema` -- tracks: taskId, sliceId, milestoneId, model (provider, modelId, profile), tokens (input, output), costUsd, durationMs, success, retries, downshifted, reflectionPassed, timestamp
+- `AggregateMetricsUseCase`: reads from journal, computes on-demand recommendations
+- Recommendations surfaced in `/tff:settings` as advisory text (e.g., "budget tasks have 92% success rate -- consider downshifting F-lite")
+- No automatic model routing changes -- human stays in control
 
 **AC:**
-- Quality signals captured per stage
-- Trends queryable by milestone/slice
+- TaskMetrics captured from every dispatch
+- Suggestions computed on-demand (not stored)
+- No auto-adjustment of model routing
 
-### R13: Configurable Tool/Command Rules Per Agent (Gap G09)
+### R10: 5-Level Tiered Memory (Design Improvement E)
 
-- `ToolPolicySchema` in settings:
-  - `defaults.blocked`: globally blocked tools/commands
-  - `byTier`: per-complexity-tier allowed/blocked (e.g., S-tier: no Agent tool)
-  - `byRole`: per-agent-role allowed/blocked (e.g., security-auditor: read-only)
-- Enforced at dispatch time via tool filtering in `AgentDispatchConfigSchema`
-- Security auditor = read-only (Read, Grep, Glob only)
-- S-tier = no sub-agent spawning
-- Executors = no destructive git operations
+- `MemoryEntrySchema`: id, level (working/session/episodic/semantic/procedural), kind, content, source (task/slice/milestone), relevanceScore, accessedAt, accessCount
+- Five levels: L0 (context window, ephemeral) -> L1 (checkpoint, until slice closes) -> L2 (journal + SQLite, until milestone closes) -> L3 (SQLite patterns, permanent with decay) -> L4 (skill files, permanent)
+- Promotion flow: L0 (agent works) -> L1 (task completes) -> L2 (pattern across tasks) -> L3 (n-gram extraction) -> L4 (skill creation threshold)
+- Context injection: L4 in system prompt, L3 as "hints" (top 3 by relevance), L2 via `memory-recall` tool, L1 from checkpoint
+- Integrates with existing auto-learn pipeline (R03-R04 operate on L2->L3->L4 transitions)
 
 **AC:**
-- Tool policies enforced before dispatch (not after)
-- Per-tier and per-role rules composable
-- Configurable in settings
+- Memory entries tracked with level and kind
+- Promotion between levels is automatic (threshold-based)
+- L3/L4 injected into agent prompts
+- L2 available on-demand via tool
 
-### R14: Code Intelligence -- AST/LSP (Gap G10)
+### R11: Journal Consumers (Design Improvement F)
 
-- Optional `CodeIntelligencePort` abstract class
-- Tree-sitter parsing for supported languages (TS, Rust, Python, Go)
-- Extract: imports, exports, class/function definitions, dependency graph
-- Use cases: smarter task file scoping, impact analysis for changes, review scope narrowing
-- Heavy dependency -- implemented as optional adapter (graceful degradation if unavailable)
+- Elevate journal.jsonl from crash-recovery to unified event backbone
+- New journal entry types: observation-recorded, pattern-detected, skill-refined, task-retried, model-downshifted, guardrail-violation, drift-scan-completed, metrics-snapshot
+- Consumer architecture: `JournalConsumerPort` implementations registered in Intelligence hexagon
+  - Recovery consumer (existing): replays entries to reconstruct state
+  - Memory consumer: promotes observations through L0->L4 tiers
+  - Metrics consumer: aggregates TaskMetrics for suggestions
+  - Drift consumer: feeds DriftReport at milestone boundaries
+- Each consumer tracks own read offset (stored in SQLite)
+- Consumers invoked on-demand (not real-time streaming)
 
 **AC:**
-- Semantic analysis available when Tree-sitter is installed
-- Graceful fallback to file-path-based routing when unavailable
-- Dependency graph extracted for supported languages
+- Journal serves multiple consumers (not just recovery)
+- Consumer offsets tracked (no re-processing)
+- Journal format unchanged (JSONL, append-only, idempotent)
+
+### R12: Architecture Drift Detection (Design Improvement H)
+
+- `ScanArchitectureDriftUseCase`: milestone-boundary scan
+- Triggers: slice transition, milestone close
+- `DriftReportSchema`: id, milestoneId, sliceId, checks array, overallHealth (healthy/warning/critical)
+- Checks:
+  - File size: >400 lines warning, >500 critical
+  - Boundary violations: any import crossing hexagon walls
+  - Test coverage delta: >5% drop warning, >15% critical
+  - Dependency complexity: circular deps, depth >3
+  - Domain leaks: infrastructure types in domain layer
+- DriftReport persisted in SQLite, summary in journal (`drift-scan-completed`)
+- Warnings surfaced in `/tff:status` output
+- Advisory only -- no blocking
+
+**AC:**
+- Drift scanned automatically at milestone boundaries
+- All 5 checks produce structured results
+- No deployments blocked (advisory only)
+- Results visible in status output

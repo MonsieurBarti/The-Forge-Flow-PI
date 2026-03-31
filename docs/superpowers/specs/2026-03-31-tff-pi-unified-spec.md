@@ -55,7 +55,7 @@ the-forge-flow-pi/
       workflow/     [BUILT]
       settings/     [BUILT]
       review/       [PLANNED - M05]
-      intelligence/ [PLANNED - M06]
+      intelligence/ [PLANNED - M07]
     infrastructure/                  # Cross-cutting adapters
       pi/           [BUILT]          # PI SDK extension wiring
     cli/            [PARTIAL]        # Entry point (awaiting PI SDK)
@@ -243,14 +243,14 @@ completing  -> closed
 | InMemory adapters (7 total) | BUILT |
 | Tests: 48 specs | BUILT |
 
-**Design Improvements (deferred from M04 to M07):**
+**Design Improvements (deferred from M04 to M08):**
 
 | Improvement | Description | Status |
 |---|---|---|
-| **A. Per-task reflection** | After task completes, same agent re-reads diff vs ACs. Blockers -> retry. Warnings recorded. `ReflectionResultSchema` extends `AgentResultSchema`. | DEFERRED (M07) -- placeholder field in TaskMetrics |
-| **B. Model downshift fallback** | 3-step chain: retry same model (1x) -> downshift to cheaper (1x) -> escalate. `FallbackStrategySchema` in settings. Checkpoint saved before retry. | DEFERRED (M07) -- fallbackChain schema exists, no retry-downshift logic |
-| **G. Full pre/post-dispatch guardrails** | Pre-dispatch: scope containment, worktree state, budget check. Post-dispatch: file containment, lint, tests, secrets, file size. Auto-retry once with feedback. | PARTIAL -- post-dispatch built (M04), pre-dispatch DEFERRED (M07) |
-| **I. Compressor notation** | All generated artifacts use formal logic symbols (~50-60% token reduction). Schemas/code uncompressed. | DEFERRED (M07) -- notation in templates only, no transformation logic |
+| **A. Per-task reflection** | After task completes, same agent re-reads diff vs ACs. Blockers -> retry. Warnings recorded. `ReflectionResultSchema` extends `AgentResultSchema`. | DEFERRED (M08) -- placeholder field in TaskMetrics |
+| **B. Model downshift fallback** | 3-step chain: retry same model (1x) -> downshift to cheaper (1x) -> escalate. `FallbackStrategySchema` in settings. Checkpoint saved before retry. | DEFERRED (M08) -- fallbackChain schema exists, no retry-downshift logic |
+| **G. Full pre/post-dispatch guardrails** | Pre-dispatch: scope containment, worktree state, budget check. Post-dispatch: file containment, lint, tests, secrets, file size. Auto-retry once with feedback. | PARTIAL -- post-dispatch built (M04), pre-dispatch DEFERRED (M08) |
+| **I. Compressor notation** | All generated artifacts use formal logic symbols (~50-60% token reduction). Schemas/code uncompressed. | DEFERRED (M08) -- notation in templates only, no transformation logic |
 
 ### 4.6 Settings Hexagon [BUILT]
 
@@ -394,7 +394,7 @@ paused      + resume  -> previousPhase
 | `/tff:ship` -- PR creation, merge gate, worktree cleanup | PLANNED |
 | `/tff:complete-milestone` -- audit + PR to main | PLANNED |
 
-### 4.9 Intelligence Hexagon [PLANNED -- M06]
+### 4.9 Intelligence Hexagon [PLANNED -- M07]
 
 **Aggregates:** `Skill`, `Observation`, `Pattern`, `Candidate`
 
@@ -466,6 +466,15 @@ Each hexagon contributes a PI extension registering tools, commands, and event h
 ### Agent Dispatch [BUILT]
 `PiAgentDispatchAdapter` creates fresh PI session per task via `createAgentSession()`. Skills injected in system prompt.
 
+### pi-ai Direct Integration [PLANNED -- M06]
+Promote `@mariozechner/pi-ai` from transitive to direct dependency. Replace thin `pi.types.ts` aliases with direct pi-ai type imports (Model, Usage, Provider, etc.).
+
+### Agent Event Wiring [PLANNED -- M06]
+`AgentEventPort` streams granular events (turn/tool/message lifecycle) from per-task `AgentSession.on()` to journal and TUI overlays. NOT Extension API `pi.on()` (host process only).
+
+### TUI Overlay System [PLANNED -- M06]
+`@mariozechner/pi-tui` for persistent overlays via `registerShortcut` + `ctx.custom()` with `onHandle`/`setHidden()` toggle pattern. Three overlays: status dashboard, workflow visualizer, execution monitor. Overlays are pull-based with event-driven invalidation via `handle.requestRender()`.
+
 ### Registered Commands [PARTIAL]
 
 | Command | Phase | Status |
@@ -481,18 +490,21 @@ Each hexagon contributes a PI extension registering tools, commands, and event h
 | `/tff:verify` | Verifying | PLANNED (M05) |
 | `/tff:ship` | Shipping | PLANNED (M05) |
 | `/tff:complete-milestone` | Completing | PLANNED (M05) |
-| `/tff:quick` | S-tier shortcut | PLANNED (M07) |
-| `/tff:debug` | Debugging | PLANNED (M07) |
-| `/tff:health` | Diagnostics | PLANNED (M07) |
-| `/tff:progress` | Dashboard | PLANNED (M07) |
-| `/tff:add-slice`, `/tff:remove-slice`, `/tff:insert-slice` | Management | PLANNED (M07) |
-| `/tff:rollback` | Recovery | PLANNED (M07) |
-| `/tff:audit-milestone` | Audit | PLANNED (M07) |
-| `/tff:map-codebase` | Analysis | PLANNED (M07) |
-| `/tff:sync` | Sync | PLANNED (M07) |
-| `/tff:suggest`, `/tff:skill:new`, `/tff:learn`, `/tff:patterns`, `/tff:compose` | Intelligence | PLANNED (M06) |
-| `/tff:settings` | Configuration | PLANNED (M07) |
-| `/tff:help` | Help | PLANNED (M07) |
+| `/tff:dashboard` | TUI overlay | PLANNED (M06) |
+| `/tff:workflow-view` | TUI overlay | PLANNED (M06) |
+| `/tff:execution-monitor` | TUI overlay | PLANNED (M06) |
+| `/tff:quick` | S-tier shortcut | PLANNED (M08) |
+| `/tff:debug` | Debugging | PLANNED (M08) |
+| `/tff:health` | Diagnostics | PLANNED (M08) |
+| `/tff:progress` | Dashboard | PLANNED (M08) |
+| `/tff:add-slice`, `/tff:remove-slice`, `/tff:insert-slice` | Management | PLANNED (M08) |
+| `/tff:rollback` | Recovery | PLANNED (M08) |
+| `/tff:audit-milestone` | Audit | PLANNED (M08) |
+| `/tff:map-codebase` | Analysis | PLANNED (M08) |
+| `/tff:sync` | Sync | PLANNED (M08) |
+| `/tff:suggest`, `/tff:skill:new`, `/tff:learn`, `/tff:patterns`, `/tff:compose` | Intelligence | PLANNED (M07) |
+| `/tff:settings` | Configuration | PLANNED (M08) |
+| `/tff:help` | Help | PLANNED (M08) |
 
 ---
 
@@ -521,7 +533,7 @@ Each hexagon contributes a PI extension registering tools, commands, and event h
   worktrees/                   # Git worktrees (ephemeral)
 ```
 
-### 6.2 Per-Branch State Branches [PLANNED -- M07]
+### 6.2 Per-Branch State Branches [PLANNED -- M08]
 
 Every code branch gets a mirrored orphan state branch:
 
@@ -620,7 +632,7 @@ Elevated from crash-recovery to first-class event backbone. Entry types:
 
 ### Milestone Numbering
 
-The design spec used M01a/M01b/M02-M06. Actual milestones are M01-M08:
+The design spec used M01a/M01b/M02-M06. Actual milestones are M01-M09:
 
 | Spec Name | Actual | Goal | Status |
 |---|---|---|---|
@@ -628,10 +640,11 @@ The design spec used M01a/M01b/M02-M06. Actual milestones are M01-M08:
 | M01b: Task + Settings + CLI | **M02** | Complete entity stack, wire CLI | CLOSED |
 | M02: Workflow Engine | **M03** | Orchestrator, phase commands, artifacts | CLOSED |
 | M03: Execution & Recovery | **M04** | Wave dispatch, checkpoints, guardrails | CLOSED (10/10 slices) |
-| M04: Review & Ship | **M05** | Fresh-reviewer, 3-stage review, PR creation | PLANNED |
-| M05: Intelligence & Auto-Learn | **M06** | Observations, patterns, skills, auto-learn | PLANNED |
-| M06: Team & Polish | **M07** | Per-branch sync, state reconstruction, remaining commands | PLANNED |
-| (new) Expansion | **M08** | Empty stub | PLANNED |
+| M04: Review & Ship | **M05** | Fresh-reviewer, 3-stage review, PR creation | IN PROGRESS |
+| (new) PI-Native Integration | **M06** | pi-ai, pi-tui, agent events, TUI overlays | PLANNED |
+| M05: Intelligence & Auto-Learn | **M07** | Observations, patterns, skills, auto-learn | PLANNED |
+| M06: Team & Polish | **M08** | Per-branch sync, state reconstruction, remaining commands | PLANNED |
+| (new) Expansion | **M09** | CQ integration, caching, hooks, CI/CD | PLANNED |
 
 ### M04: Execution & Recovery [CLOSED -- 10/10 slices]
 
@@ -648,9 +661,9 @@ The design spec used M01a/M01b/M02-M06. Actual milestones are M01-M08:
 | S09 | Async overseer / watchdog | CLOSED |
 | S10 | Execute/pause/resume commands | CLOSED |
 
-**Design improvements deferred to M07:** A (per-task reflection), B (model downshift fallback), G-pre (pre-dispatch guardrails), I (compressor notation)
+**Design improvements deferred to M08:** A (per-task reflection), B (model downshift fallback), G-pre (pre-dispatch guardrails), I (compressor notation)
 
-### M05: Review & Ship [PLANNED]
+### M05: Review & Ship [IN PROGRESS]
 
 **Requirements (10):**
 - R01: Review hexagon (aggregate, schemas, findings)
@@ -664,7 +677,37 @@ The design spec used M01a/M01b/M02-M06. Actual milestones are M01-M08:
 - R09: Ship command (`/tff:ship`) -- PR creation, merge gate, worktree cleanup
 - R10: Complete milestone (`/tff:complete-milestone`) -- audit + PR to main
 
-### M06: Intelligence & Auto-Learn [PLANNED]
+### M06: PI-Native Integration [PLANNED]
+
+> Full spec: `docs/superpowers/specs/2026-03-31-pi-native-integration.md`
+
+**Goal:** Deep PI SDK integration — promote `pi-ai` and `pi-tui` to direct dependencies, wire agent events from per-task sessions, build TUI overlay infrastructure with persistent dashboards.
+
+**Architecture:** Hybrid — domain hexagons unchanged, PI packages in infrastructure shell. Overlay data flow: domain EventBus → OverlayDataPort query → component state → `handle.requestRender()`.
+
+**Wave 1: Infrastructure (S01 ∥ S02 → S03)**
+
+| Slice | Content |
+|---|---|
+| S01 | pi-ai direct dependency + type cleanup (replace `pi.types.ts` thin aliases) |
+| S02 | Agent event deepening (`AgentEventPort` via `AgentSession.on()` on per-task sessions) |
+| S03 | pi-tui foundation (persistent overlay toggle via `onHandle`/`setHidden`, hotkeys, slash commands) |
+
+**Wave 2: TUI Overlays (S04-S06, depends on S03)**
+
+| Slice | Content |
+|---|---|
+| S04 | Status dashboard overlay (milestone progress, slice phases, budget, next step) |
+| S05 | Workflow visualizer overlay (phase pipeline FSM, artifact status, timing) |
+| S06 | Execution monitor overlay (wave progress, live agent events, cost summary) |
+
+**New Ports:** `AgentEventPort`, `OverlayDataPort`
+
+**Existing (no changes):** `ModelRoutingPort`/`ResolveModelUseCase` (model routing already built), `MetricsRepositoryPort`/`BudgetTrackingPort` (cost tracking already built in M04)
+
+**Non-goals:** Web UI (pi-web-ui), native Rust engine, raw pi-agent-core Agent class migration, rebuilding model routing or cost tracking
+
+### M07: Intelligence & Auto-Learn [PLANNED]
 
 **Requirements (8):**
 - R01: Skill entity (aggregate, enforcer rules, drift tracking)
@@ -676,9 +719,9 @@ The design spec used M01a/M01b/M02-M06. Actual milestones are M01-M08:
 - R07: Cluster detection (Jaccard, co-activation bundles)
 - R08: Commands (/tff:suggest, /tff:skill:new, /tff:learn, /tff:patterns, /tff:compose)
 
-**Design improvements targeting M06:** C (metrics suggestions), E (tiered memory), F (journal consumers), H (drift detection)
+**Design improvements targeting M07:** C (metrics suggestions), E (tiered memory), F (journal consumers), H (drift detection)
 
-### M07: Team Collaboration & Polish [PLANNED -- expanded with gap analysis]
+### M08: Team Collaboration & Polish [PLANNED -- expanded with gap analysis]
 
 **Original scope:** Per-branch sync, state reconstruction, remaining commands, polish.
 
@@ -712,7 +755,7 @@ The design spec used M01a/M01b/M02-M06. Actual milestones are M01-M08:
 | G09 | **Tool/command rules per agent** -- declarative `ToolPolicySchema` in settings: allowed/blocked tools by tier and by role. Security auditor = read-only. S-tier = no sub-agents. Enforced at dispatch time. | P1 |
 | G10 | **Code intelligence (AST/LSP)** -- optional `CodeIntelligencePort` with Tree-sitter parsing for semantic code understanding: imports, exports, dependency graph, impact analysis. | P3 |
 
-### M08: Expansion [PLANNED -- filled from gap analysis]
+### M09: Expansion [PLANNED -- filled from gap analysis]
 
 | ID | Feature | Priority |
 |---|---|---|
@@ -733,13 +776,14 @@ Cross-referencing spec vs. built codebase revealed these discrepancies:
 | Item | Expected In |
 |---|---|
 | Review hexagon (entire) | M05 |
-| Intelligence hexagon (entire) | M06 |
-| Per-branch state persistence | M07 |
-| StateSyncPort implementations | M07 |
-| SyncScheduler | M07 |
-| GitHub port adapter (gh CLI) | M05 (ship) or M07 |
-| ReconstructStateUseCase | M07 |
-| MarkdownCheckpointRepository | M04 (S10) |
+| PI-native integration (pi-ai, pi-tui, overlays) | M06 |
+| Intelligence hexagon (entire) | M07 |
+| Per-branch state persistence | M08 |
+| StateSyncPort implementations | M08 |
+| SyncScheduler | M08 |
+| GitHub port adapter (gh CLI) | M05 (ship) or M08 |
+| ReconstructStateUseCase | M08 |
+| MarkdownCheckpointRepository | M04 (closed without it) |
 
 ### In Code, Not Explicitly In Spec (Organic Growth -- OK)
 

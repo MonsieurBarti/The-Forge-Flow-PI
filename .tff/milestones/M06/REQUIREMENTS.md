@@ -1,173 +1,107 @@
-# M06: Intelligence and Auto-Learn
+# M06: PI-Native Integration
 
 ## Goal
 
-Build the intelligence hexagon with the full auto-learn pipeline: observation capture, pattern detection, skill creation/refinement, and cluster detection.
+Deep PI SDK integration — promote `pi-ai` and `pi-tui` to direct dependencies, wire agent events from per-task sessions, build TUI overlay infrastructure with persistent dashboards.
+
+> Full spec: `docs/superpowers/specs/2026-03-31-pi-native-integration.md`
+
+## Architecture
+
+**Hybrid:** Domain hexagons unchanged, PI packages in infrastructure shell. Overlay data flow: domain EventBus → OverlayDataPort query → component state → `handle.requestRender()`.
+
+**New Ports:** `AgentEventPort`, `OverlayDataPort`
+
+**Existing (no changes):** `ModelRoutingPort`/`ResolveModelUseCase`, `MetricsRepositoryPort`/`BudgetTrackingPort`
 
 ## Requirements
 
-### R01: Skill Entity
+### Wave 1: Infrastructure (S01 ∥ S02 → S03)
 
-- `Skill` aggregate with `SkillPropsSchema` (id, name, description, type, markdown, enforcerRules, version, driftPct, lastRefinedAt, timestamps)
-- Skill types: rigid (follow exactly) | flexible (adapt to context)
-- Name validation: `[a-z][a-z0-9-]*`, 1-64 chars, no consecutive hyphens
-- `refine()`, `checkDrift()` business methods
-- `SkillRepositoryPort`, SQLite + in-memory adapters
-- `SkillBuilder`
+### R01: pi-ai Direct Dependency + Type Cleanup
 
-**AC:**
-- Name regex enforced at creation
-- Drift percentage tracked and queryable
-
-### R02: Observation System
-
-- `Observation` entity for capturing tool invocations
-- Storage: `.tff/observations/` as JSONL files (one per session)
-- Dead-letter queue: failed appends go to `dead-letter.jsonl`, replayed on next success
-- Always resilient: observation failures never crash the main process (exit 0 equivalent)
+- Promote `@mariozechner/pi-ai` from transitive to direct dependency in package.json
+- Replace `infrastructure/pi/pi.types.ts` thin aliases with direct pi-ai type imports (Model, Usage, Provider, etc.)
+- All infrastructure adapters import pi-ai types directly — no indirection layer
 
 **AC:**
-- Zero data loss from observation capture
-- Dead-letter replay tested
-- Main process unaffected by observation failures
+- pi-ai is a direct dependency in package.json
+- `pi.types.ts` deleted or reduced to re-exports only
+- All existing tests pass (no domain logic changes)
 
-### R03: Pattern Detection Pipeline
+### R02: Agent Event Deepening
 
-Three-stage pipeline:
-1. **Extract** (`ExtractNgramsUseCase`): group observations by session, extract n-grams, track count/sessions/projects/lastSeen
-2. **Aggregate** (`AggregateUseCase`): filter by minCount (default 3), remove framework noise (>80% session frequency)
-3. **Rank** (`RankCandidatesUseCase`): weighted scoring:
-   - Frequency: 0.25 (how often the pattern appears)
-   - Breadth: 0.30 (how many projects contain it)
-   - Recency: 0.25 (14-day half-life)
-   - Consistency: 0.20 (fraction of sessions containing it)
+- `AgentEventPort` interface in kernel — typed event stream: `turn_start`, `turn_end`, `message_start`, `message_update`, `message_end`, `tool_execution_start`, `tool_execution_update`, `tool_execution_end`
+- `PiSessionEventAdapter` implements `AgentEventPort` via `AgentSession.on()` on per-task sessions inside `PiAgentDispatchAdapter` — NOT Extension API `pi.on()` (host process only)
+- Events piped to: execution journal, future TUI overlays
+- `AgentResult` enriched with per-turn metrics (tokens, duration, tool invocations)
+- Execution journal records richer event stream with tool call details
 
-**AC:**
-- Weights configurable via settings
-- Framework noise filtered (common tool sequences excluded)
-- Property-based tests for scoring weight stability (fast-check)
-
-### R04: Skill Creation and Refinement
-
-- `CreateSkillUseCase`: draft skill from candidate (requires >= 3 session evidence)
-- Evidence table required (no speculation)
-- `RefineSkillUseCase`: bounded refinement with guardrails:
-  - Max 20% drift per refinement (character-level diff ratio)
-  - Max 60% cumulative drift
-  - 7-day cooldown between refinements
-  - Min 3 corrections before proposing refinement
-- Drafts saved to drafts dir -- user reviews before promotion
-- Skill validation: name regex, description format, size limits, shell injection detection (allowlist + dangerous pattern blocklist)
+**Non-goal:** Migration from `createAgentSession()` to raw `pi-agent-core` `Agent` class.
 
 **AC:**
-- Cannot create skill with < 3 evidence sessions
-- Drift limits enforced (20% per, 60% cumulative)
-- Cooldown enforced (7-day minimum)
-- Shell injection in skill content detected and blocked
+- AgentEventPort typed for all 8 event kinds
+- Events come from per-task AgentSession.on(), not host Extension API
+- Journal entries include tool call details
+- Existing execution tests pass + new event adapter tests
 
-### R05: Skill Enforcer System
+### R03: pi-tui Foundation
 
-- `SkillEnforcer` classes for programmatic validation alongside markdown guidance
-- Layered approach: markdown for LLM guidance + enforcer for hard gates
-- Enforcer rules defined per skill (name + check function)
-
-**AC:**
-- Enforcer runs independently of LLM (programmatic check)
-- Failed enforcement blocks the operation (hard gate)
-
-### R06: Knowledge Base Learning
-
-- Store problem-solution pairs from successful task completions
-- Queryable by semantic similarity for future tasks
-- Indexed by: hexagon, error type, file patterns, skill used
+- Promote `@mariozechner/pi-tui` to direct dependency in package.json
+- `OverlayDataPort` interface in kernel — read-only queries for milestone/slice/task/execution state
+- Overlays use persistent toggle pattern: `registerShortcut` → `ctx.custom()` with `onHandle` → `handle.setHidden(true/false)` for visibility toggle
+- Base rendering helpers: progress bars, phase badges, status chips using pi-tui `Text`/`Box`
+- Default hotkeys: `ctrl+alt+d` (dashboard), `ctrl+alt+w` (workflow), `ctrl+alt+e` (execution monitor) — configurable via settings hexagon
+- Shortcut registration handles conflicts gracefully (logs warning, falls back to slash-command-only)
+- Fallback commands: `/tff:dashboard`, `/tff:workflow-view`, `/tff:execution-monitor`
+- Depends on R02 (`AgentEventPort`)
 
 **AC:**
-- Successful completions automatically recorded
-- Query returns ranked matches by relevance
+- pi-tui is a direct dependency
+- OverlayDataPort provides read-only domain state queries
+- Persistent overlay toggle works (setHidden, not create-destroy)
+- Hotkeys configurable, slash command fallbacks always available
+- Empty placeholder renders without error for all 3 overlay slots
 
-### R07: Cluster Detection
+### Wave 2: TUI Overlays (S04-S06, depends on R03)
 
-- `DetectClustersUseCase`: find co-activated skill bundles
-- Jaccard distance-based clustering
-- Thresholds: min-sessions 3, min-patterns 2, jaccard-threshold 0.3
-- >= 70% co-activation -> propose bundle (meta-skill with skill references)
+### R04: Status Dashboard Overlay
 
-**AC:**
-- Clusters detected from real activation data
-- Bundle proposals include co-activation percentage
-
-### R08: Commands
-
-- `/tff:suggest` -- show detected pattern candidates with summaries
-- `/tff:skill:new` -- draft a new skill from a detected pattern or description
-- `/tff:learn` -- detect corrections to existing skills and propose refinements
-- `/tff:patterns` -- extract, aggregate, and rank patterns from observations
-- `/tff:compose` -- detect skill co-activation clusters and propose bundles
+- Renders via `ctrl+alt+d` or `/tff:dashboard` with live data from `OverlayDataPort`
+- Shows: project name, current milestone + progress bar, slice list with phase badges, task counts (done/total), budget (spent/ceiling with %), next suggested action
+- Subscribes to domain EventBus; calls `handle.requestRender()` on phase transitions and task completions
+- Responsive layout: adapts to terminal width (min 80 cols)
+- Uses pi-tui `Markdown` for rich formatting, `Box` for sections
 
 **AC:**
-- All commands produce human-readable output with actionable next steps
-- Skill drafts require user approval before promotion
+- Dashboard shows all listed data points
+- Auto-refreshes on domain events
+- Responsive to terminal width
 
-### R09: Metrics-Informed Suggestions (Design Improvement C)
+### R05: Workflow Visualizer Overlay
 
-- `TaskMetricsSchema` replaces `CostEntrySchema` -- tracks: taskId, sliceId, milestoneId, model (provider, modelId, profile), tokens (input, output), costUsd, durationMs, success, retries, downshifted, reflectionPassed, timestamp
-- `AggregateMetricsUseCase`: reads from journal, computes on-demand recommendations
-- Recommendations surfaced in `/tff:settings` as advisory text (e.g., "budget tasks have 92% success rate -- consider downshifting F-lite")
-- No automatic model routing changes -- human stays in control
-
-**AC:**
-- TaskMetrics captured from every dispatch
-- Suggestions computed on-demand (not stored)
-- No auto-adjustment of model routing
-
-### R10: 5-Level Tiered Memory (Design Improvement E)
-
-- `MemoryEntrySchema`: id, level (working/session/episodic/semantic/procedural), kind, content, source (task/slice/milestone), relevanceScore, accessedAt, accessCount
-- Five levels: L0 (context window, ephemeral) -> L1 (checkpoint, until slice closes) -> L2 (journal + SQLite, until milestone closes) -> L3 (SQLite patterns, permanent with decay) -> L4 (skill files, permanent)
-- Promotion flow: L0 (agent works) -> L1 (task completes) -> L2 (pattern across tasks) -> L3 (n-gram extraction) -> L4 (skill creation threshold)
-- Context injection: L4 in system prompt, L3 as "hints" (top 3 by relevance), L2 via `memory-recall` tool, L1 from checkpoint
-- Integrates with existing auto-learn pipeline (R03-R04 operate on L2->L3->L4 transitions)
+- Renders via `ctrl+alt+w` or `/tff:workflow-view` for the active slice
+- Phase pipeline: `discuss → research → plan → execute → verify → review → ship → closed`
+- Current phase highlighted (bold/color), completed phases dimmed, future phases muted
+- Phase metadata: time spent in phase, artifact status (SPEC.md? PLAN.md?)
+- Slice selector if multiple slices active
+- Subscribes to domain EventBus; calls `handle.requestRender()` on phase transitions
 
 **AC:**
-- Memory entries tracked with level and kind
-- Promotion between levels is automatic (threshold-based)
-- L3/L4 injected into agent prompts
-- L2 available on-demand via tool
+- FSM pipeline rendered with visual phase indicators
+- Current/completed/future phases visually distinct
+- Updates on phase transitions
 
-### R11: Journal Consumers (Design Improvement F)
+### R06: Execution Monitor Overlay
 
-- Elevate journal.jsonl from crash-recovery to unified event backbone
-- New journal entry types: observation-recorded, pattern-detected, skill-refined, task-retried, model-downshifted, guardrail-violation, drift-scan-completed, metrics-snapshot
-- Consumer architecture: `JournalConsumerPort` implementations registered in Intelligence hexagon
-  - Recovery consumer (existing): replays entries to reconstruct state
-  - Memory consumer: promotes observations through L0->L4 tiers
-  - Metrics consumer: aggregates TaskMetrics for suggestions
-  - Drift consumer: feeds DriftReport at milestone boundaries
-- Each consumer tracks own read offset (stored in SQLite)
-- Consumers invoked on-demand (not real-time streaming)
+- Renders via `ctrl+alt+e` or `/tff:execution-monitor` during slice execution
+- Wave layout: waves 1..N with tasks grouped per wave
+- Per-task: status icon (pending/running/done/failed), name, assigned model, token count, duration
+- Live streaming: subscribes to `AgentEventPort` for active task agent events, throttled to 100ms render intervals
+- Summary footer: total tokens, total cost, elapsed time, guardrail violations
+- Subscribes to domain EventBus + `AgentEventPort`; calls `handle.requestRender()` on events
 
 **AC:**
-- Journal serves multiple consumers (not just recovery)
-- Consumer offsets tracked (no re-processing)
-- Journal format unchanged (JSONL, append-only, idempotent)
-
-### R12: Architecture Drift Detection (Design Improvement H)
-
-- `ScanArchitectureDriftUseCase`: milestone-boundary scan
-- Triggers: slice transition, milestone close
-- `DriftReportSchema`: id, milestoneId, sliceId, checks array, overallHealth (healthy/warning/critical)
-- Checks:
-  - File size: >400 lines warning, >500 critical
-  - Boundary violations: any import crossing hexagon walls
-  - Test coverage delta: >5% drop warning, >15% critical
-  - Dependency complexity: circular deps, depth >3
-  - Domain leaks: infrastructure types in domain layer
-- DriftReport persisted in SQLite, summary in journal (`drift-scan-completed`)
-- Warnings surfaced in `/tff:status` output
-- Advisory only -- no blocking
-
-**AC:**
-- Drift scanned automatically at milestone boundaries
-- All 5 checks produce structured results
-- No deployments blocked (advisory only)
-- Results visible in status output
+- Wave-grouped task display with status icons
+- Live agent events streamed (throttled to 100ms)
+- Summary footer with cost/token totals
