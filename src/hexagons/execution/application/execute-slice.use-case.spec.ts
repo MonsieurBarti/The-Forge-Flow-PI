@@ -9,18 +9,28 @@ import {
   InMemoryGitAdapter,
   InProcessEventBus,
   ok,
+  type Result,
   SilentLoggerAdapter,
 } from "@kernel";
-import { AgentResultBuilder, isSuccessfulStatus } from "@kernel/agents";
+import {
+  type AgentDispatchConfig,
+  type AgentResult,
+  AgentResultBuilder,
+  isSuccessfulStatus,
+} from "@kernel/agents";
 import { beforeEach, describe, expect, it } from "vitest";
 import { Checkpoint } from "../domain/checkpoint.aggregate";
+import type { AgentDispatchError } from "../domain/errors/agent-dispatch.error";
 import { AllTasksCompletedEvent } from "../domain/events/all-tasks-completed.event";
 import { TaskExecutionCompletedEvent } from "../domain/events/task-execution-completed.event";
+import type { OverseerConfig } from "../domain/overseer.schemas";
+import { DefaultRetryPolicy } from "../infrastructure/default-retry-policy";
 import { InMemoryAgentDispatchAdapter } from "../infrastructure/in-memory-agent-dispatch.adapter";
 import { InMemoryCheckpointRepository } from "../infrastructure/in-memory-checkpoint.repository";
 import { InMemoryGuardrailAdapter } from "../infrastructure/in-memory-guardrail.adapter";
 import { InMemoryJournalRepository } from "../infrastructure/in-memory-journal.repository";
 import { InMemoryMetricsRepository } from "../infrastructure/in-memory-metrics.repository";
+import { InMemoryOverseerAdapter } from "../infrastructure/in-memory-overseer.adapter";
 import { InMemoryWorktreeAdapter } from "../infrastructure/in-memory-worktree.adapter";
 import type { ExecuteSliceInput } from "./execute-slice.schemas";
 import { ExecuteSliceUseCase } from "./execute-slice.use-case";
@@ -96,6 +106,13 @@ describe("ExecuteSliceUseCase", () => {
   let logger: SilentLoggerAdapter;
   let guardrailAdapter: InMemoryGuardrailAdapter;
   let mockGitPort: InMemoryGitAdapter;
+  let overseerAdapter: InMemoryOverseerAdapter;
+  let retryPolicy: DefaultRetryPolicy;
+  const OVERSEER_CONFIG: OverseerConfig = {
+    enabled: true,
+    timeouts: { S: 300000, "F-lite": 900000, "F-full": 1800000 },
+    retryLoop: { threshold: 3 },
+  };
   let useCase: ExecuteSliceUseCase;
 
   beforeEach(() => {
@@ -111,6 +128,8 @@ describe("ExecuteSliceUseCase", () => {
     logger = new SilentLoggerAdapter();
     guardrailAdapter = new InMemoryGuardrailAdapter();
     mockGitPort = new InMemoryGitAdapter();
+    overseerAdapter = new InMemoryOverseerAdapter();
+    retryPolicy = new DefaultRetryPolicy(2, 3);
 
     // Seed worktree for non-S tier by default
     worktreeAdapter.seed({
@@ -134,6 +153,9 @@ describe("ExecuteSliceUseCase", () => {
       templateContent: TEMPLATE_CONTENT,
       guardrail: guardrailAdapter,
       gitPort: mockGitPort,
+      overseer: overseerAdapter,
+      retryPolicy,
+      overseerConfig: OVERSEER_CONFIG,
     });
   });
 
@@ -772,6 +794,242 @@ describe("ExecuteSliceUseCase", () => {
       await useCase.execute(makeInput());
 
       expect(mockGitPort.restoreWorktreeCalls).toContain("/mock/worktree");
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Overseer integration
+  // -----------------------------------------------------------------------
+  describe("overseer integration", () => {
+    it("does not monitor when overseer disabled (AC5)", async () => {
+      const disabledConfig: OverseerConfig = { ...OVERSEER_CONFIG, enabled: false };
+      useCase = new ExecuteSliceUseCase({
+        taskRepository: taskRepo,
+        waveDetection,
+        checkpointRepository: checkpointRepo,
+        agentDispatch,
+        worktree: worktreeAdapter,
+        eventBus,
+        journalRepository: journalRepo,
+        metricsRepository: metricsRepo,
+        dateProvider,
+        logger,
+        templateContent: TEMPLATE_CONTENT,
+        guardrail: guardrailAdapter,
+        gitPort: mockGitPort,
+        overseer: overseerAdapter,
+        retryPolicy,
+        overseerConfig: disabledConfig,
+      });
+
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(new AgentResultBuilder().withTaskId(T1_ID).asDone().build()),
+      );
+
+      const result = await useCase.execute(makeInput());
+
+      expect(result.ok).toBe(true);
+      expect(overseerAdapter.monitorCalls.length).toBe(0);
+    });
+
+    it("successful dispatch stops overseer monitor without intervention", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(new AgentResultBuilder().withTaskId(T1_ID).asDone().build()),
+      );
+
+      const result = await useCase.execute(makeInput());
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.completedTasks).toContain(T1_ID);
+
+      // Verify overseer was started (monitor called)
+      expect(overseerAdapter.monitorCalls.length).toBe(1);
+
+      // No intervention journal entries
+      const journalResult = await journalRepo.readAll(SLICE_ID);
+      if (!journalResult.ok) return;
+      const interventions = journalResult.data.filter((e) => e.type === "overseer-intervention");
+      expect(interventions.length).toBe(0);
+    });
+
+    it("stale-claim detection still works with overseer enabled (AC6)", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      t1.start(new Date("2026-03-30T10:00:00Z"));
+      taskRepo.seed(t1);
+
+      const result = await useCase.execute(makeInput());
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.skippedTasks).toContain(T1_ID);
+      expect(agentDispatch.wasDispatched(T1_ID)).toBe(false);
+      // Overseer should NOT be called for skipped tasks
+      expect(overseerAdapter.monitorCalls.length).toBe(0);
+    });
+
+    it("full intervention lifecycle: timeout → abort → journal → retry → success (AC1,AC3,AC4)", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      // Override dispatch: first call never resolves (overseer will win), second succeeds
+      const capturedConfigs: AgentDispatchConfig[] = [];
+      let dispatchCall = 0;
+      agentDispatch.dispatch = async (
+        config: AgentDispatchConfig,
+      ): Promise<Result<AgentResult, AgentDispatchError>> => {
+        capturedConfigs.push(config);
+        dispatchCall++;
+        if (dispatchCall === 1) {
+          // First attempt: never resolves — overseer will trigger timeout
+          return new Promise<Result<AgentResult, AgentDispatchError>>(() => {});
+        }
+        // Second attempt (retry): succeeds immediately
+        return ok(new AgentResultBuilder().withTaskId(config.taskId).asDone().build());
+      };
+
+      const executePromise = useCase.execute(makeInput());
+
+      // Wait for monitor to be registered (async repository calls settle first)
+      await new Promise((r) => setTimeout(r, 50));
+
+      // Trigger overseer timeout for the first attempt
+      overseerAdapter.triggerVerdict(T1_ID, {
+        strategy: "timeout",
+        reason: "Task exceeded S timeout of 300000ms",
+      });
+
+      const result = await executePromise;
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.completedTasks).toContain(T1_ID);
+
+      // Verify 2 dispatch calls (first aborted, second succeeded)
+      expect(capturedConfigs.length).toBe(2);
+
+      // Verify journal entries
+      const journalResult = await journalRepo.readAll(SLICE_ID);
+      if (!journalResult.ok) return;
+      const interventions = journalResult.data.filter((e) => e.type === "overseer-intervention");
+
+      // Should have aborted + retrying entries
+      const abortEntry = interventions.find(
+        (e) => e.type === "overseer-intervention" && e.action === "aborted",
+      );
+      const retryEntry = interventions.find(
+        (e) => e.type === "overseer-intervention" && e.action === "retrying",
+      );
+      expect(abortEntry).toBeDefined();
+      expect(retryEntry).toBeDefined();
+
+      if (abortEntry?.type === "overseer-intervention") {
+        expect(abortEntry.strategy).toBe("timeout");
+        expect(abortEntry.taskId).toBe(T1_ID);
+        expect(abortEntry.retryCount).toBe(0);
+      }
+    });
+
+    it("enriches prompt with error context on retry (AC4)", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      const capturedConfigs: AgentDispatchConfig[] = [];
+      let dispatchCall = 0;
+      agentDispatch.dispatch = async (
+        config: AgentDispatchConfig,
+      ): Promise<Result<AgentResult, AgentDispatchError>> => {
+        capturedConfigs.push(config);
+        dispatchCall++;
+        if (dispatchCall === 1) {
+          return new Promise<Result<AgentResult, AgentDispatchError>>(() => {});
+        }
+        return ok(new AgentResultBuilder().withTaskId(config.taskId).asDone().build());
+      };
+
+      const executePromise = useCase.execute(makeInput());
+      await new Promise((r) => setTimeout(r, 50));
+
+      overseerAdapter.triggerVerdict(T1_ID, {
+        strategy: "timeout",
+        reason: "Task exceeded S timeout of 300000ms",
+      });
+
+      await executePromise;
+
+      // Second dispatch config should contain enriched prompt
+      expect(capturedConfigs.length).toBe(2);
+      const retryConfig = capturedConfigs[1];
+      expect(retryConfig).toBeDefined();
+      if (retryConfig) {
+        expect(retryConfig.taskPrompt).toContain("[OVERSEER]");
+        expect(retryConfig.taskPrompt).toContain("Previous attempt failed");
+        expect(retryConfig.taskPrompt).toContain("300000ms");
+      }
+    });
+
+    it("escalates immediately when retry policy denies retry (AC2)", async () => {
+      // maxRetries=0 → immediate escalation
+      const noRetryPolicy = new DefaultRetryPolicy(0, 3);
+      useCase = new ExecuteSliceUseCase({
+        taskRepository: taskRepo,
+        waveDetection,
+        checkpointRepository: checkpointRepo,
+        agentDispatch,
+        worktree: worktreeAdapter,
+        eventBus,
+        journalRepository: journalRepo,
+        metricsRepository: metricsRepo,
+        dateProvider,
+        logger,
+        templateContent: TEMPLATE_CONTENT,
+        guardrail: guardrailAdapter,
+        gitPort: mockGitPort,
+        overseer: overseerAdapter,
+        retryPolicy: noRetryPolicy,
+        overseerConfig: OVERSEER_CONFIG,
+      });
+
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      agentDispatch.dispatch = async (
+        _config: AgentDispatchConfig,
+      ): Promise<Result<AgentResult, AgentDispatchError>> => {
+        return new Promise<Result<AgentResult, AgentDispatchError>>(() => {});
+      };
+
+      const executePromise = useCase.execute(makeInput());
+      await new Promise((r) => setTimeout(r, 50));
+
+      overseerAdapter.triggerVerdict(T1_ID, {
+        strategy: "timeout",
+        reason: "Task exceeded S timeout",
+      });
+
+      const result = await executePromise;
+
+      // Should fail (escalated, no retry)
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.aborted).toBe(true);
+      expect(result.data.failedTasks).toContain(T1_ID);
+
+      // Verify escalation journal entry
+      const journalResult = await journalRepo.readAll(SLICE_ID);
+      if (!journalResult.ok) return;
+      const interventions = journalResult.data.filter((e) => e.type === "overseer-intervention");
+
+      const escalated = interventions.find(
+        (e) => e.type === "overseer-intervention" && e.action === "escalated",
+      );
+      expect(escalated).toBeDefined();
     });
   });
 });

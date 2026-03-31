@@ -113,6 +113,23 @@ const BaseGuardrailsConfigSchema = z.object({
 });
 export type GuardrailsConfig = z.infer<typeof BaseGuardrailsConfigSchema>;
 
+const BaseOverseerConfigSchema = z.object({
+  enabled: z.boolean().default(true),
+  timeouts: z
+    .object({
+      S: z.number().int().positive().default(300000),
+      "F-lite": z.number().int().positive().default(900000),
+      "F-full": z.number().int().positive().default(1800000),
+    })
+    .default({ S: 300000, "F-lite": 900000, "F-full": 1800000 }),
+  retryLoop: z
+    .object({
+      threshold: z.number().int().min(1).default(3),
+    })
+    .default({ threshold: 3 }),
+});
+export type OverseerConfig = z.infer<typeof BaseOverseerConfigSchema>;
+
 // ---------------------------------------------------------------------------
 // Fully-hydrated defaults (required by Zod 4 — parent .default() is literal)
 // ---------------------------------------------------------------------------
@@ -156,6 +173,12 @@ export const GUARDRAILS_DEFAULTS: GuardrailsConfig = {
   },
 };
 
+export const OVERSEER_DEFAULTS: OverseerConfig = {
+  enabled: true,
+  timeouts: { S: 300000, "F-lite": 900000, "F-full": 1800000 },
+  retryLoop: { threshold: 3 },
+};
+
 // ---------------------------------------------------------------------------
 // Exported schemas with .catch() for resilience
 // ---------------------------------------------------------------------------
@@ -165,6 +188,7 @@ export const AutonomyConfigSchema = BaseAutonomyConfigSchema.catch(AUTONOMY_DEFA
 export const AutoLearnConfigSchema = BaseAutoLearnConfigSchema.catch(AUTO_LEARN_DEFAULTS);
 export const BeadsConfigSchema = BaseBeadsConfigSchema.catch(BEADS_DEFAULTS);
 export const GuardrailsConfigSchema = BaseGuardrailsConfigSchema.catch(GUARDRAILS_DEFAULTS);
+export const OverseerConfigSchema = BaseOverseerConfigSchema.catch(OVERSEER_DEFAULTS);
 
 // ---------------------------------------------------------------------------
 // Top-level SettingsSchema
@@ -176,6 +200,7 @@ export const SETTINGS_DEFAULTS = {
   autoLearn: AUTO_LEARN_DEFAULTS,
   beads: BEADS_DEFAULTS,
   guardrails: GUARDRAILS_DEFAULTS,
+  overseer: OVERSEER_DEFAULTS,
 };
 
 export const SettingsSchema = z
@@ -185,6 +210,7 @@ export const SettingsSchema = z
     autoLearn: AutoLearnConfigSchema.default(AUTO_LEARN_DEFAULTS),
     beads: BeadsConfigSchema.default(BEADS_DEFAULTS),
     guardrails: GuardrailsConfigSchema.default(GUARDRAILS_DEFAULTS),
+    overseer: OverseerConfigSchema.default(OVERSEER_DEFAULTS),
   })
   .default(SETTINGS_DEFAULTS);
 export type SettingsProps = z.infer<typeof SettingsSchema>;
@@ -200,6 +226,7 @@ export const ENV_VAR_MAP: Record<string, string[]> = {
   TFF_AUTONOMY_MODE: ["autonomy", "mode"],
   TFF_AUTONOMY_MAX_RETRIES: ["autonomy", "maxRetries"],
   TFF_BEADS_TIMEOUT: ["beads", "timeout"],
+  TFF_OVERSEER_ENABLED: ["overseer", "enabled"],
 };
 
 // ---------------------------------------------------------------------------

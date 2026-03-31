@@ -34,6 +34,8 @@ export { InvalidCheckpointStateError } from "./domain/errors/invalid-checkpoint-
 export { JournalReadError } from "./domain/errors/journal-read.error";
 export { JournalReplayError } from "./domain/errors/journal-replay.error";
 export { JournalWriteError } from "./domain/errors/journal-write.error";
+// Domain -- Overseer Errors
+export { OverseerError } from "./domain/errors/overseer.error";
 export { RollbackError } from "./domain/errors/rollback.error";
 export { WorktreeError } from "./domain/errors/worktree.error";
 // Domain -- Events
@@ -57,12 +59,14 @@ export {
 } from "./domain/guardrail.schemas";
 // Domain -- Guardrail Rule Interface
 export type { GuardrailRule } from "./domain/guardrail-rule";
+// Domain -- Overseer Journal Entry
 export type {
   ArtifactWrittenEntry,
   CheckpointSavedEntry,
   FileWrittenEntry,
   GuardrailViolationEntry,
   JournalEntry,
+  OverseerInterventionEntry,
   PhaseChangedEntry,
   TaskCompletedEntry,
   TaskFailedEntry,
@@ -74,11 +78,29 @@ export {
   FileWrittenEntrySchema,
   GuardrailViolationEntrySchema,
   JournalEntrySchema,
+  OverseerInterventionEntrySchema,
   PhaseChangedEntrySchema,
   TaskCompletedEntrySchema,
   TaskFailedEntrySchema,
   TaskStartedEntrySchema,
 } from "./domain/journal-entry.schemas";
+// Domain -- Overseer Schemas
+export type {
+  InterventionAction,
+  OverseerConfig,
+  OverseerContext,
+  OverseerVerdict,
+  RetryDecision,
+} from "./domain/overseer.schemas";
+export {
+  InterventionActionSchema,
+  OverseerConfigSchema,
+  OverseerContextSchema,
+  OverseerVerdictSchema,
+  RetryDecisionSchema,
+} from "./domain/overseer.schemas";
+// Domain -- Overseer Strategy
+export type { OverseerStrategy } from "./domain/overseer-strategy";
 // Domain -- Ports
 export { AgentDispatchPort } from "./domain/ports/agent-dispatch.port";
 export { CheckpointRepositoryPort } from "./domain/ports/checkpoint-repository.port";
@@ -86,7 +108,10 @@ export { JournalRepositoryPort } from "./domain/ports/journal-repository.port";
 export { MetricsQueryPort } from "./domain/ports/metrics-query.port";
 export { MetricsRepositoryPort } from "./domain/ports/metrics-repository.port";
 export { OutputGuardrailPort } from "./domain/ports/output-guardrail.port";
+// Domain -- Overseer Ports
+export { OverseerPort } from "./domain/ports/overseer.port";
 export { PhaseTransitionPort } from "./domain/ports/phase-transition.port";
+export { RetryPolicy } from "./domain/ports/retry-policy.port";
 export type { SliceStatusProvider } from "./domain/ports/slice-status-provider.port";
 export { WorktreePort } from "./domain/ports/worktree.port";
 // Domain -- Builders
@@ -112,6 +137,9 @@ export {
 } from "./domain/worktree.schemas";
 // Infrastructure -- Guardrail Adapters
 export { ComposableGuardrailAdapter } from "./infrastructure/composable-guardrail.adapter";
+// Infrastructure -- Overseer Adapters
+export { ComposableOverseerAdapter } from "./infrastructure/composable-overseer.adapter";
+export { DefaultRetryPolicy } from "./infrastructure/default-retry-policy";
 // Infrastructure -- Adapters (exported for downstream test wiring)
 export { GitWorktreeAdapter } from "./infrastructure/git-worktree.adapter";
 export { InMemoryAgentDispatchAdapter } from "./infrastructure/in-memory-agent-dispatch.adapter";
@@ -119,6 +147,8 @@ export { InMemoryCheckpointRepository } from "./infrastructure/in-memory-checkpo
 export { InMemoryGuardrailAdapter } from "./infrastructure/in-memory-guardrail.adapter";
 export { InMemoryJournalRepository } from "./infrastructure/in-memory-journal.repository";
 export { InMemoryMetricsRepository } from "./infrastructure/in-memory-metrics.repository";
+export { InMemoryOverseerAdapter } from "./infrastructure/in-memory-overseer.adapter";
 export { InMemoryWorktreeAdapter } from "./infrastructure/in-memory-worktree.adapter";
 export { JsonlMetricsRepository } from "./infrastructure/jsonl-metrics.repository";
 export { PiAgentDispatchAdapter } from "./infrastructure/pi-agent-dispatch.adapter";
+export { TimeoutStrategy } from "./infrastructure/timeout-strategy";

@@ -4,6 +4,7 @@ import {
   CheckpointSavedEntrySchema,
   FileWrittenEntrySchema,
   JournalEntrySchema,
+  OverseerInterventionEntrySchema,
   PhaseChangedEntrySchema,
   TaskCompletedEntrySchema,
   TaskFailedEntrySchema,
@@ -407,5 +408,54 @@ describe("JournalEntrySchema", () => {
       to: "b",
     });
     expect(entry.seq).toBe(0);
+  });
+
+  it("routes overseer-intervention correctly", () => {
+    const entry = JournalEntrySchema.parse({
+      ...baseFields,
+      type: "overseer-intervention",
+      taskId: crypto.randomUUID(),
+      strategy: "timeout",
+      reason: "timed out",
+      action: "aborted",
+      retryCount: 0,
+    });
+    expect(entry.type).toBe("overseer-intervention");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// OverseerInterventionEntrySchema
+// ---------------------------------------------------------------------------
+describe("OverseerInterventionEntrySchema", () => {
+  it("accepts a valid intervention entry", () => {
+    const result = OverseerInterventionEntrySchema.safeParse({
+      seq: 0,
+      sliceId: crypto.randomUUID(),
+      timestamp: new Date(),
+      type: "overseer-intervention",
+      taskId: crypto.randomUUID(),
+      strategy: "timeout",
+      reason: "Task exceeded S timeout of 300000ms",
+      action: "aborted",
+      retryCount: 0,
+    });
+    expect(result.success).toBe(true);
+  });
+  it("accepts all action variants", () => {
+    for (const action of ["aborted", "retrying", "escalated"]) {
+      const result = OverseerInterventionEntrySchema.safeParse({
+        seq: 1,
+        sliceId: crypto.randomUUID(),
+        timestamp: new Date(),
+        type: "overseer-intervention",
+        taskId: crypto.randomUUID(),
+        strategy: "timeout",
+        reason: "timeout",
+        action,
+        retryCount: 1,
+      });
+      expect(result.success).toBe(true);
+    }
   });
 });

@@ -10,20 +10,28 @@ import {
   ok,
   type Result,
 } from "@kernel";
-import type { AgentConcern } from "@kernel/agents";
+import type { AgentConcern, AgentDispatchConfig, AgentResult } from "@kernel/agents";
 import { isSuccessfulStatus } from "@kernel/agents";
 import type { GitPort } from "@kernel/ports/git.port";
 import { Checkpoint } from "../domain/checkpoint.aggregate";
+import type { AgentDispatchError } from "../domain/errors/agent-dispatch.error";
 import { ExecutionError } from "../domain/errors/execution.error";
+import { OverseerError } from "../domain/errors/overseer.error";
 import { AllTasksCompletedEvent } from "../domain/events/all-tasks-completed.event";
 import { TaskExecutionCompletedEvent } from "../domain/events/task-execution-completed.event";
 import type { GuardrailValidationReport, GuardrailViolation } from "../domain/guardrail.schemas";
-import type { GuardrailViolationEntry } from "../domain/journal-entry.schemas";
+import type {
+  GuardrailViolationEntry,
+  OverseerInterventionEntry,
+} from "../domain/journal-entry.schemas";
+import type { OverseerConfig, OverseerVerdict } from "../domain/overseer.schemas";
 import type { AgentDispatchPort } from "../domain/ports/agent-dispatch.port";
 import type { CheckpointRepositoryPort } from "../domain/ports/checkpoint-repository.port";
 import type { JournalRepositoryPort } from "../domain/ports/journal-repository.port";
 import type { MetricsRepositoryPort } from "../domain/ports/metrics-repository.port";
 import type { OutputGuardrailPort } from "../domain/ports/output-guardrail.port";
+import type { OverseerPort } from "../domain/ports/overseer.port";
+import type { RetryPolicy } from "../domain/ports/retry-policy.port";
 import type { WorktreePort } from "../domain/ports/worktree.port";
 import { DomainRouter } from "./domain-router";
 import type { ExecuteSliceInput, ExecuteSliceResult } from "./execute-slice.schemas";
@@ -55,10 +63,117 @@ interface ExecuteSliceUseCaseDeps {
   readonly templateContent: string;
   readonly guardrail: OutputGuardrailPort;
   readonly gitPort: GitPort;
+  readonly overseer: OverseerPort;
+  readonly retryPolicy: RetryPolicy;
+  readonly overseerConfig: OverseerConfig;
 }
 
 export class ExecuteSliceUseCase {
   constructor(private readonly deps: ExecuteSliceUseCaseDeps) {}
+
+  private async executeTaskWithOverseer(
+    task: Task,
+    config: AgentDispatchConfig,
+    input: ExecuteSliceInput,
+  ): Promise<Result<AgentResult, AgentDispatchError | OverseerError>> {
+    if (!this.deps.overseerConfig.enabled) {
+      return this.deps.agentDispatch.dispatch(config);
+    }
+
+    const maxRetries = this.deps.overseerConfig.retryLoop?.threshold
+      ? Math.min(2, this.deps.overseerConfig.retryLoop.threshold)
+      : 2;
+    let currentConfig = config;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      const monitorPromise = this.deps.overseer.monitor({
+        taskId: task.id,
+        sliceId: input.sliceId,
+        complexityTier: input.complexity,
+        dispatchTimestamp: this.deps.dateProvider.now(),
+      });
+
+      const dispatchPromise = this.deps.agentDispatch.dispatch(currentConfig);
+
+      type RaceResult =
+        | { type: "completed"; value: Result<AgentResult, AgentDispatchError> }
+        | { type: "intervention"; verdict: OverseerVerdict };
+
+      const raceResult: RaceResult = await Promise.race([
+        dispatchPromise.then((r): RaceResult => ({ type: "completed", value: r })),
+        monitorPromise.then((v): RaceResult => ({ type: "intervention", verdict: v })),
+      ]);
+
+      if (raceResult.type === "completed") {
+        await this.deps.overseer.stop(task.id).catch(() => {});
+        monitorPromise.catch(() => {}); // swallow cancellation rejection
+        return raceResult.value;
+      }
+
+      // Overseer triggered — abort agent
+      await this.deps.agentDispatch.abort(task.id);
+      dispatchPromise.catch(() => {}); // swallow abort rejection
+
+      // Journal the abort
+      const abortEntry: Omit<OverseerInterventionEntry, "seq"> = {
+        type: "overseer-intervention",
+        sliceId: input.sliceId,
+        timestamp: this.deps.dateProvider.now(),
+        taskId: task.id,
+        strategy: raceResult.verdict.strategy,
+        reason: raceResult.verdict.reason,
+        action: "aborted",
+        retryCount: attempt,
+      };
+      await this.deps.journalRepository.append(input.sliceId, abortEntry);
+
+      // Check retry policy
+      this.deps.retryPolicy.recordFailure(task.id, raceResult.verdict.strategy);
+      const decision = this.deps.retryPolicy.shouldRetry(
+        task.id,
+        raceResult.verdict.strategy,
+        attempt,
+      );
+
+      if (!decision.retry) {
+        const escalateEntry: Omit<OverseerInterventionEntry, "seq"> = {
+          type: "overseer-intervention",
+          sliceId: input.sliceId,
+          timestamp: this.deps.dateProvider.now(),
+          taskId: task.id,
+          strategy: raceResult.verdict.strategy,
+          reason: raceResult.verdict.reason,
+          action: "escalated",
+          retryCount: attempt,
+        };
+        await this.deps.journalRepository.append(input.sliceId, escalateEntry);
+        return err(OverseerError.timeout(task.id, raceResult.verdict.reason));
+      }
+
+      // Journal retry
+      const retryEntry: Omit<OverseerInterventionEntry, "seq"> = {
+        type: "overseer-intervention",
+        sliceId: input.sliceId,
+        timestamp: this.deps.dateProvider.now(),
+        taskId: task.id,
+        strategy: raceResult.verdict.strategy,
+        reason: raceResult.verdict.reason,
+        action: "retrying",
+        retryCount: attempt,
+      };
+      await this.deps.journalRepository.append(input.sliceId, retryEntry);
+
+      // Enrich prompt with error context
+      currentConfig = {
+        ...currentConfig,
+        taskPrompt: `${currentConfig.taskPrompt}\n\n[OVERSEER] Previous attempt failed: ${raceResult.verdict.reason}. Avoid repeating the same approach.`,
+      };
+      // Cleanup before retry
+      await this.deps.gitPort.restoreWorktree(input.workingDirectory);
+    }
+
+    return err(OverseerError.timeout(task.id, "max retries exhausted"));
+  }
 
   async execute(input: ExecuteSliceInput): Promise<Result<ExecuteSliceResult, ExecutionError>> {
     // 1. Load tasks
@@ -192,7 +307,11 @@ export class ExecuteSliceUseCase {
 
       // 6e. Dispatch all tasks in parallel via Promise.allSettled
       const settled = await Promise.allSettled(
-        configs.map((config) => this.deps.agentDispatch.dispatch(config)),
+        waveTasks.map((task, i) => {
+          const config = configs[i];
+          if (!config) throw new Error(`Missing config for task index ${i}`);
+          return this.executeTaskWithOverseer(task, config, input);
+        }),
       );
 
       // 6e-bis. Wave-level guardrail validation
