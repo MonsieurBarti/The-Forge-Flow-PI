@@ -25,6 +25,8 @@ export {
   ExecutionCoordinator,
   type ExecutionCoordinatorDeps,
 } from "./application/execution-coordinator.use-case";
+// Application -- Queries
+export { GetSliceExecutorsUseCase } from "./application/get-slice-executors.use-case";
 export { JournalEventHandler } from "./application/journal-event-handler";
 export type { PromptBuilderConfig, PromptBuilderTask } from "./application/prompt-builder";
 export { PromptBuilder } from "./application/prompt-builder";
@@ -35,6 +37,8 @@ export {
   type RollbackResult,
   RollbackSliceUseCase,
 } from "./application/rollback-slice.use-case";
+// Domain -- Aggregates (for downstream test wiring)
+export { Checkpoint } from "./domain/checkpoint.aggregate";
 // Domain -- Schemas
 export type { CheckpointDTO, CheckpointProps, ExecutorLogEntry } from "./domain/checkpoint.schemas";
 export { CheckpointPropsSchema, ExecutorLogEntrySchema } from "./domain/checkpoint.schemas";
