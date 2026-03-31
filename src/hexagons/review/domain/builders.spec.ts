@@ -1,3 +1,4 @@
+import { faker } from "@faker-js/faker";
 import { describe, expect, it } from "vitest";
 import { FindingBuilder } from "./finding.builder";
 import { ReviewBuilder } from "./review.builder";
@@ -20,6 +21,22 @@ describe("FindingBuilder", () => {
     expect(finding.filePath).toBe("src/danger.ts");
     expect(finding.lineStart).toBe(42);
     expect(finding.message).toBe("SQL injection risk");
+  });
+
+  it("withId sets custom ID", () => {
+    const id = faker.string.uuid();
+    const finding = new FindingBuilder().withId(id).build();
+    expect(finding.id).toBe(id);
+  });
+
+  it("withImpact sets impact field", () => {
+    const finding = new FindingBuilder().withImpact("must-fix").build();
+    expect(finding.impact).toBe("must-fix");
+  });
+
+  it("build without withImpact produces undefined impact", () => {
+    const finding = new FindingBuilder().build();
+    expect(finding.impact).toBeUndefined();
   });
 });
 
