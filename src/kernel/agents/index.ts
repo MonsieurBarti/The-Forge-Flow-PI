@@ -37,3 +37,4 @@ export { crossCheckAgentResult } from "./agent-status-cross-checker";
 export { AgentStatusParseError } from "./agent-status-parse.error";
 export { parseAgentStatusReport } from "./agent-status-parser";
 export { AGENT_STATUS_PROMPT } from "./agent-status-prompt";
+export { GUARDRAIL_PROMPT } from "./guardrail-prompt";

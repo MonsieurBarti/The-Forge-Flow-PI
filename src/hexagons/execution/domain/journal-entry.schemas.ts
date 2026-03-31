@@ -1,5 +1,6 @@
 import { IdSchema, TimestampSchema } from "@kernel";
 import { z } from "zod";
+import { GuardrailViolationSchema } from "./guardrail.schemas";
 
 // ---------------------------------------------------------------------------
 // Base
@@ -70,6 +71,15 @@ export const ArtifactWrittenEntrySchema = JournalEntryBaseSchema.extend({
 });
 export type ArtifactWrittenEntry = z.infer<typeof ArtifactWrittenEntrySchema>;
 
+export const GuardrailViolationEntrySchema = JournalEntryBaseSchema.extend({
+  type: z.literal("guardrail-violation"),
+  taskId: IdSchema,
+  waveIndex: z.number().int().min(0),
+  violations: z.array(GuardrailViolationSchema),
+  action: z.enum(["blocked", "warned"]),
+});
+export type GuardrailViolationEntry = z.infer<typeof GuardrailViolationEntrySchema>;
+
 // ---------------------------------------------------------------------------
 // Discriminated union
 // ---------------------------------------------------------------------------
@@ -81,5 +91,6 @@ export const JournalEntrySchema = z.discriminatedUnion("type", [
   CheckpointSavedEntrySchema,
   PhaseChangedEntrySchema,
   ArtifactWrittenEntrySchema,
+  GuardrailViolationEntrySchema,
 ]);
 export type JournalEntry = z.infer<typeof JournalEntrySchema>;

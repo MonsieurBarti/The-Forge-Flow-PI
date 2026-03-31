@@ -10,21 +10,34 @@ import {
   ok,
   type Result,
 } from "@kernel";
+import type { AgentConcern } from "@kernel/agents";
 import { isSuccessfulStatus } from "@kernel/agents";
+import type { GitPort } from "@kernel/ports/git.port";
 import { Checkpoint } from "../domain/checkpoint.aggregate";
 import { ExecutionError } from "../domain/errors/execution.error";
 import { AllTasksCompletedEvent } from "../domain/events/all-tasks-completed.event";
 import { TaskExecutionCompletedEvent } from "../domain/events/task-execution-completed.event";
+import type { GuardrailValidationReport, GuardrailViolation } from "../domain/guardrail.schemas";
+import type { GuardrailViolationEntry } from "../domain/journal-entry.schemas";
 import type { AgentDispatchPort } from "../domain/ports/agent-dispatch.port";
 import type { CheckpointRepositoryPort } from "../domain/ports/checkpoint-repository.port";
 import type { JournalRepositoryPort } from "../domain/ports/journal-repository.port";
 import type { MetricsRepositoryPort } from "../domain/ports/metrics-repository.port";
+import type { OutputGuardrailPort } from "../domain/ports/output-guardrail.port";
 import type { WorktreePort } from "../domain/ports/worktree.port";
 import { DomainRouter } from "./domain-router";
 import type { ExecuteSliceInput, ExecuteSliceResult } from "./execute-slice.schemas";
 import { JournalEventHandler } from "./journal-event-handler";
 import { PromptBuilder } from "./prompt-builder";
 import { RecordTaskMetricsUseCase } from "./record-task-metrics.use-case";
+
+function toAgentConcern(v: GuardrailViolation): AgentConcern {
+  return {
+    area: v.ruleId,
+    description: v.filePath ? `${v.message} (${v.filePath}:${v.line ?? "?"})` : v.message,
+    severity: v.severity === "error" ? "critical" : v.severity === "warning" ? "warning" : "info",
+  };
+}
 
 const STALE_CLAIM_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -40,6 +53,8 @@ interface ExecuteSliceUseCaseDeps {
   readonly dateProvider: DateProviderPort;
   readonly logger: LoggerPort;
   readonly templateContent: string;
+  readonly guardrail: OutputGuardrailPort;
+  readonly gitPort: GitPort;
 }
 
 export class ExecuteSliceUseCase {
@@ -68,11 +83,9 @@ export class ExecuteSliceUseCase {
     const waves: Wave[] = wavesResult.data;
 
     // 3. Validate worktree
-    if (input.complexity !== "S") {
-      const worktreeExists = await this.deps.worktree.exists(input.sliceId);
-      if (!worktreeExists) {
-        return err(ExecutionError.worktreeRequired(input.sliceId));
-      }
+    const worktreeExists = await this.deps.worktree.exists(input.sliceId);
+    if (!worktreeExists) {
+      return err(ExecutionError.worktreeRequired(input.sliceId));
     }
 
     // 4. Load or create checkpoint
@@ -182,9 +195,85 @@ export class ExecuteSliceUseCase {
         configs.map((config) => this.deps.agentDispatch.dispatch(config)),
       );
 
-      // 6f. Process settled results
+      // 6e-bis. Wave-level guardrail validation
       const waveFailedTasks: string[] = [];
+      let guardrailBlocked = false;
 
+      const guardrailResults = new Map<string, GuardrailValidationReport>();
+
+      for (let i = 0; i < settled.length; i++) {
+        const settlement = settled[i];
+        const task = waveTasks[i];
+        if (!settlement || !task || settlement.status !== "fulfilled" || !settlement.value.ok)
+          continue;
+        const agentResult = settlement.value.data;
+        if (!isSuccessfulStatus(agentResult.status)) continue;
+
+        const reportResult = await this.deps.guardrail.validate({
+          agentResult,
+          taskFilePaths: [...task.filePaths],
+          workingDirectory: input.workingDirectory,
+          filesChanged: [...agentResult.filesChanged],
+        });
+        if (reportResult.ok) {
+          guardrailResults.set(task.id, reportResult.data);
+        }
+      }
+
+      const hasBlockers = [...guardrailResults.values()].some((r) => !r.passed);
+
+      if (hasBlockers) {
+        guardrailBlocked = true;
+        await this.deps.gitPort.restoreWorktree(input.workingDirectory);
+
+        for (const [taskId, report] of guardrailResults) {
+          if (!report.passed) {
+            const entry: Omit<GuardrailViolationEntry, "seq"> = {
+              type: "guardrail-violation",
+              sliceId: input.sliceId,
+              timestamp: this.deps.dateProvider.now(),
+              taskId,
+              waveIndex,
+              violations: report.violations,
+              action: "blocked",
+            };
+            await this.deps.journalRepository.append(input.sliceId, entry);
+            waveFailedTasks.push(taskId);
+          }
+        }
+      } else {
+        for (const [taskId, report] of guardrailResults) {
+          const warnings = report.violations.filter((v) => v.severity !== "info");
+          if (warnings.length > 0) {
+            const entry: Omit<GuardrailViolationEntry, "seq"> = {
+              type: "guardrail-violation",
+              sliceId: input.sliceId,
+              timestamp: this.deps.dateProvider.now(),
+              taskId,
+              waveIndex,
+              violations: warnings,
+              action: "warned",
+            };
+            await this.deps.journalRepository.append(input.sliceId, entry);
+            // Enrich AgentResult concerns
+            const idx = waveTasks.findIndex((t) => t.id === taskId);
+            const settlement = settled[idx];
+            if (settlement?.status === "fulfilled" && settlement.value.ok) {
+              const result = settlement.value.data;
+              const enrichedConcerns = [...result.concerns, ...warnings.map(toAgentConcern)];
+              Object.assign(result, { concerns: enrichedConcerns });
+            }
+          }
+        }
+      }
+
+      if (guardrailBlocked) {
+        failedTasks.push(...waveFailedTasks);
+        aborted = true;
+        break;
+      }
+
+      // 6f. Process settled results
       for (let i = 0; i < settled.length; i++) {
         const settlement = settled[i];
         const task = waveTasks[i];

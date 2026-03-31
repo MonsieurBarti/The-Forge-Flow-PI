@@ -91,6 +91,28 @@ const BaseBeadsConfigSchema = z.object({
 });
 export type BeadsConfig = z.infer<typeof BaseBeadsConfigSchema>;
 
+const GuardrailRuleSeveritySchema = z.enum(["error", "warning", "info"]);
+
+const BaseGuardrailsConfigSchema = z.object({
+  enabled: z.boolean().default(true),
+  rules: z
+    .object({
+      "dangerous-commands": GuardrailRuleSeveritySchema.default("error"),
+      "credential-exposure": GuardrailRuleSeveritySchema.default("error"),
+      "destructive-git": GuardrailRuleSeveritySchema.default("error"),
+      "file-scope": GuardrailRuleSeveritySchema.default("warning"),
+      "suspicious-content": GuardrailRuleSeveritySchema.default("warning"),
+    })
+    .default({
+      "dangerous-commands": "error",
+      "credential-exposure": "error",
+      "destructive-git": "error",
+      "file-scope": "warning",
+      "suspicious-content": "warning",
+    }),
+});
+export type GuardrailsConfig = z.infer<typeof BaseGuardrailsConfigSchema>;
+
 // ---------------------------------------------------------------------------
 // Fully-hydrated defaults (required by Zod 4 — parent .default() is literal)
 // ---------------------------------------------------------------------------
@@ -123,6 +145,17 @@ export const BEADS_DEFAULTS: BeadsConfig = {
   timeout: 30000,
 };
 
+export const GUARDRAILS_DEFAULTS: GuardrailsConfig = {
+  enabled: true,
+  rules: {
+    "dangerous-commands": "error",
+    "credential-exposure": "error",
+    "destructive-git": "error",
+    "file-scope": "warning",
+    "suspicious-content": "warning",
+  },
+};
+
 // ---------------------------------------------------------------------------
 // Exported schemas with .catch() for resilience
 // ---------------------------------------------------------------------------
@@ -131,6 +164,7 @@ export const ModelRoutingConfigSchema = BaseModelRoutingConfigSchema.catch(MODEL
 export const AutonomyConfigSchema = BaseAutonomyConfigSchema.catch(AUTONOMY_DEFAULTS);
 export const AutoLearnConfigSchema = BaseAutoLearnConfigSchema.catch(AUTO_LEARN_DEFAULTS);
 export const BeadsConfigSchema = BaseBeadsConfigSchema.catch(BEADS_DEFAULTS);
+export const GuardrailsConfigSchema = BaseGuardrailsConfigSchema.catch(GUARDRAILS_DEFAULTS);
 
 // ---------------------------------------------------------------------------
 // Top-level SettingsSchema
@@ -141,6 +175,7 @@ export const SETTINGS_DEFAULTS = {
   autonomy: AUTONOMY_DEFAULTS,
   autoLearn: AUTO_LEARN_DEFAULTS,
   beads: BEADS_DEFAULTS,
+  guardrails: GUARDRAILS_DEFAULTS,
 };
 
 export const SettingsSchema = z
@@ -149,6 +184,7 @@ export const SettingsSchema = z
     autonomy: AutonomyConfigSchema.default(AUTONOMY_DEFAULTS),
     autoLearn: AutoLearnConfigSchema.default(AUTO_LEARN_DEFAULTS),
     beads: BeadsConfigSchema.default(BEADS_DEFAULTS),
+    guardrails: GuardrailsConfigSchema.default(GUARDRAILS_DEFAULTS),
   })
   .default(SETTINGS_DEFAULTS);
 export type SettingsProps = z.infer<typeof SettingsSchema>;

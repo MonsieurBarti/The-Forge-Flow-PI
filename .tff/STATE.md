@@ -1,7 +1,7 @@
 # State — M04
 
 ## Progress
-- Slices: 0/6 completed
+- Slices: 0/3 completed
 - Tasks: 0/0 completed
 
 ## Slices
@@ -10,6 +10,3 @@
 | Execute/pause/resume commands | open | 0/0 | 0% |
 | Output safety guardrails | open | 0/0 | 0% |
 | Async overseer / watchdog | open | 0/0 | 0% |
-| Cost tracking | open | 0/0 | 0% |
-| Agent status protocol | open | 0/0 | 0% |
-| Wave-based execution engine | open | 0/0 | 0% |

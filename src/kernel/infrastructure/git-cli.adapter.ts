@@ -237,4 +237,28 @@ export class GitCliAdapter extends GitPort {
     if (!result.ok) return result;
     return ok(undefined);
   }
+
+  async diffNameOnly(cwd: string): Promise<Result<string[], GitError>> {
+    const result = await this.runGit(["-C", cwd, "diff", "--name-only"]);
+    if (!result.ok) return result;
+    const files = result.data
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+    return ok(files);
+  }
+
+  async diff(cwd: string): Promise<Result<string, GitError>> {
+    return this.runGit(["-C", cwd, "diff"]);
+  }
+
+  async restoreWorktree(cwd: string): Promise<Result<void, GitError>> {
+    const result = await this.runGit(["-C", cwd, "restore", "."]);
+    if (!result.ok) {
+      // "pathspec '.' did not match any file(s)" means there are no tracked changes — not an error
+      if (result.error.message.includes("did not match any file")) return ok(undefined);
+      return result;
+    }
+    return ok(undefined);
+  }
 }

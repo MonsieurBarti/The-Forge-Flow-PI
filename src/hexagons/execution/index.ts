@@ -23,10 +23,13 @@ export {
 // Domain -- Schemas
 export type { CheckpointDTO, CheckpointProps, ExecutorLogEntry } from "./domain/checkpoint.schemas";
 export { CheckpointPropsSchema, ExecutorLogEntrySchema } from "./domain/checkpoint.schemas";
-// Domain -- Errors
+// Domain -- Guardrail Context
+export type { EnrichedGuardrailContext } from "./domain/enriched-guardrail-context";
 export { AgentDispatchError } from "./domain/errors/agent-dispatch.error";
 export { CheckpointNotFoundError } from "./domain/errors/checkpoint-not-found.error";
 export { ExecutionError } from "./domain/errors/execution.error";
+// Domain -- Errors
+export { GuardrailError } from "./domain/errors/guardrail.error";
 export { InvalidCheckpointStateError } from "./domain/errors/invalid-checkpoint-state.error";
 export { JournalReadError } from "./domain/errors/journal-read.error";
 export { JournalReplayError } from "./domain/errors/journal-replay.error";
@@ -37,10 +40,28 @@ export { WorktreeError } from "./domain/errors/worktree.error";
 export { AllTasksCompletedEvent } from "./domain/events/all-tasks-completed.event";
 export { CheckpointSavedEvent } from "./domain/events/checkpoint-saved.event";
 export { TaskExecutionCompletedEvent } from "./domain/events/task-execution-completed.event";
+// Domain -- Guardrail Schemas
+export type {
+  GuardrailContext,
+  GuardrailRuleId,
+  GuardrailSeverity,
+  GuardrailValidationReport,
+  GuardrailViolation,
+} from "./domain/guardrail.schemas";
+export {
+  GuardrailContextSchema,
+  GuardrailRuleIdSchema,
+  GuardrailSeveritySchema,
+  GuardrailValidationReportSchema,
+  GuardrailViolationSchema,
+} from "./domain/guardrail.schemas";
+// Domain -- Guardrail Rule Interface
+export type { GuardrailRule } from "./domain/guardrail-rule";
 export type {
   ArtifactWrittenEntry,
   CheckpointSavedEntry,
   FileWrittenEntry,
+  GuardrailViolationEntry,
   JournalEntry,
   PhaseChangedEntry,
   TaskCompletedEntry,
@@ -51,6 +72,7 @@ export {
   ArtifactWrittenEntrySchema,
   CheckpointSavedEntrySchema,
   FileWrittenEntrySchema,
+  GuardrailViolationEntrySchema,
   JournalEntrySchema,
   PhaseChangedEntrySchema,
   TaskCompletedEntrySchema,
@@ -63,6 +85,7 @@ export { CheckpointRepositoryPort } from "./domain/ports/checkpoint-repository.p
 export { JournalRepositoryPort } from "./domain/ports/journal-repository.port";
 export { MetricsQueryPort } from "./domain/ports/metrics-query.port";
 export { MetricsRepositoryPort } from "./domain/ports/metrics-repository.port";
+export { OutputGuardrailPort } from "./domain/ports/output-guardrail.port";
 export { PhaseTransitionPort } from "./domain/ports/phase-transition.port";
 export type { SliceStatusProvider } from "./domain/ports/slice-status-provider.port";
 export { WorktreePort } from "./domain/ports/worktree.port";
@@ -87,10 +110,13 @@ export {
   WorktreeHealthSchema,
   WorktreeInfoSchema,
 } from "./domain/worktree.schemas";
+// Infrastructure -- Guardrail Adapters
+export { ComposableGuardrailAdapter } from "./infrastructure/composable-guardrail.adapter";
 // Infrastructure -- Adapters (exported for downstream test wiring)
 export { GitWorktreeAdapter } from "./infrastructure/git-worktree.adapter";
 export { InMemoryAgentDispatchAdapter } from "./infrastructure/in-memory-agent-dispatch.adapter";
 export { InMemoryCheckpointRepository } from "./infrastructure/in-memory-checkpoint.repository";
+export { InMemoryGuardrailAdapter } from "./infrastructure/in-memory-guardrail.adapter";
 export { InMemoryJournalRepository } from "./infrastructure/in-memory-journal.repository";
 export { InMemoryMetricsRepository } from "./infrastructure/in-memory-metrics.repository";
 export { InMemoryWorktreeAdapter } from "./infrastructure/in-memory-worktree.adapter";

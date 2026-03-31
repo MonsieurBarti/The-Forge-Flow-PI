@@ -3,6 +3,7 @@ import type {
   AutonomyConfig,
   AutonomyMode,
   BeadsConfig,
+  GuardrailsConfig,
   ModelRoutingConfig,
   SettingsProps,
 } from "./project-settings.schemas";
@@ -10,6 +11,7 @@ import {
   AUTO_LEARN_DEFAULTS,
   AUTONOMY_DEFAULTS,
   BEADS_DEFAULTS,
+  GUARDRAILS_DEFAULTS,
   MODEL_ROUTING_DEFAULTS,
 } from "./project-settings.schemas";
 import { ProjectSettings } from "./project-settings.value-object";
@@ -19,6 +21,7 @@ export class ProjectSettingsBuilder {
   private _autonomy: AutonomyConfig = { ...AUTONOMY_DEFAULTS };
   private _autoLearn: AutoLearnConfig = { ...AUTO_LEARN_DEFAULTS };
   private _beads: BeadsConfig = { ...BEADS_DEFAULTS };
+  private _guardrails: GuardrailsConfig = { ...GUARDRAILS_DEFAULTS };
 
   withModelRouting(config: Partial<ModelRoutingConfig>): this {
     Object.assign(this._modelRouting, config);
@@ -37,6 +40,11 @@ export class ProjectSettingsBuilder {
 
   withBeads(config: Partial<BeadsConfig>): this {
     Object.assign(this._beads, config);
+    return this;
+  }
+
+  withGuardrails(config: Partial<GuardrailsConfig>): this {
+    Object.assign(this._guardrails, config);
     return this;
   }
 
@@ -60,6 +68,7 @@ export class ProjectSettingsBuilder {
       autonomy: this._autonomy,
       autoLearn: this._autoLearn,
       beads: this._beads,
+      guardrails: this._guardrails,
     };
   }
 }
