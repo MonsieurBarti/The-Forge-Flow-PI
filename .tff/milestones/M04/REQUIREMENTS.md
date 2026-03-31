@@ -127,3 +127,57 @@ Build the execution engine with wave-based parallel dispatch, checkpoint/resume 
 - Execute dispatches tasks wave-by-wave with checkpointing
 - Pause saves state and can resume from exact point
 - Resume skips completed work
+
+### R11: Per-Task Reflection (Design Improvement A)
+
+- After each task completes successfully, the same agent re-reads its diff and checks output against acceptance criteria
+- `ReflectionResultSchema`: passed, issues (criterion, concern, severity: blocker/warning), reflectedAt
+- Extends `AgentResultSchema` with optional `reflection` field
+- Reflection.passed -> record success; blockers -> retry (counts toward maxRetries); warnings -> record success with warnings
+- Reflection uses same agent session (second turn, no extra dispatch)
+- Max 1 reflection per task (no loops)
+
+**AC:**
+- Blockers caught before subsequent tasks build on flawed output
+- Reflection retry counts toward fallback chain
+- No extra agent dispatch cost (same session)
+
+### R12: Model Downshift Fallback Chain (Design Improvement B)
+
+- 3-step recovery chain: retry same model (1x) -> downshift to cheaper (1x) -> escalate
+- `FallbackStrategySchema`: retryCount (default 1, max 3), downshiftChain (quality -> balanced -> budget), checkpointBeforeRetry (default true)
+- Added to `SettingsSchema.autonomy.fallbackStrategy`
+- Checkpoint saved before each retry to prevent state loss
+- Total attempts capped at `retryCount + len(downshiftChain)`
+- Independent from `autonomy.maxRetries` (workflow-level re-execution cap)
+
+**AC:**
+- Checkpoint saved before any retry
+- Downshift chain configurable in settings
+- Total attempts bounded (no infinite loops)
+
+### R13: Pre-Dispatch Guardrails (Design Improvement G -- pre-dispatch half)
+
+- Extend existing post-dispatch guardrails with pre-dispatch validation
+- Pre-dispatch checks: scope containment (task filePaths subset of slice scope), worktree state (correct branch, clean), no uncommitted changes, budget check (sufficient for estimated cost)
+- Pre-dispatch blocker -> task not dispatched, escalate
+- Configurable (individual checks can be disabled in settings)
+
+**AC:**
+- Out-of-scope tasks caught before dispatch (not after)
+- Budget exhaustion detected before wasting tokens
+- Pre-dispatch checks configurable per-project
+
+### R14: Compressor Notation for Artifacts (Design Improvement I)
+
+- All TFF-generated artifacts injected into agent context use formal logic notation
+- Notation: `∀ ∃ ∈ ∧ ∨ ¬ → ⇒ ⟺ ⊆ |`
+- Applies to: skills, agent definitions, plans, specs, research docs, task prompts
+- Schemas and code blocks stay uncompressed
+- ~40-60% token reduction vs verbose prose
+- Injected into system prompt of artifact-generating agents (discuss, plan, research phases)
+
+**AC:**
+- Generated artifacts use compressed notation
+- No information loss vs verbose originals
+- Schemas/code uncompressed

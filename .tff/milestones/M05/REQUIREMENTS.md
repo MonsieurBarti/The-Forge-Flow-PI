@@ -30,19 +30,26 @@ Build the review hexagon with fresh-reviewer enforcement, multi-stage review pip
 - Self-review is impossible (hard error, not warning)
 - Cross-hexagon query goes through port (not direct import)
 
-### R03: Multi-Stage Review Pipeline
+### R03: Multi-Stage Review Pipeline (Parallel -- Design Improvement D)
 
-- `ConductReviewUseCase`: 3-stage sequential review
+- `ConductReviewUseCase`: 3 reviewers dispatch in **parallel** (Promise.all with per-agent timeout)
   1. Spec compliance (spec-reviewer, quality model): acceptance criteria vs implementation -> PASS/FAIL
   2. Code quality (code-reviewer, quality model): patterns, YAGNI, tests, readability -> APPROVE/CHANGES_REQUESTED
   3. Security audit (security-auditor, quality model): OWASP/STRIDE -> critical/high blocks PR
-- Stage 2 blocked until Stage 1 passes
+- Findings merged: deduplicate by (filePath, lineRange, description similarity), take highest severity on duplicates, flag contradictions for human
+- `MergedReviewPropsSchema`: extends ReviewPropsSchema with sourceReviews and conflicts arrays
+- Each reviewer is a fresh independent session (not same agent reviewing 3 times)
+- Per-agent timeout: configurable, default 5 minutes; timeout of one reviewer doesn't block others
 - CHANGES_REQUESTED spawns fixer agent -> loop until APPROVE (max 2 cycles)
+- Verdict: any critical -> changes_requested; all approved -> approved
 
 **AC:**
-- Stages execute sequentially (stage 2 waits for stage 1)
+- All 3 reviewers run in parallel (~3x faster wall-clock)
+- Findings merged and deduplicated by file+line
+- Contradictions flagged for human (not auto-resolved)
 - Security audit runs on every PR (not optional)
 - Fixer loop respects max retries
+- Partial timeout is degraded but not blocked
 
 ### R04: Critique-then-Reflection Review
 
