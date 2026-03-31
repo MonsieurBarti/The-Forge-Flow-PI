@@ -7,10 +7,12 @@ export default defineConfig({
       "@kernel": resolve(import.meta.dirname, "src/kernel"),
       "@hexagons": resolve(import.meta.dirname, "src/hexagons"),
       "@infrastructure": resolve(import.meta.dirname, "src/infrastructure"),
+      "@resources": resolve(import.meta.dirname, "src/resources"),
     },
   },
   test: {
     include: ["src/**/*.spec.ts"],
+    setupFiles: ["src/test-setup.ts"],
     globals: false,
     passWithNoTests: true,
     coverage: {

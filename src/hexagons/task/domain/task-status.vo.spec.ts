@@ -9,6 +9,7 @@ describe("TaskStatusVO", () => {
       ["open", "in_progress"],
       ["open", "blocked"],
       ["in_progress", "closed"],
+      ["in_progress", "blocked"],
       ["blocked", "open"],
       ["blocked", "blocked"],
     ];
@@ -31,7 +32,6 @@ describe("TaskStatusVO", () => {
       ["open", "closed"],
       ["open", "open"],
       ["in_progress", "open"],
-      ["in_progress", "blocked"],
       ["in_progress", "in_progress"],
       ["blocked", "in_progress"],
       ["blocked", "closed"],

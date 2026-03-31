@@ -39,6 +39,7 @@ export { EVENT_NAMES, EventNameSchema } from "./event-names";
 export {
   ConsoleLoggerAdapter,
   GitCliAdapter,
+  InMemoryGitAdapter,
   InProcessEventBus,
   SilentLoggerAdapter,
   SystemDateProvider,
@@ -48,6 +49,7 @@ export type {
   GitLogEntry,
   GitStatus,
   GitStatusEntry,
+  GitWorktreeEntry,
   PrFilter,
   PullRequestConfig,
   PullRequestInfo,
@@ -62,6 +64,7 @@ export {
   GitPort,
   GitStatusEntrySchema,
   GitStatusSchema,
+  GitWorktreeEntrySchema,
   LoggerPort,
   PrFilterSchema,
   PullRequestConfigSchema,

@@ -2,13 +2,26 @@ import { faker } from "@faker-js/faker";
 import type { AgentType } from "./agent-card.schema";
 import type { AgentCost, AgentResult } from "./agent-result.schema";
 import { AgentResultSchema } from "./agent-result.schema";
+import type { AgentConcern, AgentStatus, SelfReviewChecklist } from "./agent-status.schema";
+
+const DEFAULT_SELF_REVIEW: SelfReviewChecklist = {
+  dimensions: [
+    { dimension: "completeness", passed: true },
+    { dimension: "quality", passed: true },
+    { dimension: "discipline", passed: true },
+    { dimension: "verification", passed: true },
+  ],
+  overallConfidence: "high",
+};
 
 export class AgentResultBuilder {
   private _taskId: string = faker.string.uuid();
   private _agentType: AgentType = "fixer";
-  private _success = true;
+  private _status: AgentStatus = "DONE";
   private _output: string = faker.lorem.paragraph();
   private _filesChanged: string[] = [];
+  private _concerns: AgentConcern[] = [];
+  private _selfReview: SelfReviewChecklist = DEFAULT_SELF_REVIEW;
   private _cost: AgentCost = {
     provider: "anthropic",
     modelId: "claude-sonnet-4-6",
@@ -27,8 +40,8 @@ export class AgentResultBuilder {
     this._agentType = agentType;
     return this;
   }
-  withSuccess(success: boolean): this {
-    this._success = success;
+  withStatus(status: AgentStatus): this {
+    this._status = status;
     return this;
   }
   withOutput(output: string): this {
@@ -37,6 +50,14 @@ export class AgentResultBuilder {
   }
   withFilesChanged(files: string[]): this {
     this._filesChanged = files;
+    return this;
+  }
+  withConcerns(concerns: AgentConcern[]): this {
+    this._concerns = concerns;
+    return this;
+  }
+  withSelfReview(selfReview: SelfReviewChecklist): this {
+    this._selfReview = selfReview;
     return this;
   }
   withCost(cost: AgentCost): this {
@@ -52,8 +73,22 @@ export class AgentResultBuilder {
     return this;
   }
 
-  withFailure(error: string): this {
-    this._success = false;
+  asDone(): this {
+    this._status = "DONE";
+    return this;
+  }
+  asDoneWithConcerns(concerns: AgentConcern[]): this {
+    this._status = "DONE_WITH_CONCERNS";
+    this._concerns = concerns;
+    return this;
+  }
+  asBlocked(error: string): this {
+    this._status = "BLOCKED";
+    this._error = error;
+    return this;
+  }
+  asNeedsContext(error: string): this {
+    this._status = "NEEDS_CONTEXT";
     this._error = error;
     return this;
   }
@@ -62,9 +97,11 @@ export class AgentResultBuilder {
     return AgentResultSchema.parse({
       taskId: this._taskId,
       agentType: this._agentType,
-      success: this._success,
+      status: this._status,
       output: this._output,
       filesChanged: this._filesChanged,
+      concerns: this._concerns,
+      selfReview: this._selfReview,
       cost: this._cost,
       durationMs: this._durationMs,
       error: this._error,

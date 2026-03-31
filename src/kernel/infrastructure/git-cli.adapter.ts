@@ -8,6 +8,7 @@ import {
   GitLogEntrySchema,
   type GitStatus,
   type GitStatusEntry,
+  type GitWorktreeEntry,
 } from "@kernel/ports/git.schemas";
 import { err, ok, type Result } from "@kernel/result";
 
@@ -113,10 +114,8 @@ export class GitCliAdapter extends GitPort {
     return ok(entries);
   }
 
-  async status(): Promise<Result<GitStatus, GitError>> {
-    const result = await this.runGit(["status", "--porcelain=v1", "--branch"]);
-    if (!result.ok) return result;
-    const lines = result.data.split("\n").filter(Boolean);
+  private parseStatusOutput(stdout: string): Result<GitStatus, GitError> {
+    const lines = stdout.split("\n").filter(Boolean);
     const branchLine = lines[0] ?? "## HEAD";
     let branch = branchLine.replace(/^##\s*/, "");
     if (branch.includes("(no branch)")) {
@@ -151,6 +150,18 @@ export class GitCliAdapter extends GitPort {
     return ok({ branch, clean: entries.length === 0, entries });
   }
 
+  async status(): Promise<Result<GitStatus, GitError>> {
+    const result = await this.runGit(["status", "--porcelain=v1", "--branch"]);
+    if (!result.ok) return result;
+    return this.parseStatusOutput(result.data);
+  }
+
+  async statusAt(cwd: string): Promise<Result<GitStatus, GitError>> {
+    const result = await this.runGit(["-C", cwd, "status", "--porcelain=v1", "--branch"]);
+    if (!result.ok) return result;
+    return this.parseStatusOutput(result.data);
+  }
+
   async commit(message: string, paths: string[]): Promise<Result<string, GitError>> {
     if (paths.length === 0) return err(new GitError("COMMAND_FAILED", "No paths to commit"));
     const addResult = await this.runGit(["add", ...paths]);
@@ -159,5 +170,95 @@ export class GitCliAdapter extends GitPort {
     if (!commitResult.ok) return commitResult;
     const match = commitResult.data.match(/\[\S+\s+(?:\(root-commit\)\s+)?([a-f0-9]+)\]/);
     return ok(match ? match[1] : commitResult.data.trim());
+  }
+
+  async revert(commitHash: string): Promise<Result<void, GitError>> {
+    const result = await this.runGit(["revert", "--no-edit", commitHash]);
+    if (!result.ok) return result;
+    return ok(undefined);
+  }
+
+  async isAncestor(ancestor: string, descendant: string): Promise<Result<boolean, GitError>> {
+    const result = await this.runGit(["merge-base", "--is-ancestor", ancestor, descendant]);
+    if (result.ok) return ok(true);
+    // REF_NOT_FOUND means an invalid hash was supplied — propagate the error
+    if (result.error.code === "GIT.REF_NOT_FOUND") return result;
+    // COMMAND_FAILED with exit code 1 means "not an ancestor" — not an error condition
+    return ok(false);
+  }
+
+  async worktreeAdd(
+    path: string,
+    branch: string,
+    baseBranch: string,
+  ): Promise<Result<void, GitError>> {
+    const result = await this.runGit(["worktree", "add", "-b", branch, path, baseBranch]);
+    if (!result.ok) return result;
+    return ok(undefined);
+  }
+
+  async worktreeRemove(path: string): Promise<Result<void, GitError>> {
+    const result = await this.runGit(["worktree", "remove", "--force", path]);
+    if (!result.ok) return result;
+    return ok(undefined);
+  }
+
+  async worktreeList(): Promise<Result<GitWorktreeEntry[], GitError>> {
+    const result = await this.runGit(["worktree", "list", "--porcelain"]);
+    if (!result.ok) return result;
+
+    const entries: GitWorktreeEntry[] = [];
+    const records = result.data.split("\n\n").filter(Boolean);
+
+    for (const record of records) {
+      const lines = record.split("\n");
+      let path = "";
+      let head = "";
+      let branch: string | undefined;
+      let bare = false;
+
+      for (const line of lines) {
+        if (line.startsWith("worktree ")) path = line.slice(9);
+        else if (line.startsWith("HEAD ")) head = line.slice(5);
+        else if (line.startsWith("branch ")) branch = line.slice(7).replace("refs/heads/", "");
+        else if (line === "bare") bare = true;
+      }
+
+      if (path) {
+        entries.push({ path, head, branch, bare });
+      }
+    }
+
+    return ok(entries);
+  }
+
+  async deleteBranch(name: string, force?: boolean): Promise<Result<void, GitError>> {
+    const result = await this.runGit(["branch", force === true ? "-D" : "-d", name]);
+    if (!result.ok) return result;
+    return ok(undefined);
+  }
+
+  async diffNameOnly(cwd: string): Promise<Result<string[], GitError>> {
+    const result = await this.runGit(["-C", cwd, "diff", "--name-only"]);
+    if (!result.ok) return result;
+    const files = result.data
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+    return ok(files);
+  }
+
+  async diff(cwd: string): Promise<Result<string, GitError>> {
+    return this.runGit(["-C", cwd, "diff"]);
+  }
+
+  async restoreWorktree(cwd: string): Promise<Result<void, GitError>> {
+    const result = await this.runGit(["-C", cwd, "restore", "."]);
+    if (!result.ok) {
+      // "pathspec '.' did not match any file(s)" means there are no tracked changes — not an error
+      if (result.error.message.includes("did not match any file")) return ok(undefined);
+      return result;
+    }
+    return ok(undefined);
   }
 }

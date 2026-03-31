@@ -230,4 +230,51 @@ describe("GitCliAdapter", () => {
       }
     });
   });
+
+  describe("revert", () => {
+    it("reverts a commit", async () => {
+      writeFileSync(join(repoDir, "revert-test.txt"), "content");
+      git(["add", "revert-test.txt"], repoDir);
+      git(["commit", "-m", "add revert-test"], repoDir);
+      const logResult = await adapter.log("HEAD", 1);
+      expect(isOk(logResult)).toBe(true);
+      const hash = isOk(logResult) ? logResult.data[0].hash : "";
+      const result = await adapter.revert(hash);
+      expect(isOk(result)).toBe(true);
+    });
+
+    it("returns error for invalid commit hash", async () => {
+      const result = await adapter.revert("deadbeefdeadbeefdeadbeefdeadbeefdeadbeef");
+      expect(isErr(result)).toBe(true);
+    });
+  });
+
+  describe("isAncestor", () => {
+    it("returns true when commit is ancestor", async () => {
+      writeFileSync(join(repoDir, "ancestor-test.txt"), "content");
+      git(["add", "ancestor-test.txt"], repoDir);
+      git(["commit", "-m", "ancestor test"], repoDir);
+      const logResult = await adapter.log("HEAD", 2);
+      expect(isOk(logResult)).toBe(true);
+      if (isOk(logResult) && logResult.data.length >= 2) {
+        const child = logResult.data[0];
+        const parent = logResult.data[1];
+        const result = await adapter.isAncestor(parent.hash, child.hash);
+        expect(isOk(result)).toBe(true);
+        if (isOk(result)) expect(result.data).toBe(true);
+      }
+    });
+
+    it("returns false when commit is not ancestor", async () => {
+      const logResult = await adapter.log("HEAD", 2);
+      expect(isOk(logResult)).toBe(true);
+      if (isOk(logResult) && logResult.data.length >= 2) {
+        const child = logResult.data[0];
+        const parent = logResult.data[1];
+        const result = await adapter.isAncestor(child.hash, parent.hash);
+        expect(isOk(result)).toBe(true);
+        if (isOk(result)) expect(result.data).toBe(false);
+      }
+    });
+  });
 });

@@ -1,12 +1,19 @@
 export { DateProviderPort } from "./date-provider.port";
 export { EventBusPort } from "./event-bus.port";
 export { GitPort } from "./git.port";
-export type { GitFileStatus, GitLogEntry, GitStatus, GitStatusEntry } from "./git.schemas";
+export type {
+  GitFileStatus,
+  GitLogEntry,
+  GitStatus,
+  GitStatusEntry,
+  GitWorktreeEntry,
+} from "./git.schemas";
 export {
   GitFileStatusSchema,
   GitLogEntrySchema,
   GitStatusEntrySchema,
   GitStatusSchema,
+  GitWorktreeEntrySchema,
 } from "./git.schemas";
 export { GitHubPort } from "./github.port";
 export type { PrFilter, PullRequestConfig, PullRequestInfo } from "./github.schemas";

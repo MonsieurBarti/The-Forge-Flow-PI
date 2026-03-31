@@ -19,7 +19,9 @@
       "@kernel": ["./src/kernel"],
       "@kernel/*": ["./src/kernel/*"],
       "@hexagons/*": ["./src/hexagons/*"],
-      "@infrastructure/*": ["./src/infrastructure/*"]
+      "@infrastructure/*": ["./src/infrastructure/*"],
+      "@resources": ["./src/resources"],
+      "@resources/*": ["./src/resources/*"]
     }
   },
   "include": ["src"],

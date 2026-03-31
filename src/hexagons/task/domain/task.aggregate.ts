@@ -105,6 +105,11 @@ export class Task extends AggregateRoot<TaskProps> {
           id: crypto.randomUUID(),
           aggregateId: this.props.id,
           occurredAt: now,
+          sliceId: this.props.sliceId,
+          taskId: this.props.id,
+          waveIndex: this.props.waveIndex ?? 0,
+          durationMs: 0,
+          commitHash: undefined,
         }),
       );
     }
@@ -122,6 +127,11 @@ export class Task extends AggregateRoot<TaskProps> {
             id: crypto.randomUUID(),
             aggregateId: this.props.id,
             occurredAt: now,
+            sliceId: this.props.sliceId,
+            taskId: this.props.id,
+            waveIndex: this.props.waveIndex ?? 0,
+            errorCode: "TASK.BLOCKED",
+            errorMessage: "Task blocked by dependencies",
           }),
         );
       }

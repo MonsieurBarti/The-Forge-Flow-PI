@@ -57,6 +57,18 @@ beads:
     timeout: 30000 # bd CLI command timeout in milliseconds
 
 
+# ── Guardrails ────────────────────────────────────────────────
+# Output safety guardrails for agent-produced code.
+# Severity per rule: error (block + revert), warning (flag), info (log only)
+guardrails:
+    enabled: true
+    rules:
+        dangerous-commands: error
+        credential-exposure: error
+        destructive-git: error
+        file-scope: warning
+        suspicious-content: warning
+
 # ── Dolt Remote (optional) ────────────────────────────────────
 # Sync beads state to a remote Dolt database for team collaboration.
 # Uncomment and configure after running: dolt remote add origin <url>

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { loadResource } from "@resources";
 
 export interface DiscussProtocolParams {
   sliceId: string;
@@ -11,10 +11,7 @@ export interface DiscussProtocolParams {
   nextStep: string;
 }
 
-const template = readFileSync(
-  new URL("./templates/protocols/discuss.md", import.meta.url),
-  "utf-8",
-);
+const template = loadResource("protocols/discuss.md");
 
 function render(tmpl: string, vars: Record<string, string>): string {
   return tmpl.replace(/\{\{(\w+)\}\}/g, (_, key: string) => vars[key] ?? `{{${key}}}`);
