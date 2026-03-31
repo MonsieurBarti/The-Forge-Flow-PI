@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import type { FindingProps, ReviewSeverity } from "./review.schemas";
+import type { FindingImpact, FindingProps, ReviewSeverity } from "./review.schemas";
 
 export class FindingBuilder {
   private _id: string = faker.string.uuid();
@@ -10,7 +10,16 @@ export class FindingBuilder {
   private _lineEnd?: number;
   private _suggestion?: string;
   private _ruleId?: string;
+  private _impact?: FindingImpact;
 
+  withId(id: string): this {
+    this._id = id;
+    return this;
+  }
+  withImpact(impact: FindingImpact): this {
+    this._impact = impact;
+    return this;
+  }
   withSeverity(s: ReviewSeverity): this {
     this._severity = s;
     return this;
@@ -50,6 +59,7 @@ export class FindingBuilder {
       lineEnd: this._lineEnd,
       suggestion: this._suggestion,
       ruleId: this._ruleId,
+      impact: this._impact,
     };
   }
 }
