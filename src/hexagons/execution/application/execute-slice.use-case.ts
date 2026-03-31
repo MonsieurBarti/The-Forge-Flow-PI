@@ -175,7 +175,10 @@ export class ExecuteSliceUseCase {
     return err(OverseerError.timeout(task.id, "max retries exhausted"));
   }
 
-  async execute(input: ExecuteSliceInput): Promise<Result<ExecuteSliceResult, ExecutionError>> {
+  async execute(
+    input: ExecuteSliceInput,
+    signal?: AbortSignal,
+  ): Promise<Result<ExecuteSliceResult, ExecutionError>> {
     // 1. Load tasks
     const tasksResult = await this.deps.taskRepository.findBySliceId(input.sliceId);
     if (!tasksResult.ok) {
@@ -478,6 +481,19 @@ export class ExecuteSliceUseCase {
       const advanceEvents = checkpoint.pullEvents();
       for (const advEvent of advanceEvents) {
         await this.deps.eventBus.publish(advEvent);
+      }
+
+      // Check abort signal between waves
+      if (signal?.aborted) {
+        return ok({
+          sliceId: input.sliceId,
+          completedTasks,
+          failedTasks,
+          skippedTasks,
+          wavesCompleted,
+          totalWaves: waves.length,
+          aborted: true,
+        });
       }
 
       wavesCompleted++;

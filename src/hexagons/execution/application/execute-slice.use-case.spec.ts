@@ -1032,4 +1032,59 @@ describe("ExecuteSliceUseCase", () => {
       expect(escalated).toBeDefined();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // signal-based abort
+  // -------------------------------------------------------------------------
+  describe("signal-based abort", () => {
+    it("returns aborted=true when signal is aborted between waves", async () => {
+      // Two tasks in separate waves: T1 (wave 0), T2 blocked by T1 (wave 1)
+      const t1 = makeTask(T1_ID, "T01");
+      const t2 = makeTask(T2_ID, "T02", [T1_ID]);
+      taskRepo.seed(t1);
+      taskRepo.seed(t2);
+
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(new AgentResultBuilder().withTaskId(T1_ID).asDone().build()),
+      );
+
+      // Create AbortController and abort before second wave
+      const controller = new AbortController();
+      const originalDispatch = agentDispatch.dispatch.bind(agentDispatch);
+      let dispatchCount = 0;
+      agentDispatch.dispatch = async (cfg: AgentDispatchConfig) => {
+        dispatchCount++;
+        const result = await originalDispatch(cfg);
+        // After first task completes, abort the signal
+        if (dispatchCount === 1) controller.abort();
+        return result;
+      };
+
+      const result = await useCase.execute(makeInput(), controller.signal);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.data.aborted).toBe(true);
+        expect(result.data.completedTasks).toContain(T1_ID);
+        expect(result.data.wavesCompleted).toBe(0);
+      }
+    });
+
+    it("runs normally when no signal provided", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(new AgentResultBuilder().withTaskId(T1_ID).asDone().build()),
+      );
+
+      const result = await useCase.execute(makeInput());
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.data.aborted).toBe(false);
+      }
+    });
+  });
 });
