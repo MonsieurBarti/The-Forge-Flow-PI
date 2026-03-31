@@ -95,7 +95,7 @@ export class MarkdownExecutionSessionAdapter extends ExecutionSessionRepositoryP
     const filePath = join(this.basePath, pathResult.data, "CHECKPOINT.md");
     try {
       const content = await readFile(filePath, "utf-8");
-      const cleaned = content.replace(SESSION_DATA_REGEX, "").trimEnd() + "\n";
+      const cleaned = `${content.replace(SESSION_DATA_REGEX, "").trimEnd()}\n`;
       await writeFile(filePath, cleaned, "utf-8");
     } catch (error: unknown) {
       if (isErrnoException(error) && error.code === "ENOENT") {
