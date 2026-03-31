@@ -16,11 +16,14 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { Checkpoint } from "../domain/checkpoint.aggregate";
 import { AllTasksCompletedEvent } from "../domain/events/all-tasks-completed.event";
 import { TaskExecutionCompletedEvent } from "../domain/events/task-execution-completed.event";
+import type { OverseerConfig } from "../domain/overseer.schemas";
+import { DefaultRetryPolicy } from "../infrastructure/default-retry-policy";
 import { InMemoryAgentDispatchAdapter } from "../infrastructure/in-memory-agent-dispatch.adapter";
 import { InMemoryCheckpointRepository } from "../infrastructure/in-memory-checkpoint.repository";
 import { InMemoryGuardrailAdapter } from "../infrastructure/in-memory-guardrail.adapter";
 import { InMemoryJournalRepository } from "../infrastructure/in-memory-journal.repository";
 import { InMemoryMetricsRepository } from "../infrastructure/in-memory-metrics.repository";
+import { InMemoryOverseerAdapter } from "../infrastructure/in-memory-overseer.adapter";
 import { InMemoryWorktreeAdapter } from "../infrastructure/in-memory-worktree.adapter";
 import type { ExecuteSliceInput } from "./execute-slice.schemas";
 import { ExecuteSliceUseCase } from "./execute-slice.use-case";
@@ -96,6 +99,13 @@ describe("ExecuteSliceUseCase", () => {
   let logger: SilentLoggerAdapter;
   let guardrailAdapter: InMemoryGuardrailAdapter;
   let mockGitPort: InMemoryGitAdapter;
+  let overseerAdapter: InMemoryOverseerAdapter;
+  let retryPolicy: DefaultRetryPolicy;
+  const OVERSEER_CONFIG: OverseerConfig = {
+    enabled: true,
+    timeouts: { S: 300000, "F-lite": 900000, "F-full": 1800000 },
+    retryLoop: { threshold: 3 },
+  };
   let useCase: ExecuteSliceUseCase;
 
   beforeEach(() => {
@@ -111,6 +121,8 @@ describe("ExecuteSliceUseCase", () => {
     logger = new SilentLoggerAdapter();
     guardrailAdapter = new InMemoryGuardrailAdapter();
     mockGitPort = new InMemoryGitAdapter();
+    overseerAdapter = new InMemoryOverseerAdapter();
+    retryPolicy = new DefaultRetryPolicy(2, 3);
 
     // Seed worktree for non-S tier by default
     worktreeAdapter.seed({
@@ -134,6 +146,9 @@ describe("ExecuteSliceUseCase", () => {
       templateContent: TEMPLATE_CONTENT,
       guardrail: guardrailAdapter,
       gitPort: mockGitPort,
+      overseer: overseerAdapter,
+      retryPolicy,
+      overseerConfig: OVERSEER_CONFIG,
     });
   });
 
@@ -772,6 +787,84 @@ describe("ExecuteSliceUseCase", () => {
       await useCase.execute(makeInput());
 
       expect(mockGitPort.restoreWorktreeCalls).toContain("/mock/worktree");
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Overseer integration
+  // -----------------------------------------------------------------------
+  describe("overseer integration", () => {
+    it("does not monitor when overseer disabled (AC5)", async () => {
+      const disabledConfig: OverseerConfig = { ...OVERSEER_CONFIG, enabled: false };
+      useCase = new ExecuteSliceUseCase({
+        taskRepository: taskRepo,
+        waveDetection,
+        checkpointRepository: checkpointRepo,
+        agentDispatch,
+        worktree: worktreeAdapter,
+        eventBus,
+        journalRepository: journalRepo,
+        metricsRepository: metricsRepo,
+        dateProvider,
+        logger,
+        templateContent: TEMPLATE_CONTENT,
+        guardrail: guardrailAdapter,
+        gitPort: mockGitPort,
+        overseer: overseerAdapter,
+        retryPolicy,
+        overseerConfig: disabledConfig,
+      });
+
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(new AgentResultBuilder().withTaskId(T1_ID).asDone().build()),
+      );
+
+      const result = await useCase.execute(makeInput());
+
+      expect(result.ok).toBe(true);
+      expect(overseerAdapter.monitorCalls.length).toBe(0);
+    });
+
+    it("successful dispatch stops overseer monitor without intervention", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(new AgentResultBuilder().withTaskId(T1_ID).asDone().build()),
+      );
+
+      const result = await useCase.execute(makeInput());
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.completedTasks).toContain(T1_ID);
+
+      // Verify overseer was started (monitor called)
+      expect(overseerAdapter.monitorCalls.length).toBe(1);
+
+      // No intervention journal entries
+      const journalResult = await journalRepo.readAll(SLICE_ID);
+      if (!journalResult.ok) return;
+      const interventions = journalResult.data.filter((e) => e.type === "overseer-intervention");
+      expect(interventions.length).toBe(0);
+    });
+
+    it("stale-claim detection still works with overseer enabled (AC6)", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      t1.start(new Date("2026-03-30T10:00:00Z"));
+      taskRepo.seed(t1);
+
+      const result = await useCase.execute(makeInput());
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.skippedTasks).toContain(T1_ID);
+      expect(agentDispatch.wasDispatched(T1_ID)).toBe(false);
+      // Overseer should NOT be called for skipped tasks
+      expect(overseerAdapter.monitorCalls.length).toBe(0);
     });
   });
 });
