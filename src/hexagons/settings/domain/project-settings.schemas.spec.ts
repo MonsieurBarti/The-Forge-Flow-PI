@@ -91,3 +91,34 @@ describe("default complexity mapping", () => {
     });
   });
 });
+
+describe("OverseerConfig in SettingsSchema", () => {
+  it("provides overseer defaults when omitted", () => {
+    const result = SettingsSchema.safeParse({});
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.overseer.enabled).toBe(true);
+      expect(result.data.overseer.timeouts.S).toBe(300000);
+      expect(result.data.overseer.timeouts["F-lite"]).toBe(900000);
+      expect(result.data.overseer.timeouts["F-full"]).toBe(1800000);
+      expect(result.data.overseer.retryLoop.threshold).toBe(3);
+    }
+  });
+  it("accepts custom overseer config", () => {
+    const result = SettingsSchema.safeParse({
+      overseer: { enabled: false, timeouts: { S: 60000, "F-lite": 120000, "F-full": 300000 } },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.overseer.enabled).toBe(false);
+      expect(result.data.overseer.timeouts.S).toBe(60000);
+    }
+  });
+  it("falls back to defaults on invalid overseer config", () => {
+    const result = SettingsSchema.safeParse({ overseer: "invalid" });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.overseer.enabled).toBe(true);
+    }
+  });
+});
