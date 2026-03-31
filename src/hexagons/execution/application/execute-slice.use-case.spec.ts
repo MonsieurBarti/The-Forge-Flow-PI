@@ -20,7 +20,7 @@ import {
 } from "@kernel/agents";
 import { beforeEach, describe, expect, it } from "vitest";
 import { Checkpoint } from "../domain/checkpoint.aggregate";
-import { AgentDispatchError } from "../domain/errors/agent-dispatch.error";
+import type { AgentDispatchError } from "../domain/errors/agent-dispatch.error";
 import { AllTasksCompletedEvent } from "../domain/events/all-tasks-completed.event";
 import { TaskExecutionCompletedEvent } from "../domain/events/task-execution-completed.event";
 import type { OverseerConfig } from "../domain/overseer.schemas";
