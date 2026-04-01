@@ -16,14 +16,17 @@ import {
   AgentResultBuilder,
   type ResolvedModel,
 } from "@kernel/agents";
+import type { DateProviderPort } from "@kernel/ports";
 import { describe, expect, it } from "vitest";
 import type { ConductReviewRequest } from "../domain/conduct-review.schemas";
 import { ConductReviewError } from "../domain/errors/conduct-review.error";
+import { ExecutorQueryError } from "../domain/errors/executor-query.error";
 import { ChangedFilesError, SliceSpecError } from "../domain/errors/review-context.error";
 import { ChangedFilesPort } from "../domain/ports/changed-files.port";
 import { ExecutorQueryPort } from "../domain/ports/executor-query.port";
 import { FixerPort } from "../domain/ports/fixer.port";
 import { type SliceSpec, SliceSpecPort } from "../domain/ports/slice-spec.port";
+import type { FindingProps } from "../domain/review.schemas";
 import { CritiqueReflectionService } from "../domain/services/critique-reflection.service";
 import { FreshReviewerService } from "../domain/services/fresh-reviewer.service";
 import { InMemoryReviewRepository } from "../infrastructure/in-memory-review.repository";
@@ -71,6 +74,52 @@ class StubExecutorQueryPort extends ExecutorQueryPort {
   }
 }
 
+/** Returns executors that always include the queried identity (for violation tests). */
+class ViolatingExecutorQueryPort extends ExecutorQueryPort {
+  private _queriedSliceIds: string[] = [];
+
+  async getSliceExecutors(
+    sliceId: string,
+  ): Promise<Result<ReadonlySet<string>, ExecutorQueryError>> {
+    this._queriedSliceIds.push(sliceId);
+    // Return a set containing ALL possible reviewer identities (catch-all)
+    // The fresh-reviewer service matches the exact identity, so we use a wildcard approach:
+    // We return a set that .has() returns true for any string
+    return ok(new MatchAllSet());
+  }
+
+  get queriedSliceIds(): readonly string[] {
+    return this._queriedSliceIds;
+  }
+}
+
+/** A set that matches all strings — used to trigger fresh-reviewer violation. */
+class MatchAllSet extends Set<string> {
+  override has(_value: string): boolean {
+    return true;
+  }
+}
+
+/** ExecutorQueryPort that always returns an error. */
+class FailingExecutorQueryPort extends ExecutorQueryPort {
+  async getSliceExecutors(): Promise<Result<ReadonlySet<string>, ExecutorQueryError>> {
+    return err(new ExecutorQueryError("Database connection failed"));
+  }
+}
+
+/** Tracks enforce calls on FreshReviewerService. */
+class TrackingFreshReviewerService extends FreshReviewerService {
+  readonly enforceCalls: Array<{ sliceId: string; reviewerId: string }> = [];
+
+  override async enforce(
+    sliceId: string,
+    reviewerId: string,
+  ): ReturnType<FreshReviewerService["enforce"]> {
+    this.enforceCalls.push({ sliceId, reviewerId });
+    return super.enforce(sliceId, reviewerId);
+  }
+}
+
 class StubFixerPort extends FixerPort {
   async fix(): Promise<never> {
     throw new Error("StubFixerPort.fix not expected in T08");
@@ -103,6 +152,14 @@ class FailingDispatchAdapter extends AgentDispatchPort {
 // ---------------------------------------------------------------------------
 const logger = new SilentLoggerAdapter();
 
+const FIXED_DATE = new Date("2026-04-01T12:00:00.000Z");
+
+class FixedDateProvider implements DateProviderPort {
+  now(): Date {
+    return FIXED_DATE;
+  }
+}
+
 function makeRequest(overrides?: Partial<ConductReviewRequest>): ConductReviewRequest {
   return {
     sliceId: SLICE_ID,
@@ -121,24 +178,57 @@ function stubTemplateLoader(_path: string): string {
   return "Review {{sliceLabel}} {{sliceTitle}} {{sliceId}} {{reviewRole}} {{changedFiles}} {{acceptanceCriteria}}";
 }
 
-function buildUseCase(
-  overrides: {
-    sliceSpecPort?: SliceSpecPort;
-    changedFilesPort?: ChangedFilesPort;
-    agentDispatchPort?: AgentDispatchPort;
-  } = {},
-): ConductReviewUseCase {
+function makeFinding(overrides?: Partial<FindingProps>): FindingProps {
+  return {
+    id: crypto.randomUUID(),
+    severity: "medium",
+    message: "Test finding",
+    filePath: "src/foo.ts",
+    lineStart: 42,
+    ...overrides,
+  };
+}
+
+function makeCtrOutput(findings: FindingProps[]): string {
+  return JSON.stringify({
+    critique: {
+      rawFindings: findings,
+    },
+    reflection: {
+      prioritizedFindings: findings.map((f) => ({ ...f, impact: "should-fix" })),
+      insights: [],
+      summary: "Test summary",
+    },
+  });
+}
+
+function makeStandardOutput(findings: FindingProps[]): string {
+  return JSON.stringify(findings);
+}
+
+interface BuildUseCaseOverrides {
+  sliceSpecPort?: SliceSpecPort;
+  changedFilesPort?: ChangedFilesPort;
+  agentDispatchPort?: AgentDispatchPort;
+  executorQueryPort?: ExecutorQueryPort;
+  freshReviewerService?: FreshReviewerService;
+  reviewRepository?: InMemoryReviewRepository;
+  dateProvider?: DateProviderPort;
+}
+
+function buildUseCase(overrides: BuildUseCaseOverrides = {}): ConductReviewUseCase {
   const sliceSpecPort = overrides.sliceSpecPort ?? new StubSliceSpecPort(ok(STUB_SPEC));
   const changedFilesPort =
     overrides.changedFilesPort ?? new StubChangedFilesPort(ok("diff --git a/foo.ts b/foo.ts"));
-  const executorQueryPort = new StubExecutorQueryPort();
-  const freshReviewerService = new FreshReviewerService(executorQueryPort);
+  const executorQueryPort = overrides.executorQueryPort ?? new StubExecutorQueryPort();
+  const freshReviewerService =
+    overrides.freshReviewerService ?? new FreshReviewerService(executorQueryPort);
   const critiqueReflectionService = new CritiqueReflectionService();
   const promptBuilder = new ReviewPromptBuilder(stubTemplateLoader);
   const fixerPort = new StubFixerPort();
-  const reviewRepository = new InMemoryReviewRepository();
+  const reviewRepository = overrides.reviewRepository ?? new InMemoryReviewRepository();
   const eventBus = new InProcessEventBus(logger);
-  const dateProvider = new SystemDateProvider();
+  const dateProvider = overrides.dateProvider ?? new SystemDateProvider();
   const agentDispatchPort = overrides.agentDispatchPort ?? new InMemoryAgentDispatchAdapter();
 
   return new ConductReviewUseCase(
@@ -312,11 +402,265 @@ describe("ConductReviewUseCase", () => {
       }
     });
   });
+
+  // =========================================================================
+  // T09 — fresh-reviewer + CTR + merge + persist
+  // =========================================================================
+  describe("fresh-reviewer enforcement (AC6)", () => {
+    it("calls FreshReviewerService.enforce() for each reviewer before dispatch", async () => {
+      const tracking = new TrackingFreshReviewerService(new StubExecutorQueryPort());
+      const useCase = buildUseCase({ freshReviewerService: tracking });
+
+      await useCase.execute(makeRequest());
+
+      expect(tracking.enforceCalls).toHaveLength(3);
+      const sliceIds = tracking.enforceCalls.map((c) => c.sliceId);
+      expect(sliceIds.every((id) => id === SLICE_ID)).toBe(true);
+      // Each reviewer ID should be unique
+      const reviewerIds = new Set(tracking.enforceCalls.map((c) => c.reviewerId));
+      expect(reviewerIds.size).toBe(3);
+    });
+  });
+
+  describe("fresh-reviewer violation → freshReviewerBlocked (AC7)", () => {
+    it("returns freshReviewerBlocked when executor set contains reviewer identity", async () => {
+      const executorQueryPort = new ViolatingExecutorQueryPort();
+      const freshReviewerService = new FreshReviewerService(executorQueryPort);
+      const useCase = buildUseCase({ executorQueryPort, freshReviewerService });
+
+      const result = await useCase.execute(makeRequest());
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toBeInstanceOf(ConductReviewError);
+        expect(result.error.code).toBe("REVIEW.FRESH_REVIEWER_BLOCKED");
+      }
+    });
+  });
+
+  describe("ExecutorQueryError from enforce → contextResolutionFailed (fail-closed)", () => {
+    it("returns contextResolutionFailed when executor query errors", async () => {
+      const executorQueryPort = new FailingExecutorQueryPort();
+      const freshReviewerService = new FreshReviewerService(executorQueryPort);
+      const useCase = buildUseCase({ executorQueryPort, freshReviewerService });
+
+      const result = await useCase.execute(makeRequest());
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toBeInstanceOf(ConductReviewError);
+        expect(result.error.code).toBe("REVIEW.CONTEXT_RESOLUTION_FAILED");
+      }
+    });
+  });
+
+  describe("CTR roles processed via CritiqueReflectionService (AC8)", () => {
+    it("extracts findings from CTR output for code-reviewer and security-auditor", async () => {
+      const finding1 = makeFinding({ message: "CTR finding 1" });
+      const finding2 = makeFinding({ message: "CTR finding 2" });
+
+      const dispatch = new OutputDispatchAdapter({
+        "code-reviewer": makeCtrOutput([finding1]),
+        "security-auditor": makeCtrOutput([finding2]),
+        "spec-reviewer": makeStandardOutput([]),
+      });
+
+      const reviewRepository = new InMemoryReviewRepository();
+      const useCase = buildUseCase({
+        agentDispatchPort: dispatch,
+        reviewRepository,
+        dateProvider: new FixedDateProvider(),
+      });
+
+      const result = await useCase.execute(makeRequest());
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const codeReview = result.data.individualReviews.find((r) => r.role === "code-reviewer");
+        const securityReview = result.data.individualReviews.find(
+          (r) => r.role === "security-auditor",
+        );
+        expect(codeReview?.findings).toHaveLength(1);
+        expect(codeReview?.findings[0].message).toBe("CTR finding 1");
+        expect(securityReview?.findings).toHaveLength(1);
+        expect(securityReview?.findings[0].message).toBe("CTR finding 2");
+      }
+    });
+  });
+
+  describe("spec-reviewer NOT processed via CTR (AC9)", () => {
+    it("parses spec-reviewer findings directly, not through CritiqueReflectionService", async () => {
+      const specFinding = makeFinding({ message: "Spec finding" });
+
+      const dispatch = new OutputDispatchAdapter({
+        "code-reviewer": makeCtrOutput([]),
+        "security-auditor": makeCtrOutput([]),
+        "spec-reviewer": makeStandardOutput([specFinding]),
+      });
+
+      const reviewRepository = new InMemoryReviewRepository();
+      const useCase = buildUseCase({
+        agentDispatchPort: dispatch,
+        reviewRepository,
+        dateProvider: new FixedDateProvider(),
+      });
+
+      const result = await useCase.execute(makeRequest());
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const specReview = result.data.individualReviews.find((r) => r.role === "spec-reviewer");
+        expect(specReview?.findings).toHaveLength(1);
+        expect(specReview?.findings[0].message).toBe("Spec finding");
+      }
+    });
+  });
+
+  describe("3 Reviews created and saved (AC10)", () => {
+    it("creates and persists 3 Review aggregates via reviewRepository.save()", async () => {
+      const dispatch = new OutputDispatchAdapter({
+        "code-reviewer": makeCtrOutput([]),
+        "security-auditor": makeCtrOutput([]),
+        "spec-reviewer": makeStandardOutput([]),
+      });
+
+      const reviewRepository = new InMemoryReviewRepository();
+      const useCase = buildUseCase({
+        agentDispatchPort: dispatch,
+        reviewRepository,
+        dateProvider: new FixedDateProvider(),
+      });
+
+      const result = await useCase.execute(makeRequest());
+
+      expect(result.ok).toBe(true);
+
+      const savedResult = await reviewRepository.findBySliceId(SLICE_ID);
+      expect(savedResult.ok).toBe(true);
+      if (savedResult.ok) {
+        expect(savedResult.data).toHaveLength(3);
+        const roles = savedResult.data.map((r) => r.role).sort();
+        expect(roles).toEqual(["code-reviewer", "security-auditor", "spec-reviewer"]);
+      }
+    });
+  });
+
+  describe("MergedReview.merge() invoked (AC11)", () => {
+    it("returns mergedReview with correct sourceReviewIds", async () => {
+      const dispatch = new OutputDispatchAdapter({
+        "code-reviewer": makeCtrOutput([]),
+        "security-auditor": makeCtrOutput([]),
+        "spec-reviewer": makeStandardOutput([]),
+      });
+
+      const reviewRepository = new InMemoryReviewRepository();
+      const useCase = buildUseCase({
+        agentDispatchPort: dispatch,
+        reviewRepository,
+        dateProvider: new FixedDateProvider(),
+      });
+
+      const result = await useCase.execute(makeRequest());
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.data.mergedReview.sourceReviewIds).toHaveLength(3);
+        expect(result.data.mergedReview.sliceId).toBe(SLICE_ID);
+        // Each sourceReviewId should match an individual review id
+        const individualIds = result.data.individualReviews.map((r) => r.id);
+        for (const sourceId of result.data.mergedReview.sourceReviewIds) {
+          expect(individualIds).toContain(sourceId);
+        }
+      }
+    });
+  });
+
+  describe("CTR parse error → degraded 0 findings (AC25)", () => {
+    it("degrades to 0 findings when CTR output is invalid JSON", async () => {
+      const dispatch = new OutputDispatchAdapter({
+        "code-reviewer": "not valid json at all",
+        "security-auditor": makeCtrOutput([]),
+        "spec-reviewer": makeStandardOutput([]),
+      });
+
+      const reviewRepository = new InMemoryReviewRepository();
+      const useCase = buildUseCase({
+        agentDispatchPort: dispatch,
+        reviewRepository,
+        dateProvider: new FixedDateProvider(),
+      });
+
+      const result = await useCase.execute(makeRequest());
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const codeReview = result.data.individualReviews.find((r) => r.role === "code-reviewer");
+        expect(codeReview?.findings).toHaveLength(0);
+      }
+    });
+
+    it("degrades to 0 findings when CTR output fails schema validation", async () => {
+      // Valid JSON but doesn't match CTR schema
+      const dispatch = new OutputDispatchAdapter({
+        "code-reviewer": JSON.stringify({ bad: "structure" }),
+        "security-auditor": makeCtrOutput([]),
+        "spec-reviewer": makeStandardOutput([]),
+      });
+
+      const reviewRepository = new InMemoryReviewRepository();
+      const useCase = buildUseCase({
+        agentDispatchPort: dispatch,
+        reviewRepository,
+        dateProvider: new FixedDateProvider(),
+      });
+
+      const result = await useCase.execute(makeRequest());
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const codeReview = result.data.individualReviews.find((r) => r.role === "code-reviewer");
+        expect(codeReview?.findings).toHaveLength(0);
+      }
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
 // Custom test adapters
 // ---------------------------------------------------------------------------
+
+/** Adapter that returns configurable output per role. */
+class OutputDispatchAdapter extends AgentDispatchPort {
+  private _dispatched: AgentDispatchConfig[] = [];
+
+  constructor(private readonly outputByRole: Record<string, string>) {
+    super();
+  }
+
+  async dispatch(config: AgentDispatchConfig): Promise<Result<AgentResult, AgentDispatchError>> {
+    this._dispatched.push(config);
+    const output = this.outputByRole[config.agentType] ?? "[]";
+    return ok(
+      new AgentResultBuilder()
+        .withTaskId(config.taskId)
+        .withAgentType(config.agentType)
+        .withOutput(output)
+        .build(),
+    );
+  }
+
+  async abort(): Promise<void> {
+    /* no-op */
+  }
+
+  isRunning(): boolean {
+    return false;
+  }
+
+  get dispatchedConfigs(): readonly AgentDispatchConfig[] {
+    return this._dispatched;
+  }
+}
 
 /** Adapter that delays all dispatches beyond a given time (to test timeout). */
 class SlowDispatchAdapter extends AgentDispatchPort {

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { err, type ModelProfileName, type Result } from "@kernel";
+import { err, type ModelProfileName, ok, type Result } from "@kernel";
 import {
   type AgentDispatchConfig,
   type AgentDispatchPort,
@@ -11,11 +11,15 @@ import type { DateProviderPort, EventBusPort, LoggerPort } from "@kernel/ports";
 import type { ConductReviewRequest, ConductReviewResult } from "../domain/conduct-review.schemas";
 import { ConductReviewRequestSchema } from "../domain/conduct-review.schemas";
 import { ConductReviewError } from "../domain/errors/conduct-review.error";
+import { FreshReviewerViolationError } from "../domain/errors/fresh-reviewer-violation.error";
+import { MergedReview } from "../domain/merged-review.vo";
 import type { ChangedFilesPort } from "../domain/ports/changed-files.port";
 import type { FixerPort } from "../domain/ports/fixer.port";
 import type { ReviewRepositoryPort } from "../domain/ports/review-repository.port";
 import type { SliceSpec, SliceSpecPort } from "../domain/ports/slice-spec.port";
-import type { ReviewRole } from "../domain/review.schemas";
+import { Review } from "../domain/review.aggregate";
+import { type FindingProps, FindingPropsSchema, type ReviewRole } from "../domain/review.schemas";
+import { strategyForRole } from "../domain/review-strategy";
 import type { CritiqueReflectionService } from "../domain/services/critique-reflection.service";
 import type { FreshReviewerService } from "../domain/services/fresh-reviewer.service";
 import type { ReviewPromptBuilder } from "./review-prompt-builder";
@@ -38,15 +42,15 @@ export class ConductReviewUseCase {
   constructor(
     private readonly sliceSpecPort: SliceSpecPort,
     private readonly changedFilesPort: ChangedFilesPort,
-    readonly _freshReviewerService: FreshReviewerService,
+    private readonly freshReviewerService: FreshReviewerService,
     private readonly agentDispatchPort: AgentDispatchPort,
-    readonly _critiqueReflectionService: CritiqueReflectionService,
+    private readonly critiqueReflectionService: CritiqueReflectionService,
     private readonly reviewPromptBuilder: ReviewPromptBuilder,
     private readonly modelResolver: (profile: ModelProfileName) => ResolvedModel,
     readonly _fixerPort: FixerPort,
-    readonly _reviewRepository: ReviewRepositoryPort,
+    private readonly reviewRepository: ReviewRepositoryPort,
     readonly _eventBus: EventBusPort,
-    readonly _dateProvider: DateProviderPort,
+    private readonly dateProvider: DateProviderPort,
     private readonly logger: LoggerPort,
   ) {}
 
@@ -69,10 +73,25 @@ export class ConductReviewUseCase {
     const spec = specResult.data;
     const diff = diffResult.data;
 
-    // Step 2: Dispatch reviewers (parallel with timeout + retry)
-    const outcomes = await this.dispatchAllReviewers(spec, diff, parsed);
+    // Step 2: Enforce fresh-reviewer for each role
+    const agentIdentities = new Map<ReviewRole, string>();
+    for (const role of REVIEWER_ROLES) {
+      const identity = `${role}-${randomUUID()}`;
+      agentIdentities.set(role, identity);
+      const enforceResult = await this.freshReviewerService.enforce(parsed.sliceId, identity);
+      if (!enforceResult.ok) {
+        if (enforceResult.error instanceof FreshReviewerViolationError) {
+          return err(ConductReviewError.freshReviewerBlocked(parsed.sliceId, role, identity));
+        }
+        // ExecutorQueryError → fail-closed
+        return err(ConductReviewError.contextResolutionFailed(parsed.sliceId, enforceResult.error));
+      }
+    }
 
-    // Step 3: Check for total failure
+    // Step 3: Dispatch reviewers (parallel with timeout + retry)
+    const outcomes = await this.dispatchAllReviewers(spec, diff, parsed, agentIdentities);
+
+    // Step 3b: Check for total failure
     const allFailed = outcomes.every((o) => o.status !== "completed");
     if (allFailed) {
       return err(
@@ -83,7 +102,7 @@ export class ConductReviewUseCase {
       );
     }
 
-    // Step 4: Check for individual retry exhaustion
+    // Step 3c: Check for individual retry exhaustion
     for (const outcome of outcomes) {
       if (outcome.status !== "completed") {
         return err(
@@ -92,10 +111,42 @@ export class ConductReviewUseCase {
       }
     }
 
-    // T09/T10 will add: fresh-reviewer enforcement, CTR processing,
-    // Review creation, merge, persist, fixer loop, event emission.
-    // For now, return a placeholder error that satisfies the type signature.
-    return err(ConductReviewError.mergeError(parsed.sliceId, new Error("T09/T10 not implemented")));
+    // Step 4: Process results — create Review aggregates
+    const reviews: Review[] = [];
+    const now = this.dateProvider.now();
+
+    for (const outcome of outcomes) {
+      const review = Review.createNew({
+        id: randomUUID(),
+        sliceId: parsed.sliceId,
+        role: outcome.role,
+        agentIdentity: this.resolveIdentity(agentIdentities, outcome.role),
+        now,
+      });
+
+      // Parse findings from agent output
+      const findings = this.extractFindings(outcome);
+      review.recordFindings(findings, now);
+
+      // Save to repository
+      await this.reviewRepository.save(review);
+      reviews.push(review);
+    }
+
+    // Step 5: Merge reviews
+    const mergeResult = MergedReview.merge(reviews, now);
+    if (!mergeResult.ok) {
+      return err(ConductReviewError.mergeError(parsed.sliceId, mergeResult.error));
+    }
+
+    // T10 will add: fixer loop, ReviewPipelineCompletedEvent emission
+    return ok({
+      mergedReview: mergeResult.data.toJSON(),
+      individualReviews: reviews.map((r) => r.toJSON()),
+      fixCyclesUsed: 0,
+      timedOutReviewers: [],
+      retriedReviewers: [],
+    });
   }
 
   private resolveIdentity(identities: Map<ReviewRole, string>, role: ReviewRole): string {
@@ -110,12 +161,8 @@ export class ConductReviewUseCase {
     spec: SliceSpec,
     diff: string,
     request: ConductReviewRequest,
+    agentIdentities: Map<ReviewRole, string>,
   ): Promise<DispatchOutcome[]> {
-    const agentIdentities = new Map<ReviewRole, string>();
-    for (const role of REVIEWER_ROLES) {
-      agentIdentities.set(role, `${role}-${randomUUID()}`);
-    }
-
     // Parallel dispatch — all 3 initiated before any is awaited
     const firstAttempts = await Promise.allSettled(
       REVIEWER_ROLES.map((role) =>
@@ -233,5 +280,40 @@ export class ConductReviewUseCase {
     }
 
     return { role, taskId, status: "completed", result: raceResult.data };
+  }
+
+  private extractFindings(outcome: DispatchOutcome): FindingProps[] {
+    if (!outcome.result) return [];
+
+    const strategy = strategyForRole(outcome.role);
+    if (strategy === "critique-then-reflection") {
+      try {
+        const rawResult: unknown = JSON.parse(outcome.result.output);
+        const processed = this.critiqueReflectionService.processResult(rawResult);
+        if (!processed.ok) {
+          this.logger.warn("CTR parse error — degraded to 0 findings", {
+            role: outcome.role,
+            error: processed.error.message,
+          });
+          return [];
+        }
+        return processed.data.findings;
+      } catch {
+        this.logger.warn("JSON parse error on CTR output — degraded to 0 findings", {
+          role: outcome.role,
+        });
+        return [];
+      }
+    }
+
+    // Standard role — parse JSON array of findings directly
+    try {
+      const parsed: unknown = JSON.parse(outcome.result.output);
+      return Array.isArray(parsed)
+        ? parsed.filter((f) => FindingPropsSchema.safeParse(f).success)
+        : [];
+    } catch {
+      return [];
+    }
   }
 }

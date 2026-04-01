@@ -65,6 +65,10 @@ export class MergedReview extends ValueObject<MergedReviewProps> {
     return this.props.conflicts.length > 0;
   }
 
+  toJSON(): MergedReviewProps {
+    return { ...this.props };
+  }
+
   static merge(reviews: Review[], now: Date): Result<MergedReview, BaseDomainError> {
     if (reviews.length === 0) {
       return err(new MergeValidationError("Cannot merge empty review array"));
