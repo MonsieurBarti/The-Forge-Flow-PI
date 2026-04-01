@@ -72,3 +72,7 @@ export function initializeAgentRegistry(registry: AgentRegistry): void {
 export function resetAgentRegistry(): void {
   _singleton = undefined;
 }
+
+export function isAgentRegistryInitialized(): boolean {
+  return _singleton !== undefined;
+}

@@ -34,6 +34,7 @@ export {
   findAgentsByCapability,
   getAgentCard,
   initializeAgentRegistry,
+  isAgentRegistryInitialized,
   ResolvedModelSchema,
   resetAgentRegistry,
 } from "./agents";

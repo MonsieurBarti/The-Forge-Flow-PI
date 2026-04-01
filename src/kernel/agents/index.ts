@@ -30,6 +30,7 @@ export {
   findAgentsByCapability,
   getAgentCard,
   initializeAgentRegistry,
+  isAgentRegistryInitialized,
   resetAgentRegistry,
 } from "./agent-registry";
 export { AgentResourceLoader } from "./agent-resource-loader";

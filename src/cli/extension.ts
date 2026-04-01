@@ -48,6 +48,7 @@ import {
   GitCliAdapter,
   InProcessEventBus,
   initializeAgentRegistry,
+  isAgentRegistryInitialized,
   type ModelProfileName,
   PersistenceError,
   type ResolvedModel,
@@ -79,15 +80,17 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const dateProvider = new SystemDateProvider();
 
   // --- Agent registry ---
-  const agentLoader = new AgentResourceLoader();
-  const agentRegistryResult = AgentRegistry.loadFromResources(
-    agentLoader,
-    join(options.projectRoot, "src/resources"),
-  );
-  if (!agentRegistryResult.ok) {
-    throw new Error(`Failed to load agent registry: ${agentRegistryResult.error.message}`);
+  if (!isAgentRegistryInitialized()) {
+    const agentLoader = new AgentResourceLoader();
+    const agentRegistryResult = AgentRegistry.loadFromResources(
+      agentLoader,
+      join(options.projectRoot, "src/resources"),
+    );
+    if (!agentRegistryResult.ok) {
+      throw new Error(`Failed to load agent registry: ${agentRegistryResult.error.message}`);
+    }
+    initializeAgentRegistry(agentRegistryResult.data);
   }
-  initializeAgentRegistry(agentRegistryResult.data);
 
   // --- Repositories (in-memory for now; SQLite swap in later slice) ---
   const projectRepo = new InMemoryProjectRepository();
