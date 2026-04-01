@@ -108,6 +108,10 @@ export class InMemoryGitAdapter extends GitPort {
     return Promise.resolve(ok(this._diffContent));
   }
 
+  override diffAgainst(_base: string, cwd: string): Promise<Result<string, GitError>> {
+    return this.diff(cwd);
+  }
+
   override restoreWorktree(cwd: string): Promise<Result<void, GitError>> {
     this.restoreWorktreeCalls.push(cwd);
     return Promise.resolve(ok(undefined));
