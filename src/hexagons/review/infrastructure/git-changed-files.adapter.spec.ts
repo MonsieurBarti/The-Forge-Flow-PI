@@ -1,4 +1,4 @@
-import { err, isErr, isOk, ok, type Result } from "@kernel";
+import { err, isErr, isOk, type Result } from "@kernel";
 import { GitError } from "@kernel/errors";
 import { InMemoryGitAdapter } from "@kernel/infrastructure/in-memory-git.adapter";
 import { describe, expect, it } from "vitest";
