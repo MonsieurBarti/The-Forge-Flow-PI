@@ -21,8 +21,8 @@ import { BeadSliceSpecAdapter } from "@hexagons/review/infrastructure/bead-slice
 import { CachedExecutorQueryAdapter } from "@hexagons/review/infrastructure/cached-executor-query.adapter";
 import { GitChangedFilesAdapter } from "@hexagons/review/infrastructure/git-changed-files.adapter";
 import { InMemoryReviewRepository } from "@hexagons/review/infrastructure/in-memory-review.repository";
+import { PiFixerAdapter } from "@hexagons/review/infrastructure/pi-fixer.adapter";
 import { PlannotatorReviewUIAdapter } from "@hexagons/review/infrastructure/plannotator-review-ui.adapter";
-import { StubFixerAdapter } from "@hexagons/review/infrastructure/stub-fixer.adapter";
 import { TerminalReviewUIAdapter } from "@hexagons/review/infrastructure/terminal-review-ui.adapter";
 import { MergeSettingsUseCase } from "@hexagons/settings";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
@@ -190,7 +190,12 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     }),
   );
   const gitChangedFilesAdapter = new GitChangedFilesAdapter(gitPort, (_sliceId) => "milestone/M05");
-  const stubFixer = new StubFixerAdapter();
+  const piFixerAdapter = new PiFixerAdapter(
+    new PiAgentDispatchAdapter(),
+    templateLoader,
+    modelResolver,
+    logger,
+  );
 
   const _conductReviewUseCase = new ConductReviewUseCase(
     beadSliceSpecAdapter,
@@ -200,7 +205,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     critiqueReflectionService,
     reviewPromptBuilder,
     modelResolver,
-    stubFixer,
+    piFixerAdapter,
     reviewRepository,
     eventBus,
     dateProvider,
