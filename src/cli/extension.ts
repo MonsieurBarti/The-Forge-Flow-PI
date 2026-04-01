@@ -1,14 +1,26 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { ExecuteSliceUseCase } from "@hexagons/execution/application/execute-slice.use-case";
 import { ReplayJournalUseCase } from "@hexagons/execution/application/replay-journal.use-case";
 import { InMemoryCheckpointRepository } from "@hexagons/execution/infrastructure/in-memory-checkpoint.repository";
 import { InMemoryJournalRepository } from "@hexagons/execution/infrastructure/in-memory-journal.repository";
 import { MarkdownExecutionSessionAdapter } from "@hexagons/execution/infrastructure/markdown-execution-session.adapter";
 import { registerExecutionExtension } from "@hexagons/execution/infrastructure/pi/execution.extension";
+import { PiAgentDispatchAdapter } from "@hexagons/execution/infrastructure/pi-agent-dispatch.adapter";
 import { ProcessSignalPauseAdapter } from "@hexagons/execution/infrastructure/process-signal-pause.adapter";
 import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/in-memory-milestone.repository";
 import { registerProjectExtension } from "@hexagons/project";
 import { InMemoryProjectRepository } from "@hexagons/project/infrastructure/in-memory-project.repository";
 import { NodeProjectFileSystemAdapter } from "@hexagons/project/infrastructure/node-project-filesystem.adapter";
+import { ConductReviewUseCase } from "@hexagons/review/application/conduct-review.use-case";
+import { ReviewPromptBuilder } from "@hexagons/review/application/review-prompt-builder";
+import { CritiqueReflectionService } from "@hexagons/review/domain/services/critique-reflection.service";
+import { FreshReviewerService } from "@hexagons/review/domain/services/fresh-reviewer.service";
+import { BeadSliceSpecAdapter } from "@hexagons/review/infrastructure/bead-slice-spec.adapter";
+import { CachedExecutorQueryAdapter } from "@hexagons/review/infrastructure/cached-executor-query.adapter";
+import { GitChangedFilesAdapter } from "@hexagons/review/infrastructure/git-changed-files.adapter";
+import { InMemoryReviewRepository } from "@hexagons/review/infrastructure/in-memory-review.repository";
+import { StubFixerAdapter } from "@hexagons/review/infrastructure/stub-fixer.adapter";
 import { MergeSettingsUseCase } from "@hexagons/settings";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
 import { WorkflowSliceTransitionAdapter } from "@hexagons/slice/infrastructure/workflow-slice-transition.adapter";
@@ -28,8 +40,11 @@ import type { Result } from "@kernel";
 import {
   ConsoleLoggerAdapter,
   err,
+  GitCliAdapter,
   InProcessEventBus,
+  type ModelProfileName,
   PersistenceError,
+  type ResolvedModel,
   SystemDateProvider,
 } from "@kernel";
 
@@ -114,4 +129,47 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     dateProvider,
     logger,
   });
+
+  // --- Review pipeline wiring ---
+  const gitPort = new GitCliAdapter(options.projectRoot);
+  const reviewRepository = new InMemoryReviewRepository();
+  const executorQueryAdapter = new CachedExecutorQueryAdapter(async (_sliceId) => {
+    // Stub: returns empty set. Real implementation will query execution session.
+    return { ok: true as const, data: new Set<string>() };
+  });
+  const freshReviewerService = new FreshReviewerService(executorQueryAdapter);
+  const critiqueReflectionService = new CritiqueReflectionService();
+  const templateLoader = (path: string) =>
+    readFileSync(join(options.projectRoot, "src/resources", path), "utf-8");
+  const reviewPromptBuilder = new ReviewPromptBuilder(templateLoader);
+  const modelResolver = (_profile: ModelProfileName): ResolvedModel => ({
+    provider: "anthropic",
+    modelId: "claude-opus-4-6",
+  });
+  const beadSliceSpecAdapter = new BeadSliceSpecAdapter(
+    (milestoneLabel, sliceLabel) => artifactFile.read(milestoneLabel, sliceLabel, "spec"),
+    (_sliceId) => ({
+      milestoneLabel: "M05",
+      sliceLabel: "S04",
+      sliceTitle: "Review pipeline",
+    }),
+  );
+  const gitChangedFilesAdapter = new GitChangedFilesAdapter(gitPort, (_sliceId) => "milestone/M05");
+  const stubFixer = new StubFixerAdapter();
+
+  const _conductReviewUseCase = new ConductReviewUseCase(
+    beadSliceSpecAdapter,
+    gitChangedFilesAdapter,
+    freshReviewerService,
+    new PiAgentDispatchAdapter(),
+    critiqueReflectionService,
+    reviewPromptBuilder,
+    modelResolver,
+    stubFixer,
+    reviewRepository,
+    eventBus,
+    dateProvider,
+    logger,
+  );
+  void _conductReviewUseCase; // TODO(M05-S09): wire to ship command
 }
