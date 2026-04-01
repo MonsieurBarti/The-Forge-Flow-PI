@@ -611,6 +611,7 @@
 **Steps:**
 1. Write failing test: `FreshReviewerService.enforce()` called for each of 3 reviewers before dispatch. Spy on enforce, assert 3 calls with correct `(sliceId, agentIdentity)` pairs.
 2. Write failing test: fresh-reviewer violation → `ConductReviewError.freshReviewerBlocked()`. Stub enforce to return `FreshReviewerViolationError`.
+2b. Write failing test: `ExecutorQueryError` from enforce → `ConductReviewError.contextResolutionFailed()`. Stub enforce to return `ExecutorQueryError`. Assert fail-closed (pipeline aborts, not degraded).
 3. Write failing test: CTR roles processed via `CritiqueReflectionService.processResult()`. Stub dispatch to return JSON output for code-reviewer/security-auditor. Assert `processResult()` called for those 2, NOT for spec-reviewer.
 4. Write failing test: CTR parse failure → degraded (0 findings). Stub dispatch to return invalid JSON for code-reviewer. Assert review created with 0 findings (AC25).
 5. Write failing test: 3 Review aggregates created + saved. Assert `reviewRepository.save()` called 3 times.
@@ -662,7 +663,9 @@
    - Domain errors: `ConductReviewError`, `SliceSpecError`, `ChangedFilesError`, `FixerError`
    - Domain events: `ReviewPipelineCompletedEvent`
    - Infrastructure: `StubFixerAdapter`, `BeadSliceSpecAdapter`, `GitChangedFilesAdapter`
-2. Wire in `src/cli/extension.ts` — instantiate all adapters and `ConductReviewUseCase` with proper dependencies.
+2. Wire in `src/cli/extension.ts`:
+   - `modelResolver`: stub returning hardcoded `{ provider: "anthropic", modelId: "claude-opus-4-6" }` (real resolution deferred to settings hexagon integration). Satisfies AC20 (type-level verification).
+   - Instantiate `BeadSliceSpecAdapter`, `GitChangedFilesAdapter`, `StubFixerAdapter`, `ConductReviewUseCase` with all dependencies.
 3. Write integration test: full pipeline with `InMemoryAgentDispatchAdapter`, `InMemoryReviewRepository`, stub ports. Dispatch 3 reviewers → merge → verify merged verdict + persisted reviews + event emitted.
 4. Run: `npx vitest run --reporter=verbose 2>&1 | tail -10`
    **Expect:** PASS — all tests green including integration.
