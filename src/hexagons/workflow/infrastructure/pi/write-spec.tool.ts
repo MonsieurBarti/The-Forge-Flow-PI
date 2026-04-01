@@ -1,4 +1,5 @@
 import { MilestoneLabelSchema } from "@hexagons/milestone";
+import type { ReviewUIPort } from "@hexagons/review";
 import { SliceLabelSchema } from "@hexagons/slice";
 import { createZodTool, textResult } from "@infrastructure/pi";
 import { IdSchema, isErr } from "@kernel";
@@ -12,7 +13,7 @@ const WriteSpecSchema = z.object({
   content: z.string().describe("Markdown spec content"),
 });
 
-export function createWriteSpecTool(useCase: WriteSpecUseCase) {
+export function createWriteSpecTool(useCase: WriteSpecUseCase, reviewUI: ReviewUIPort) {
   return createZodTool({
     name: "tff_write_spec",
     label: "TFF Write Spec",
@@ -21,7 +22,29 @@ export function createWriteSpecTool(useCase: WriteSpecUseCase) {
     execute: async (params) => {
       const result = await useCase.execute(params);
       if (isErr(result)) return textResult(`Error: ${result.error.message}`);
-      return textResult(JSON.stringify({ ok: true, path: result.data.path }));
+
+      const approvalResult = await reviewUI.presentForApproval({
+        sliceId: params.sliceId,
+        sliceLabel: params.sliceLabel,
+        artifactType: "spec",
+        artifactPath: result.data.path,
+        summary: `SPEC.md for ${params.sliceLabel}`,
+      });
+
+      const approval = approvalResult.ok ? approvalResult.data : undefined;
+      return textResult(
+        JSON.stringify({
+          ok: true,
+          path: result.data.path,
+          approval: approval
+            ? {
+                decision: approval.decision,
+                feedback: approval.feedback,
+                formattedOutput: approval.formattedOutput,
+              }
+            : undefined,
+        }),
+      );
     },
   });
 }
