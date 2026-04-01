@@ -1,7 +1,11 @@
 import { err, ok, type Result } from "@kernel";
-import { type AgentDispatchConfig, type AgentResult, AgentResultBuilder } from "@kernel/agents";
-import { AgentDispatchError } from "../domain/errors/agent-dispatch.error";
-import { AgentDispatchPort } from "../domain/ports/agent-dispatch.port";
+import {
+  type AgentDispatchConfig,
+  AgentDispatchError,
+  AgentDispatchPort,
+  type AgentResult,
+  AgentResultBuilder,
+} from "@kernel/agents";
 
 interface PendingDispatch {
   resolve: (result: Result<AgentResult, AgentDispatchError>) => void;

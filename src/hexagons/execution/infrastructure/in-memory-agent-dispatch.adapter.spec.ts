@@ -1,6 +1,6 @@
 import { err, ok } from "@kernel";
+import type { AgentDispatchError } from "@kernel/agents";
 import { AgentResultBuilder } from "@kernel/agents";
-import type { AgentDispatchError } from "../domain/errors/agent-dispatch.error";
 import { runContractTests, type TestConfigurator } from "./agent-dispatch.contract.spec";
 import { InMemoryAgentDispatchAdapter } from "./in-memory-agent-dispatch.adapter";
 

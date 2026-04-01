@@ -1,5 +1,6 @@
 import { err, ok, type Result } from "@kernel";
 import type { AgentDispatchConfig, AgentResult } from "@kernel/agents";
+import { AgentDispatchError, AgentDispatchPort } from "@kernel/agents";
 import type {
   AgentConcern,
   AgentStatus,
@@ -26,8 +27,6 @@ import {
   SessionManager,
   writeTool,
 } from "@mariozechner/pi-coding-agent";
-import { AgentDispatchError } from "../domain/errors/agent-dispatch.error";
-import { AgentDispatchPort } from "../domain/ports/agent-dispatch.port";
 
 /** Tool type matching CreateAgentSessionOptions["tools"] elements. */
 type PiTool = (typeof codingTools)[number];
