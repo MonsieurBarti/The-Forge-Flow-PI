@@ -1,5 +1,6 @@
 import { InMemoryAgentDispatchAdapter } from "@hexagons/execution";
 import {
+  type DomainEvent,
   err,
   InProcessEventBus,
   type ModelProfileName,
@@ -16,15 +17,17 @@ import {
   AgentResultBuilder,
   type ResolvedModel,
 } from "@kernel/agents";
-import type { DateProviderPort } from "@kernel/ports";
+import type { DateProviderPort, EventBusPort } from "@kernel/ports";
 import { describe, expect, it } from "vitest";
 import type { ConductReviewRequest } from "../domain/conduct-review.schemas";
 import { ConductReviewError } from "../domain/errors/conduct-review.error";
 import { ExecutorQueryError } from "../domain/errors/executor-query.error";
+import { FixerError } from "../domain/errors/fixer.error";
 import { ChangedFilesError, SliceSpecError } from "../domain/errors/review-context.error";
+import { ReviewPipelineCompletedEvent } from "../domain/events/review-pipeline-completed.event";
 import { ChangedFilesPort } from "../domain/ports/changed-files.port";
 import { ExecutorQueryPort } from "../domain/ports/executor-query.port";
-import { FixerPort } from "../domain/ports/fixer.port";
+import { FixerPort, type FixRequest, type FixResult } from "../domain/ports/fixer.port";
 import { type SliceSpec, SliceSpecPort } from "../domain/ports/slice-spec.port";
 import type { FindingProps } from "../domain/review.schemas";
 import { CritiqueReflectionService } from "../domain/services/critique-reflection.service";
@@ -126,6 +129,33 @@ class StubFixerPort extends FixerPort {
   }
 }
 
+/** Fixer that defers all findings (simulates "fixed nothing"). */
+class DeferAllFixerPort extends FixerPort {
+  readonly fixCalls: Array<{ sliceId: string; findings: FindingProps[] }> = [];
+
+  async fix(request: FixRequest): Promise<Result<FixResult, FixerError>> {
+    this.fixCalls.push({ sliceId: request.sliceId, findings: [...request.findings] });
+    return ok({ fixed: [], deferred: [...request.findings], testsPassing: true });
+  }
+}
+
+/** Fixer that always returns an error. */
+class FailingFixerPort extends FixerPort {
+  async fix(): Promise<Result<FixResult, FixerError>> {
+    return err(new FixerError("Fixer exploded"));
+  }
+}
+
+/** EventBus that captures all published events. */
+class SpyEventBus extends InProcessEventBus {
+  readonly publishedEvents: DomainEvent[] = [];
+
+  override async publish(event: DomainEvent): Promise<void> {
+    this.publishedEvents.push(event);
+    return super.publish(event);
+  }
+}
+
 class FailingDispatchAdapter extends AgentDispatchPort {
   private _dispatched: AgentDispatchConfig[] = [];
 
@@ -212,7 +242,9 @@ interface BuildUseCaseOverrides {
   agentDispatchPort?: AgentDispatchPort;
   executorQueryPort?: ExecutorQueryPort;
   freshReviewerService?: FreshReviewerService;
+  fixerPort?: FixerPort;
   reviewRepository?: InMemoryReviewRepository;
+  eventBus?: EventBusPort;
   dateProvider?: DateProviderPort;
 }
 
@@ -225,9 +257,9 @@ function buildUseCase(overrides: BuildUseCaseOverrides = {}): ConductReviewUseCa
     overrides.freshReviewerService ?? new FreshReviewerService(executorQueryPort);
   const critiqueReflectionService = new CritiqueReflectionService();
   const promptBuilder = new ReviewPromptBuilder(stubTemplateLoader);
-  const fixerPort = new StubFixerPort();
+  const fixerPort = overrides.fixerPort ?? new StubFixerPort();
   const reviewRepository = overrides.reviewRepository ?? new InMemoryReviewRepository();
-  const eventBus = new InProcessEventBus(logger);
+  const eventBus = overrides.eventBus ?? new InProcessEventBus(logger);
   const dateProvider = overrides.dateProvider ?? new SystemDateProvider();
   const agentDispatchPort = overrides.agentDispatchPort ?? new InMemoryAgentDispatchAdapter();
 
@@ -623,6 +655,182 @@ describe("ConductReviewUseCase", () => {
       }
     });
   });
+
+  // =========================================================================
+  // T10 — fixer loop + event emission + error paths
+  // =========================================================================
+  describe("fixerPort.fix() invoked when merged.hasBlockers() (AC14)", () => {
+    it("calls fixer when review findings include critical/high severity", async () => {
+      const blockerFinding = makeFinding({ severity: "critical", message: "Critical bug" });
+
+      // All reviewers return a critical finding → merged has blockers
+      const dispatch = new OutputDispatchAdapter({
+        "code-reviewer": makeCtrOutput([blockerFinding]),
+        "security-auditor": makeCtrOutput([]),
+        "spec-reviewer": makeStandardOutput([]),
+      });
+
+      const fixerPort = new DeferAllFixerPort();
+      const useCase = buildUseCase({
+        agentDispatchPort: dispatch,
+        fixerPort,
+        dateProvider: new FixedDateProvider(),
+      });
+
+      await useCase.execute(makeRequest({ maxFixCycles: 1 }));
+
+      expect(fixerPort.fixCalls).toHaveLength(1);
+      expect(fixerPort.fixCalls[0].sliceId).toBe(SLICE_ID);
+      expect(fixerPort.fixCalls[0].findings.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("fixer loop terminates after maxFixCycles (AC15)", () => {
+    it("stops after exactly maxFixCycles iterations with fixCyclesUsed = maxFixCycles", async () => {
+      const blockerFinding = makeFinding({ severity: "critical", message: "Persistent blocker" });
+
+      // Every cycle returns blockers (fixer never resolves them)
+      const dispatch = new CycleAwareDispatchAdapter([
+        // Cycle 0 (initial): blockers
+        {
+          "code-reviewer": makeCtrOutput([blockerFinding]),
+          "security-auditor": makeCtrOutput([]),
+          "spec-reviewer": makeStandardOutput([]),
+        },
+        // Cycle 1 (re-review after fix 1): still blockers
+        {
+          "code-reviewer": makeCtrOutput([blockerFinding]),
+          "security-auditor": makeCtrOutput([]),
+          "spec-reviewer": makeStandardOutput([]),
+        },
+        // Cycle 2 (re-review after fix 2): still blockers
+        {
+          "code-reviewer": makeCtrOutput([blockerFinding]),
+          "security-auditor": makeCtrOutput([]),
+          "spec-reviewer": makeStandardOutput([]),
+        },
+      ]);
+
+      const fixerPort = new DeferAllFixerPort();
+      const useCase = buildUseCase({
+        agentDispatchPort: dispatch,
+        fixerPort,
+        dateProvider: new FixedDateProvider(),
+      });
+
+      const result = await useCase.execute(makeRequest({ maxFixCycles: 2 }));
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.data.fixCyclesUsed).toBe(2);
+      }
+      expect(fixerPort.fixCalls).toHaveLength(2);
+    });
+  });
+
+  describe("after fix, all 3 reviewers re-dispatched (AC16)", () => {
+    it("dispatches 6 total times (3 initial + 3 re-review) when fix resolves blockers", async () => {
+      const blockerFinding = makeFinding({ severity: "high", message: "High sev bug" });
+
+      // Cycle 0: blockers; Cycle 1: no blockers
+      const dispatch = new CycleAwareDispatchAdapter([
+        {
+          "code-reviewer": makeCtrOutput([blockerFinding]),
+          "security-auditor": makeCtrOutput([]),
+          "spec-reviewer": makeStandardOutput([]),
+        },
+        {
+          "code-reviewer": makeCtrOutput([]),
+          "security-auditor": makeCtrOutput([]),
+          "spec-reviewer": makeStandardOutput([]),
+        },
+      ]);
+
+      const fixerPort = new DeferAllFixerPort();
+      const useCase = buildUseCase({
+        agentDispatchPort: dispatch,
+        fixerPort,
+        dateProvider: new FixedDateProvider(),
+      });
+
+      const result = await useCase.execute(makeRequest({ maxFixCycles: 2 }));
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.data.fixCyclesUsed).toBe(1);
+      }
+      // 3 initial + 3 re-review = 6
+      expect(dispatch.dispatchedConfigs).toHaveLength(6);
+    });
+  });
+
+  describe("fixer failure → loop stops, current result returned (AC26)", () => {
+    it("returns ok result (not error) with fixCyclesUsed=0 when fixer fails", async () => {
+      const blockerFinding = makeFinding({ severity: "critical", message: "Critical bug" });
+
+      const dispatch = new OutputDispatchAdapter({
+        "code-reviewer": makeCtrOutput([blockerFinding]),
+        "security-auditor": makeCtrOutput([]),
+        "spec-reviewer": makeStandardOutput([]),
+      });
+
+      const failingFixer = new FailingFixerPort();
+      const useCase = buildUseCase({
+        agentDispatchPort: dispatch,
+        fixerPort: failingFixer,
+        dateProvider: new FixedDateProvider(),
+      });
+
+      const result = await useCase.execute(makeRequest({ maxFixCycles: 2 }));
+
+      // Graceful: ok result, not error
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.data.fixCyclesUsed).toBe(0);
+        // Still has the merged review from initial dispatch
+        expect(result.data.mergedReview).toBeDefined();
+      }
+    });
+  });
+
+  describe("ReviewPipelineCompletedEvent emitted with all fields (AC23)", () => {
+    it("emits ReviewPipelineCompletedEvent after pipeline completes", async () => {
+      const finding = makeFinding({ severity: "medium", message: "Advisory" });
+
+      const dispatch = new OutputDispatchAdapter({
+        "code-reviewer": makeCtrOutput([finding]),
+        "security-auditor": makeCtrOutput([]),
+        "spec-reviewer": makeStandardOutput([]),
+      });
+
+      const eventBus = new SpyEventBus(logger);
+      const useCase = buildUseCase({
+        agentDispatchPort: dispatch,
+        eventBus,
+        dateProvider: new FixedDateProvider(),
+      });
+
+      const result = await useCase.execute(makeRequest());
+
+      expect(result.ok).toBe(true);
+
+      const pipelineEvents = eventBus.publishedEvents.filter(
+        (e) => e instanceof ReviewPipelineCompletedEvent,
+      );
+      expect(pipelineEvents).toHaveLength(1);
+
+      const event = pipelineEvents[0] as ReviewPipelineCompletedEvent;
+      expect(event.sliceId).toBe(SLICE_ID);
+      expect(event.verdict).toBeDefined();
+      expect(event.reviewCount).toBeGreaterThanOrEqual(3);
+      expect(typeof event.findingsCount).toBe("number");
+      expect(typeof event.blockerCount).toBe("number");
+      expect(typeof event.conflictCount).toBe("number");
+      expect(typeof event.fixCyclesUsed).toBe("number");
+      expect(Array.isArray(event.timedOutRoles)).toBe(true);
+      expect(Array.isArray(event.retriedRoles)).toBe(true);
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -709,6 +917,45 @@ class SlowDispatchAdapter extends AgentDispatchPort {
 
   get abortCount(): number {
     return this._abortCount;
+  }
+
+  get dispatchedConfigs(): readonly AgentDispatchConfig[] {
+    return this._dispatched;
+  }
+}
+
+/**
+ * Dispatch adapter that returns different outputs per dispatch cycle (group of 3).
+ * Cycle 0 = dispatches 0-2, Cycle 1 = dispatches 3-5, etc.
+ */
+class CycleAwareDispatchAdapter extends AgentDispatchPort {
+  private _dispatched: AgentDispatchConfig[] = [];
+
+  constructor(private readonly outputByCycleAndRole: Array<Record<string, string>>) {
+    super();
+  }
+
+  async dispatch(config: AgentDispatchConfig): Promise<Result<AgentResult, AgentDispatchError>> {
+    this._dispatched.push(config);
+    const cycle = Math.floor((this._dispatched.length - 1) / 3);
+    const cycleOutputs =
+      this.outputByCycleAndRole[Math.min(cycle, this.outputByCycleAndRole.length - 1)];
+    const output = cycleOutputs[config.agentType] ?? "[]";
+    return ok(
+      new AgentResultBuilder()
+        .withTaskId(config.taskId)
+        .withAgentType(config.agentType)
+        .withOutput(output)
+        .build(),
+    );
+  }
+
+  async abort(): Promise<void> {
+    /* no-op */
+  }
+
+  isRunning(): boolean {
+    return false;
   }
 
   get dispatchedConfigs(): readonly AgentDispatchConfig[] {
