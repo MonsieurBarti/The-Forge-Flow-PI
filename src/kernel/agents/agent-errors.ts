@@ -76,7 +76,7 @@ export class AgentLoadError extends BaseDomainError {
   static duplicateType(agentType: string, files: string[]): AgentLoadError {
     return new AgentLoadError(
       "AGENT.DUPLICATE_TYPE",
-      `Agent type "${agentType}" defined in multiple files: ${files.join(", ")}`,
+      `Agent type "${agentType}" is a duplicate — defined in multiple files: ${files.join(", ")}`,
       { agentType, files },
     );
   }
