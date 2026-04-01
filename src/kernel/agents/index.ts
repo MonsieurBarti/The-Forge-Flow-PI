@@ -8,7 +8,13 @@ export { AgentDispatchPort } from "./agent-dispatch.port";
 export type { AgentDispatchConfig, ResolvedModel } from "./agent-dispatch.schema";
 export { AgentDispatchConfigSchema, ResolvedModelSchema } from "./agent-dispatch.schema";
 // Registry
-export { AGENT_REGISTRY, findAgentsByCapability, getAgentCard } from "./agent-registry";
+export {
+  AgentRegistry,
+  findAgentsByCapability,
+  getAgentCard,
+  initializeAgentRegistry,
+  resetAgentRegistry,
+} from "./agent-registry";
 export { AgentResultBuilder } from "./agent-result.builder";
 export type { AgentCost, AgentResult } from "./agent-result.schema";
 export { AgentCostSchema, AgentResultSchema } from "./agent-result.schema";

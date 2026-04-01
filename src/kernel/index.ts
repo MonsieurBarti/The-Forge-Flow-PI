@@ -9,18 +9,20 @@ export type {
 } from "./agents";
 // Agent artifacts
 export {
-  AGENT_REGISTRY,
   AgentCapabilitySchema,
   AgentCardSchema,
   AgentCostSchema,
   AgentDispatchConfigBuilder,
   AgentDispatchConfigSchema,
+  AgentRegistry,
   AgentResultBuilder,
   AgentResultSchema,
   AgentTypeSchema,
   findAgentsByCapability,
   getAgentCard,
+  initializeAgentRegistry,
   ResolvedModelSchema,
+  resetAgentRegistry,
 } from "./agents";
 export { AggregateRoot } from "./aggregate-root.base";
 export type { DomainEventProps } from "./domain-event.base";
