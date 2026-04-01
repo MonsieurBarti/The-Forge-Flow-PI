@@ -7,6 +7,7 @@ export class StubFixerAdapter extends FixerPort {
     return ok({
       fixed: [],
       deferred: [...request.findings],
+      justifications: {},
       testsPassing: true,
     });
   }

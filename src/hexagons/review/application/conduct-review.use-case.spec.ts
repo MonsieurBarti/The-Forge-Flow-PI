@@ -135,7 +135,12 @@ class DeferAllFixerPort extends FixerPort {
 
   async fix(request: FixRequest): Promise<Result<FixResult, FixerError>> {
     this.fixCalls.push({ sliceId: request.sliceId, findings: [...request.findings] });
-    return ok({ fixed: [], deferred: [...request.findings], testsPassing: true });
+    return ok({
+      fixed: [],
+      deferred: [...request.findings],
+      justifications: {},
+      testsPassing: true,
+    });
   }
 }
 
