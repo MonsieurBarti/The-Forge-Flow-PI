@@ -654,19 +654,33 @@ describe("TerminalReviewUIAdapter", () => {
 ```typescript
 // src/hexagons/review/infrastructure/plannotator-review-ui.adapter.spec.ts
 import { isOk } from "@kernel";
-import { type SpyInstance, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as childProcess from "node:child_process";
 import { PlannotatorReviewUIAdapter } from "./plannotator-review-ui.adapter";
 
 vi.mock("node:child_process");
 
+// Helper: mock execFile to call callback with given stdout
+function mockExecFile(stdout: string) {
+  vi.mocked(childProcess.execFile).mockImplementation(
+    (_cmd: unknown, _args: unknown, _opts: unknown, cb: unknown) => {
+      (cb as Function)(null, stdout, "");
+      return {} as ReturnType<typeof childProcess.execFile>;
+    },
+  );
+}
+
+function mockExecFileError(errorMsg: string) {
+  vi.mocked(childProcess.execFile).mockImplementation(
+    (_cmd: unknown, _args: unknown, _opts: unknown, cb: unknown) => {
+      (cb as Function)(new Error(errorMsg), "", "");
+      return {} as ReturnType<typeof childProcess.execFile>;
+    },
+  );
+}
+
 describe("PlannotatorReviewUIAdapter", () => {
   const adapter = new PlannotatorReviewUIAdapter("/usr/local/bin/plannotator");
-  let execFileSpy: SpyInstance;
-
-  beforeEach(() => {
-    execFileSpy = vi.mocked(childProcess.execFileSync);
-  });
 
   afterEach(() => {
     vi.restoreAllMocks();
@@ -674,22 +688,23 @@ describe("PlannotatorReviewUIAdapter", () => {
 
   describe("presentFindings", () => {
     it("invokes plannotator annotate via CLI subprocess (AC4)", async () => {
-      execFileSpy.mockReturnValue(Buffer.from("# File Feedback\n\n## 1. General\n> lgtm\n"));
+      mockExecFile("# File Feedback\n\n## 1. General\n> lgtm\n");
       const ctx = {
         sliceId: "s1", sliceLabel: "M05-S05", verdict: "approved" as const,
         findings: [], conflicts: [], fixCyclesUsed: 0, timedOutReviewers: [],
       };
       const result = await adapter.presentFindings(ctx);
       expect(isOk(result)).toBe(true);
-      expect(execFileSpy).toHaveBeenCalledWith(
+      expect(childProcess.execFile).toHaveBeenCalledWith(
         "/usr/local/bin/plannotator",
         expect.arrayContaining(["annotate"]),
         expect.any(Object),
+        expect.any(Function),
       );
     });
 
-    it("degrades to acknowledged on parse error (AC12)", async () => {
-      execFileSpy.mockImplementation(() => { throw new Error("plannotator crashed"); });
+    it("degrades to acknowledged on error (AC12)", async () => {
+      mockExecFileError("plannotator crashed");
       const ctx = {
         sliceId: "s1", sliceLabel: "M05-S05", verdict: "approved" as const,
         findings: [], conflicts: [], fixCyclesUsed: 0, timedOutReviewers: [],
@@ -702,7 +717,7 @@ describe("PlannotatorReviewUIAdapter", () => {
 
   describe("presentVerification", () => {
     it("invokes plannotator annotate (AC4)", async () => {
-      execFileSpy.mockReturnValue(Buffer.from("No feedback provided."));
+      mockExecFile("No feedback provided.");
       const ctx = {
         sliceId: "s1", sliceLabel: "M05-S05",
         criteria: [{ criterion: "AC1", verdict: "PASS" as const, evidence: "ok" }],
@@ -710,11 +725,11 @@ describe("PlannotatorReviewUIAdapter", () => {
       };
       const result = await adapter.presentVerification(ctx);
       expect(isOk(result)).toBe(true);
-      expect(execFileSpy).toHaveBeenCalled();
+      expect(childProcess.execFile).toHaveBeenCalled();
     });
 
-    it("degrades to accepted on parse error (AC13)", async () => {
-      execFileSpy.mockImplementation(() => { throw new Error("crash"); });
+    it("degrades to accepted on error (AC13)", async () => {
+      mockExecFileError("crash");
       const ctx = {
         sliceId: "s1", sliceLabel: "M05-S05",
         criteria: [], overallVerdict: "PASS" as const,
@@ -727,22 +742,23 @@ describe("PlannotatorReviewUIAdapter", () => {
 
   describe("presentForApproval", () => {
     it("invokes plannotator annotate on artifact path (AC4)", async () => {
-      execFileSpy.mockReturnValue(Buffer.from("# File Feedback\n\n## 1. General\n> lgtm\n"));
+      mockExecFile("# File Feedback\n\n## 1. General\n> lgtm\n");
       const ctx = {
         sliceId: "s1", sliceLabel: "M05-S05", artifactType: "spec" as const,
         artifactPath: "/path/SPEC.md", summary: "spec",
       };
       const result = await adapter.presentForApproval(ctx);
       expect(isOk(result)).toBe(true);
-      expect(execFileSpy).toHaveBeenCalledWith(
+      expect(childProcess.execFile).toHaveBeenCalledWith(
         "/usr/local/bin/plannotator",
         ["annotate", "/path/SPEC.md"],
         expect.any(Object),
+        expect.any(Function),
       );
     });
 
     it("returns approved when feedback has no changes", async () => {
-      execFileSpy.mockReturnValue(Buffer.from("User reviewed the document and has no feedback."));
+      mockExecFile("User reviewed the document and has no feedback.");
       const ctx = {
         sliceId: "s1", sliceLabel: "M05-S05", artifactType: "plan" as const,
         artifactPath: "/path/PLAN.md", summary: "plan",
@@ -753,7 +769,7 @@ describe("PlannotatorReviewUIAdapter", () => {
     });
 
     it("returns changes_requested when feedback has REPLACEMENT/DELETION", async () => {
-      execFileSpy.mockReturnValue(Buffer.from("# File Feedback\n## 1. Line 5\n[REPLACEMENT] fix this\n"));
+      mockExecFile("# File Feedback\n## 1. Line 5\n[REPLACEMENT] fix this\n");
       const ctx = {
         sliceId: "s1", sliceLabel: "M05-S05", artifactType: "spec" as const,
         artifactPath: "/path/SPEC.md", summary: "spec",
@@ -764,7 +780,7 @@ describe("PlannotatorReviewUIAdapter", () => {
     });
 
     it("degrades to changes_requested on crash — never auto-approves (AC11)", async () => {
-      execFileSpy.mockImplementation(() => { throw new Error("crash"); });
+      mockExecFileError("crash");
       const ctx = {
         sliceId: "s1", sliceLabel: "M05-S05", artifactType: "spec" as const,
         artifactPath: "/path/SPEC.md", summary: "spec",
@@ -785,8 +801,8 @@ describe("PlannotatorReviewUIAdapter", () => {
 
 ```typescript
 // src/hexagons/review/infrastructure/plannotator-review-ui.adapter.ts
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { execFile } from "node:child_process";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { ok, type Result } from "@kernel";
@@ -802,13 +818,23 @@ import { SEVERITY_RANK } from "../domain/review.schemas";
 const NO_FEEDBACK_SENTINEL = "User reviewed the document and has no feedback.";
 const CHANGE_MARKERS = ["[DELETION]", "[REPLACEMENT]", "[INSERTION]"];
 
+// Promisify execFile for non-blocking subprocess
+function execFileAsync(cmd: string, args: string[]): Promise<string> {
+  return new Promise((resolve, reject) => {
+    execFile(cmd, args, { encoding: "utf-8", timeout: 0 }, (error, stdout) => {
+      if (error) return reject(error);
+      resolve(stdout.trim());
+    });
+  });
+}
+
 export class PlannotatorReviewUIAdapter extends ReviewUIPort {
   constructor(private readonly plannotatorPath: string) { super(); }
 
   async presentFindings(ctx: FindingsUIContext): Promise<Result<FindingsUIResponse, ReviewUIError>> {
     try {
       const md = this.formatFindingsMarkdown(ctx);
-      const feedback = this.runAnnotate(md);
+      const feedback = await this.runAnnotate(md);
       return ok({ acknowledged: true, formattedOutput: feedback });
     } catch {
       return ok({ acknowledged: true, formattedOutput: "[plannotator error — findings acknowledged]" });
@@ -818,7 +844,7 @@ export class PlannotatorReviewUIAdapter extends ReviewUIPort {
   async presentVerification(ctx: VerificationUIContext): Promise<Result<VerificationUIResponse, ReviewUIError>> {
     try {
       const md = this.formatVerificationMarkdown(ctx);
-      const feedback = this.runAnnotate(md);
+      const feedback = await this.runAnnotate(md);
       return ok({ accepted: true, formattedOutput: feedback });
     } catch {
       return ok({ accepted: true, formattedOutput: "[plannotator error — verification acknowledged]" });
@@ -827,7 +853,7 @@ export class PlannotatorReviewUIAdapter extends ReviewUIPort {
 
   async presentForApproval(ctx: ApprovalUIContext): Promise<Result<ApprovalUIResponse, ReviewUIError>> {
     try {
-      const feedback = this.runAnnotateFile(ctx.artifactPath);
+      const feedback = await this.runAnnotateFile(ctx.artifactPath);
       const hasChanges = CHANGE_MARKERS.some((m) => feedback.includes(m));
       const isNoFeedback = feedback.includes(NO_FEEDBACK_SENTINEL) || feedback.trim() === "";
       const decision = hasChanges ? "changes_requested" as const
@@ -848,25 +874,20 @@ export class PlannotatorReviewUIAdapter extends ReviewUIPort {
   }
 
   // Write temp markdown, run plannotator annotate, return stdout, cleanup
-  private runAnnotate(markdownContent: string): string {
-    const tmpDir = mkdtempSync(join(tmpdir(), "tff-review-ui-"));
+  private async runAnnotate(markdownContent: string): Promise<string> {
+    const tmpDir = await mkdtemp(join(tmpdir(), "tff-review-ui-"));
     const tmpFile = join(tmpDir, "review.md");
     try {
-      writeFileSync(tmpFile, markdownContent, "utf-8");
-      return this.runAnnotateFile(tmpFile);
+      await writeFile(tmpFile, markdownContent, "utf-8");
+      return await this.runAnnotateFile(tmpFile);
     } finally {
-      rmSync(tmpDir, { recursive: true, force: true });
+      await rm(tmpDir, { recursive: true, force: true });
     }
   }
 
-  // Run plannotator annotate on existing file, return stdout
-  private runAnnotateFile(filePath: string): string {
-    const output = execFileSync(this.plannotatorPath, ["annotate", filePath], {
-      encoding: "utf-8",
-      timeout: 0, // no timeout — user interactive
-      stdio: ["inherit", "pipe", "inherit"], // stdin+stderr pass through, capture stdout
-    });
-    return output.trim();
+  // Run plannotator annotate on existing file, return stdout (non-blocking)
+  private runAnnotateFile(filePath: string): Promise<string> {
+    return execFileAsync(this.plannotatorPath, ["annotate", filePath]);
   }
 
   private formatFindingsMarkdown(ctx: FindingsUIContext): string {
@@ -915,9 +936,10 @@ export class PlannotatorReviewUIAdapter extends ReviewUIPort {
 ```typescript
 // src/hexagons/review/infrastructure/review-ui.contract.spec.ts
 import { isOk } from "@kernel";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { ReviewUIPort } from "../domain/ports/review-ui.port";
 import { InMemoryReviewUIAdapter } from "./in-memory-review-ui.adapter";
+import { PlannotatorReviewUIAdapter } from "./plannotator-review-ui.adapter";
 import { TerminalReviewUIAdapter } from "./terminal-review-ui.adapter";
 
 // Contract: all adapters return Ok<*UIResponse> for valid contexts
@@ -958,7 +980,15 @@ function contractSuite(name: string, createAdapter: () => ReviewUIPort) {
 
 contractSuite("InMemoryReviewUIAdapter", () => new InMemoryReviewUIAdapter());
 contractSuite("TerminalReviewUIAdapter", () => new TerminalReviewUIAdapter());
-// PlannotatorReviewUIAdapter excluded — requires subprocess mock, covered in its own spec
+
+// PlannotatorReviewUIAdapter — mock subprocess to satisfy AC8 (all 3 adapters)
+vi.mock("node:child_process", () => ({
+  execFile: vi.fn((_cmd: string, _args: string[], _opts: unknown, cb: Function) => {
+    cb(null, "User reviewed the document and has no feedback.", "");
+  }),
+}));
+
+contractSuite("PlannotatorReviewUIAdapter", () => new PlannotatorReviewUIAdapter("/mock/plannotator"));
 ```
 
 - [ ] Step 2: Run `npx vitest run src/hexagons/review/infrastructure/review-ui.contract.spec.ts`, verify PASS
@@ -997,6 +1027,8 @@ export {
 } from "./domain/review-ui.schemas";
 // Infrastructure — ReviewUI Adapters
 export { InMemoryReviewUIAdapter } from "./infrastructure/in-memory-review-ui.adapter";
+export { PlannotatorReviewUIAdapter } from "./infrastructure/plannotator-review-ui.adapter";
+export { TerminalReviewUIAdapter } from "./infrastructure/terminal-review-ui.adapter";
 ```
 
 - [ ] Step 2: Run `npx vitest run src/hexagons/review/` — verify all tests PASS (no regression)
