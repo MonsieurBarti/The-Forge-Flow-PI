@@ -148,6 +148,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   });
   const beadSliceSpecAdapter = new BeadSliceSpecAdapter(
     (milestoneLabel, sliceLabel) => artifactFile.read(milestoneLabel, sliceLabel, "spec"),
+    // TODO(M05-S09): Wire real label resolver from bead metadata
     (_sliceId) => ({
       milestoneLabel: "M05",
       sliceLabel: "S04",

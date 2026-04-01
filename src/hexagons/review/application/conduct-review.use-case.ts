@@ -39,6 +39,12 @@ interface DispatchOutcome {
   readonly error?: unknown;
 }
 
+interface DispatchAllResult {
+  readonly outcomes: DispatchOutcome[];
+  readonly retriedRoles: ReviewRole[];
+  readonly timedOutRoles: ReviewRole[];
+}
+
 export class ConductReviewUseCase {
   constructor(
     private readonly sliceSpecPort: SliceSpecPort,
@@ -90,7 +96,10 @@ export class ConductReviewUseCase {
     }
 
     // Step 3: Dispatch reviewers (parallel with timeout + retry)
-    const outcomes = await this.dispatchAllReviewers(spec, diff, parsed, agentIdentities);
+    const dispatchResult = await this.dispatchAllReviewers(spec, diff, parsed, agentIdentities);
+    const outcomes = dispatchResult.outcomes;
+    let allTimedOutRoles = [...dispatchResult.timedOutRoles];
+    let allRetriedRoles = [...dispatchResult.retriedRoles];
 
     // Step 3b: Check for total failure
     const allFailed = outcomes.every((o) => o.status !== "completed");
@@ -202,7 +211,15 @@ export class ConductReviewUseCase {
       }
       if (freshReviewerFailed) break;
 
-      const reOutcomes = await this.dispatchAllReviewers(spec, currentDiff, parsed, reIdentities);
+      const reDispatchResult = await this.dispatchAllReviewers(
+        spec,
+        currentDiff,
+        parsed,
+        reIdentities,
+      );
+      const reOutcomes = reDispatchResult.outcomes;
+      allTimedOutRoles = [...allTimedOutRoles, ...reDispatchResult.timedOutRoles];
+      allRetriedRoles = [...allRetriedRoles, ...reDispatchResult.retriedRoles];
 
       // Check for total failure
       const reAllFailed = reOutcomes.every((o) => o.status !== "completed");
@@ -256,8 +273,8 @@ export class ConductReviewUseCase {
       ).length,
       conflictCount: merged.conflicts.length,
       fixCyclesUsed,
-      timedOutRoles: [],
-      retriedRoles: [],
+      timedOutRoles: allTimedOutRoles,
+      retriedRoles: allRetriedRoles,
     });
     await this.eventBus.publish(completedEvent);
 
@@ -265,8 +282,8 @@ export class ConductReviewUseCase {
       mergedReview: merged.toJSON(),
       individualReviews: allReviews.map((r) => r.toJSON()),
       fixCyclesUsed,
-      timedOutReviewers: [],
-      retriedReviewers: [],
+      timedOutReviewers: allTimedOutRoles,
+      retriedReviewers: allRetriedRoles,
     });
   }
 
@@ -283,7 +300,7 @@ export class ConductReviewUseCase {
     diff: string,
     request: ConductReviewRequest,
     agentIdentities: Map<ReviewRole, string>,
-  ): Promise<DispatchOutcome[]> {
+  ): Promise<DispatchAllResult> {
     // Parallel dispatch — all 3 initiated before any is awaited
     const firstAttempts = await Promise.allSettled(
       REVIEWER_ROLES.map((role) =>
@@ -299,6 +316,7 @@ export class ConductReviewUseCase {
 
     const outcomes: DispatchOutcome[] = [];
     const retryRoles: ReviewRole[] = [];
+    const timedOutRoles: ReviewRole[] = [];
 
     for (let i = 0; i < REVIEWER_ROLES.length; i++) {
       const role = REVIEWER_ROLES[i];
@@ -306,6 +324,9 @@ export class ConductReviewUseCase {
       if (settled.status === "fulfilled" && settled.value.status === "completed") {
         outcomes.push(settled.value);
       } else {
+        if (settled.status === "fulfilled" && settled.value.status === "timed_out") {
+          timedOutRoles.push(role);
+        }
         retryRoles.push(role);
       }
     }
@@ -335,13 +356,16 @@ export class ConductReviewUseCase {
         if (settled.status === "fulfilled" && settled.value.status === "completed") {
           outcomes.push(settled.value);
         } else {
+          if (settled.status === "fulfilled" && settled.value.status === "timed_out") {
+            timedOutRoles.push(role);
+          }
           const error = settled.status === "rejected" ? settled.reason : settled.value?.error;
           outcomes.push({ role, taskId: "", status: "failed", error });
         }
       }
     }
 
-    return outcomes;
+    return { outcomes, retriedRoles: retryRoles, timedOutRoles };
   }
 
   private async dispatchWithTimeout(
@@ -377,11 +401,13 @@ export class ConductReviewUseCase {
 
     // Race dispatch against timeout
     const dispatchPromise = this.agentDispatchPort.dispatch(config);
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
     const timeoutPromise = new Promise<null>((resolve) => {
-      setTimeout(() => resolve(null), request.timeoutMs);
+      timeoutHandle = setTimeout(() => resolve(null), request.timeoutMs);
     });
 
     const raceResult = await Promise.race([dispatchPromise, timeoutPromise]);
+    if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
 
     if (raceResult === null) {
       // Timed out — abort the running agent

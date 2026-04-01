@@ -827,8 +827,9 @@ describe("ConductReviewUseCase", () => {
       expect(typeof event.blockerCount).toBe("number");
       expect(typeof event.conflictCount).toBe("number");
       expect(typeof event.fixCyclesUsed).toBe("number");
-      expect(Array.isArray(event.timedOutRoles)).toBe(true);
-      expect(Array.isArray(event.retriedRoles)).toBe(true);
+      // No timeouts or retries in this successful-dispatch scenario
+      expect(event.timedOutRoles).toEqual([]);
+      expect(event.retriedRoles).toEqual([]);
     });
   });
 });
