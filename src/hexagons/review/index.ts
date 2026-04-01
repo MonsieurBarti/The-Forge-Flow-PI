@@ -35,6 +35,8 @@ export { ExecutorQueryError } from "./domain/errors/executor-query.error";
 export { FixerError } from "./domain/errors/fixer.error";
 export { FreshReviewerViolationError } from "./domain/errors/fresh-reviewer-violation.error";
 export { ChangedFilesError, SliceSpecError } from "./domain/errors/review-context.error";
+// Domain — ReviewUI Errors
+export { ReviewUIError } from "./domain/errors/review-ui.error";
 // Domain — New Events
 export { ReviewPipelineCompletedEvent } from "./domain/events/review-pipeline-completed.event";
 // Domain -- Events
@@ -57,6 +59,8 @@ export { ExecutorQueryPort } from "./domain/ports/executor-query.port";
 export type { FixRequest, FixResult } from "./domain/ports/fixer.port";
 export { FixerPort, FixRequestSchema, FixResultSchema } from "./domain/ports/fixer.port";
 export { ReviewRepositoryPort } from "./domain/ports/review-repository.port";
+// Domain — ReviewUI Port
+export { ReviewUIPort } from "./domain/ports/review-ui.port";
 export type { SliceSpec } from "./domain/ports/slice-spec.port";
 // Domain — New Ports
 export { SliceSpecPort, SliceSpecSchema } from "./domain/ports/slice-spec.port";
@@ -85,6 +89,23 @@ export {
 } from "./domain/review.schemas";
 // Domain -- Strategy
 export { strategyForRole } from "./domain/review-strategy";
+// Domain — ReviewUI Schemas
+export type {
+  ApprovalUIContext,
+  ApprovalUIResponse,
+  FindingsUIContext,
+  FindingsUIResponse,
+  VerificationUIContext,
+  VerificationUIResponse,
+} from "./domain/review-ui.schemas";
+export {
+  ApprovalUIContextSchema,
+  ApprovalUIResponseSchema,
+  FindingsUIContextSchema,
+  FindingsUIResponseSchema,
+  VerificationUIContextSchema,
+  VerificationUIResponseSchema,
+} from "./domain/review-ui.schemas";
 // Domain -- Services
 export { CritiqueReflectionService } from "./domain/services/critique-reflection.service";
 export { FreshReviewerService } from "./domain/services/fresh-reviewer.service";
@@ -93,6 +114,10 @@ export { BeadSliceSpecAdapter } from "./infrastructure/bead-slice-spec.adapter";
 export { CachedExecutorQueryAdapter } from "./infrastructure/cached-executor-query.adapter";
 export { GitChangedFilesAdapter } from "./infrastructure/git-changed-files.adapter";
 export { InMemoryReviewRepository } from "./infrastructure/in-memory-review.repository";
+// Infrastructure — ReviewUI Adapters
+export { InMemoryReviewUIAdapter } from "./infrastructure/in-memory-review-ui.adapter";
+export { PlannotatorReviewUIAdapter } from "./infrastructure/plannotator-review-ui.adapter";
 export { SqliteReviewRepository } from "./infrastructure/sqlite-review.repository";
 // Infrastructure — New Adapters
 export { StubFixerAdapter } from "./infrastructure/stub-fixer.adapter";
+export { TerminalReviewUIAdapter } from "./infrastructure/terminal-review-ui.adapter";
