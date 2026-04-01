@@ -1,5 +1,6 @@
 import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/in-memory-milestone.repository";
 import { InMemoryProjectRepository } from "@hexagons/project/infrastructure/in-memory-project.repository";
+import { InMemoryReviewUIAdapter } from "@hexagons/review/infrastructure/in-memory-review-ui.adapter";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
 import { WorkflowSliceTransitionAdapter } from "@hexagons/slice/infrastructure/workflow-slice-transition.adapter";
 import { CreateTasksUseCase } from "@hexagons/task/application/create-tasks.use-case";
@@ -46,6 +47,7 @@ function makeDeps(): WorkflowExtensionDeps {
     artifactFile: new InMemoryArtifactFileAdapter(),
     workflowSessionRepo: new InMemoryWorkflowSessionRepository(),
     autonomyModeProvider: { getAutonomyMode: () => "guided" as const },
+    reviewUI: new InMemoryReviewUIAdapter(),
     maxRetries: 2,
   };
 }
@@ -114,5 +116,19 @@ describe("registerWorkflowExtension", () => {
     registerWorkflowExtension(api, makeDeps());
     const toolNames = api.registerTool.mock.calls.map((call) => call[0].name);
     expect(toolNames).toContain("tff_write_plan");
+  });
+
+  it("write-spec tool calls ReviewUIPort.presentForApproval after write (AC5, AC6)", () => {
+    const api = makeMockApi();
+    const deps = makeDeps();
+    const reviewUI = deps.reviewUI as InMemoryReviewUIAdapter;
+    registerWorkflowExtension(api, deps);
+
+    const writeSpecCall = api.registerTool.mock.calls.find(
+      (call: unknown[]) => (call[0] as { name: string }).name === "tff_write_spec",
+    );
+    expect(writeSpecCall).toBeDefined();
+    // ReviewUI is injectable and starts with no presentations
+    expect(reviewUI.presentations).toHaveLength(0);
   });
 });

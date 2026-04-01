@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ExecuteSliceUseCase } from "@hexagons/execution/application/execute-slice.use-case";
@@ -20,7 +21,9 @@ import { BeadSliceSpecAdapter } from "@hexagons/review/infrastructure/bead-slice
 import { CachedExecutorQueryAdapter } from "@hexagons/review/infrastructure/cached-executor-query.adapter";
 import { GitChangedFilesAdapter } from "@hexagons/review/infrastructure/git-changed-files.adapter";
 import { InMemoryReviewRepository } from "@hexagons/review/infrastructure/in-memory-review.repository";
+import { PlannotatorReviewUIAdapter } from "@hexagons/review/infrastructure/plannotator-review-ui.adapter";
 import { StubFixerAdapter } from "@hexagons/review/infrastructure/stub-fixer.adapter";
+import { TerminalReviewUIAdapter } from "@hexagons/review/infrastructure/terminal-review-ui.adapter";
 import { MergeSettingsUseCase } from "@hexagons/settings";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
 import { WorkflowSliceTransitionAdapter } from "@hexagons/slice/infrastructure/workflow-slice-transition.adapter";
@@ -47,6 +50,14 @@ import {
   type ResolvedModel,
   SystemDateProvider,
 } from "@kernel";
+
+function detectPlannotator(): string | undefined {
+  try {
+    return execFileSync("which", ["plannotator"], { encoding: "utf-8" }).trim() || undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 class NoOpContextStaging extends ContextStagingPort {
   async stage(): Promise<Result<ContextPackage, ContextStagingError>> {
@@ -85,6 +96,11 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const workflowSessionRepo = new InMemoryWorkflowSessionRepository();
   const autonomyModeProvider = { getAutonomyMode: () => "plan-to-pr" as const };
 
+  const plannotatorPath = detectPlannotator();
+  const reviewUI = plannotatorPath
+    ? new PlannotatorReviewUIAdapter(plannotatorPath)
+    : new TerminalReviewUIAdapter();
+
   registerWorkflowExtension(api, {
     projectRepo,
     milestoneRepo,
@@ -98,6 +114,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     artifactFile,
     workflowSessionRepo,
     autonomyModeProvider,
+    reviewUI,
     maxRetries: 2,
   });
 
