@@ -1,7 +1,7 @@
-# State — M05
+# State — Milestone
 
 ## Progress
-- Slices: 0/7 completed
+- Slices: 0/6 completed
 - Tasks: 0/0 completed
 
 ## Slices
@@ -11,6 +11,5 @@
 | M05-S09: Ship command | open | 0/0 | 0% |
 | M05-S07: Fixer behavior | open | 0/0 | 0% |
 | M05-S08: Verify command | open | 0/0 | 0% |
-| M05-S05: Review UI port | open | 0/0 | 0% |
+| M05-S05: Review UI port | researching | 0/0 | 0% |
 | M05-S06: Agent authoring protocol | open | 0/0 | 0% |
-| M05-S04: Multi-stage review pipeline | open | 0/0 | 0% |
