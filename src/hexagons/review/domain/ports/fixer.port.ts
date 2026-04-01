@@ -13,6 +13,7 @@ export type FixRequest = z.infer<typeof FixRequestSchema>;
 export const FixResultSchema = z.object({
   fixed: z.array(FindingPropsSchema),
   deferred: z.array(FindingPropsSchema),
+  justifications: z.record(z.string(), z.string()).default({}),
   testsPassing: z.boolean(),
 });
 export type FixResult = z.infer<typeof FixResultSchema>;

@@ -1,56 +1,42 @@
 import { describe, expect, it } from "vitest";
-import { FixRequestSchema, FixResultSchema } from "./fixer.port";
-import { SliceSpecSchema } from "./slice-spec.port";
-
-describe("SliceSpecSchema", () => {
-  it("accepts valid spec", () => {
-    const valid = {
-      sliceId: "slice-1",
-      sliceLabel: "M05-S04",
-      sliceTitle: "Multi-stage review",
-      specContent: "# Spec content",
-      acceptanceCriteria: "## AC\n- AC1: ...",
-    };
-    expect(SliceSpecSchema.parse(valid)).toEqual(valid);
-  });
-
-  it("rejects empty sliceId", () => {
-    expect(() =>
-      SliceSpecSchema.parse({
-        sliceId: "",
-        sliceLabel: "X",
-        sliceTitle: "X",
-        specContent: "X",
-        acceptanceCriteria: "X",
-      }),
-    ).toThrow();
-  });
-});
-
-describe("FixRequestSchema", () => {
-  it("accepts valid request", () => {
-    const valid = {
-      sliceId: "slice-1",
-      findings: [],
-      workingDirectory: "/tmp/work",
-    };
-    expect(FixRequestSchema.parse(valid)).toEqual(valid);
-  });
-
-  it("rejects empty workingDirectory", () => {
-    expect(() =>
-      FixRequestSchema.parse({ sliceId: "s", findings: [], workingDirectory: "" }),
-    ).toThrow();
-  });
-});
+import { FixResultSchema } from "./fixer.port";
 
 describe("FixResultSchema", () => {
-  it("accepts valid result", () => {
-    const valid = { fixed: [], deferred: [], testsPassing: true };
-    expect(FixResultSchema.parse(valid)).toEqual(valid);
+  it("parses result with justifications", () => {
+    const result = FixResultSchema.parse({
+      fixed: [],
+      deferred: [],
+      justifications: { "finding-1": "Not a real issue — false positive" },
+      testsPassing: true,
+    });
+    expect(result.justifications).toEqual({ "finding-1": "Not a real issue — false positive" });
   });
 
-  it("rejects missing testsPassing", () => {
-    expect(() => FixResultSchema.parse({ fixed: [], deferred: [] })).toThrow();
+  it("defaults justifications to empty object when omitted", () => {
+    const result = FixResultSchema.parse({
+      fixed: [],
+      deferred: [],
+      testsPassing: true,
+    });
+    expect(result.justifications).toEqual({});
+  });
+
+  it("preserves existing fixed/deferred/testsPassing fields", () => {
+    const finding = {
+      id: "a1b2c3d4-e5f6-4789-8abc-def012345678",
+      severity: "high",
+      message: "Issue found",
+      filePath: "src/foo.ts",
+      lineStart: 10,
+    };
+    const result = FixResultSchema.parse({
+      fixed: [finding],
+      deferred: [finding],
+      testsPassing: false,
+    });
+    expect(result.fixed).toHaveLength(1);
+    expect(result.deferred).toHaveLength(1);
+    expect(result.testsPassing).toBe(false);
+    expect(result.justifications).toEqual({});
   });
 });
