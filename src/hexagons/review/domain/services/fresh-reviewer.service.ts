@@ -1,7 +1,7 @@
 import { err, ok, type Result } from "@kernel";
 import type { ExecutorQueryError } from "../errors/executor-query.error";
 import { FreshReviewerViolationError } from "../errors/fresh-reviewer-violation.error";
-import { ExecutorQueryPort } from "../ports/executor-query.port";
+import type { ExecutorQueryPort } from "../ports/executor-query.port";
 
 export class FreshReviewerService {
   constructor(private readonly executorQueryPort: ExecutorQueryPort) {}

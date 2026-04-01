@@ -1,8 +1,7 @@
 import { isErr, isOk } from "@kernel";
-import { AgentDispatchConfigBuilder } from "@kernel/agents";
+import type { AgentDispatchPort } from "@kernel/agents";
+import { AgentDispatchConfigBuilder, AgentDispatchError } from "@kernel/agents";
 import { beforeEach, describe, expect, it } from "vitest";
-import { AgentDispatchError } from "../domain/errors/agent-dispatch.error";
-import type { AgentDispatchPort } from "../domain/ports/agent-dispatch.port";
 
 const TASK_1 = "00000000-0000-4000-a000-000000000001";
 const TASK_2 = "00000000-0000-4000-a000-000000000002";

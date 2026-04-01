@@ -3,6 +3,8 @@ export type { AgentCapability, AgentCard, AgentType } from "./agent-card.schema"
 export { AgentCapabilitySchema, AgentCardSchema, AgentTypeSchema } from "./agent-card.schema";
 // Builders
 export { AgentDispatchConfigBuilder } from "./agent-dispatch.builder";
+export { AgentDispatchError } from "./agent-dispatch.error";
+export { AgentDispatchPort } from "./agent-dispatch.port";
 export type { AgentDispatchConfig, ResolvedModel } from "./agent-dispatch.schema";
 export { AgentDispatchConfigSchema, ResolvedModelSchema } from "./agent-dispatch.schema";
 // Registry

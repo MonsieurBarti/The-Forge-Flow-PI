@@ -1,4 +1,4 @@
-import { BaseDomainError } from "@kernel";
+import { BaseDomainError } from "@kernel/errors";
 
 export class AgentDispatchError extends BaseDomainError {
   readonly code: string;

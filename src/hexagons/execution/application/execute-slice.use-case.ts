@@ -10,11 +10,16 @@ import {
   ok,
   type Result,
 } from "@kernel";
-import type { AgentConcern, AgentDispatchConfig, AgentResult } from "@kernel/agents";
+import type {
+  AgentConcern,
+  AgentDispatchConfig,
+  AgentDispatchError,
+  AgentDispatchPort,
+  AgentResult,
+} from "@kernel/agents";
 import { isSuccessfulStatus } from "@kernel/agents";
 import type { GitPort } from "@kernel/ports/git.port";
 import { Checkpoint } from "../domain/checkpoint.aggregate";
-import type { AgentDispatchError } from "../domain/errors/agent-dispatch.error";
 import { ExecutionError } from "../domain/errors/execution.error";
 import { OverseerError } from "../domain/errors/overseer.error";
 import { AllTasksCompletedEvent } from "../domain/events/all-tasks-completed.event";
@@ -25,7 +30,6 @@ import type {
   OverseerInterventionEntry,
 } from "../domain/journal-entry.schemas";
 import type { OverseerConfig, OverseerVerdict } from "../domain/overseer.schemas";
-import type { AgentDispatchPort } from "../domain/ports/agent-dispatch.port";
 import type { CheckpointRepositoryPort } from "../domain/ports/checkpoint-repository.port";
 import type { JournalRepositoryPort } from "../domain/ports/journal-repository.port";
 import type { MetricsRepositoryPort } from "../domain/ports/metrics-repository.port";

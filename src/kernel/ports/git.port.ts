@@ -22,5 +22,6 @@ export abstract class GitPort {
   abstract statusAt(cwd: string): Promise<Result<GitStatus, GitError>>;
   abstract diffNameOnly(cwd: string): Promise<Result<string[], GitError>>;
   abstract diff(cwd: string): Promise<Result<string, GitError>>;
+  abstract diffAgainst(base: string, cwd: string): Promise<Result<string, GitError>>;
   abstract restoreWorktree(cwd: string): Promise<Result<void, GitError>>;
 }

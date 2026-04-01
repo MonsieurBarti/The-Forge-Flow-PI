@@ -38,16 +38,13 @@ export class ReviewPromptBuilder {
   }
 
   private buildStandard(config: ReviewPromptConfig): string {
-    return [
-      `# Review: ${config.sliceLabel} — ${config.sliceTitle}`,
-      `Role: ${config.role}`,
-      `Slice: ${config.sliceId}`,
-      "",
-      "## Changed Files",
-      config.changedFiles,
-      "",
-      "## Acceptance Criteria",
-      config.acceptanceCriteria,
-    ].join("\n");
+    const template = this.templateLoader("prompts/standard-review.md");
+    return template
+      .replace(/\{\{sliceLabel\}\}/g, config.sliceLabel)
+      .replace(/\{\{sliceTitle\}\}/g, config.sliceTitle)
+      .replace(/\{\{sliceId\}\}/g, config.sliceId)
+      .replace(/\{\{reviewRole\}\}/g, config.role)
+      .replace(/\{\{changedFiles\}\}/g, config.changedFiles)
+      .replace(/\{\{acceptanceCriteria\}\}/g, config.acceptanceCriteria);
   }
 }

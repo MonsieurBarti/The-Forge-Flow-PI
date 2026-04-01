@@ -1,4 +1,7 @@
 // Application -- Use Cases
+
+// Domain -- Ports
+export { AgentDispatchError, AgentDispatchPort } from "@kernel/agents";
 export { AggregateMetricsUseCase } from "./application/aggregate-metrics.use-case";
 export { CleanupOrphanedWorktreesUseCase } from "./application/cleanup-orphaned-worktrees.use-case";
 // Application -- Collaborators
@@ -44,7 +47,6 @@ export type { CheckpointDTO, CheckpointProps, ExecutorLogEntry } from "./domain/
 export { CheckpointPropsSchema, ExecutorLogEntrySchema } from "./domain/checkpoint.schemas";
 // Domain -- Guardrail Context
 export type { EnrichedGuardrailContext } from "./domain/enriched-guardrail-context";
-export { AgentDispatchError } from "./domain/errors/agent-dispatch.error";
 export { CheckpointNotFoundError } from "./domain/errors/checkpoint-not-found.error";
 export { ExecutionError } from "./domain/errors/execution.error";
 // Domain -- Errors
@@ -139,8 +141,6 @@ export {
 } from "./domain/overseer.schemas";
 // Domain -- Overseer Strategy
 export type { OverseerStrategy } from "./domain/overseer-strategy";
-// Domain -- Ports
-export { AgentDispatchPort } from "./domain/ports/agent-dispatch.port";
 export { CheckpointRepositoryPort } from "./domain/ports/checkpoint-repository.port";
 // Domain -- ExecutionSession Ports
 export { ExecutionSessionRepositoryPort } from "./domain/ports/execution-session-repository.port";

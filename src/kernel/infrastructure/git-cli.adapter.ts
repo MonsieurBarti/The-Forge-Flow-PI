@@ -252,6 +252,10 @@ export class GitCliAdapter extends GitPort {
     return this.runGit(["-C", cwd, "diff"]);
   }
 
+  async diffAgainst(base: string, cwd: string): Promise<Result<string, GitError>> {
+    return this.runGit(["-C", cwd, "diff", `${base}...HEAD`]);
+  }
+
   async restoreWorktree(cwd: string): Promise<Result<void, GitError>> {
     const result = await this.runGit(["-C", cwd, "restore", "."]);
     if (!result.ok) {
