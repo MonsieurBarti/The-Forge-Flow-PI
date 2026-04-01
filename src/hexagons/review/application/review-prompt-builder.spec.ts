@@ -62,4 +62,32 @@ describe("ReviewPromptBuilder", () => {
     builder.build(baseConfig);
     expect(loadedPath).toBe("prompts/critique-then-reflection.md");
   });
+
+  it("buildStandard loads standard-review.md template (AC18)", () => {
+    let loadedPath = "";
+    const spyLoader = (path: string) => {
+      loadedPath = path;
+      return "# Template\n{{reviewRole}} {{sliceLabel}} {{sliceTitle}} {{sliceId}} {{changedFiles}} {{acceptanceCriteria}}";
+    };
+    const builder = new ReviewPromptBuilder(spyLoader);
+    builder.build({ ...baseConfig, role: "spec-reviewer" });
+    expect(loadedPath).toBe("prompts/standard-review.md");
+  });
+
+  it("standard prompt contains no raw {{...}} tokens (AC19)", () => {
+    const builder = new ReviewPromptBuilder(realLoader);
+    const prompt = builder.build({ ...baseConfig, role: "spec-reviewer" });
+    expect(prompt).not.toMatch(/\{\{.*?\}\}/);
+  });
+
+  it("standard prompt contains all context fields", () => {
+    const builder = new ReviewPromptBuilder(realLoader);
+    const prompt = builder.build({ ...baseConfig, role: "spec-reviewer" });
+    expect(prompt).toContain("spec-reviewer");
+    expect(prompt).toContain("M05-S03");
+    expect(prompt).toContain("Critique-then-reflection");
+    expect(prompt).toContain("slice-123");
+    expect(prompt).toContain("src/foo.ts");
+    expect(prompt).toContain("AC1: Must pass");
+  });
 });
