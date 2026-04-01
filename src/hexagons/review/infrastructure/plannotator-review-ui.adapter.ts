@@ -15,7 +15,6 @@ import type {
   VerificationUIResponse,
 } from "../domain/review-ui.schemas";
 
-const NO_FEEDBACK_SENTINEL = "User reviewed the document and has no feedback.";
 const CHANGE_MARKERS = ["[DELETION]", "[REPLACEMENT]", "[INSERTION]"];
 
 // Promisify execFile for non-blocking subprocess
@@ -69,12 +68,7 @@ export class PlannotatorReviewUIAdapter extends ReviewUIPort {
     try {
       const feedback = await this.runAnnotateFile(ctx.artifactPath);
       const hasChanges = CHANGE_MARKERS.some((m) => feedback.includes(m));
-      const isNoFeedback = feedback.includes(NO_FEEDBACK_SENTINEL) || feedback.trim() === "";
-      const decision = hasChanges
-        ? ("changes_requested" as const)
-        : isNoFeedback
-          ? ("approved" as const)
-          : ("approved" as const); // feedback with only comments = approved
+      const decision = hasChanges ? "changes_requested" : "approved";
       return ok({
         decision,
         feedback: hasChanges ? feedback : undefined,
