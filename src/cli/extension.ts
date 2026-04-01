@@ -41,10 +41,14 @@ import { NodeArtifactFileAdapter } from "@hexagons/workflow/infrastructure/node-
 import type { ExtensionAPI } from "@infrastructure/pi";
 import type { Result } from "@kernel";
 import {
+  AgentRegistry,
+  AgentResourceLoader,
   ConsoleLoggerAdapter,
   err,
   GitCliAdapter,
   InProcessEventBus,
+  initializeAgentRegistry,
+  isAgentRegistryInitialized,
   type ModelProfileName,
   PersistenceError,
   type ResolvedModel,
@@ -74,6 +78,19 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const logger = new ConsoleLoggerAdapter();
   const eventBus = new InProcessEventBus(logger);
   const dateProvider = new SystemDateProvider();
+
+  // --- Agent registry ---
+  if (!isAgentRegistryInitialized()) {
+    const agentLoader = new AgentResourceLoader();
+    const agentRegistryResult = AgentRegistry.loadFromResources(
+      agentLoader,
+      join(options.projectRoot, "src/resources"),
+    );
+    if (!agentRegistryResult.ok) {
+      throw new Error(`Failed to load agent registry: ${agentRegistryResult.error.message}`);
+    }
+    initializeAgentRegistry(agentRegistryResult.data);
+  }
 
   // --- Repositories (in-memory for now; SQLite swap in later slice) ---
   const projectRepo = new InMemoryProjectRepository();
