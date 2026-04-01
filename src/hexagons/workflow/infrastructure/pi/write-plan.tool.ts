@@ -1,4 +1,5 @@
 import { MilestoneLabelSchema } from "@hexagons/milestone";
+import type { ReviewUIPort } from "@hexagons/review";
 import { SliceLabelSchema } from "@hexagons/slice";
 import { createZodTool, textResult } from "@infrastructure/pi";
 import { IdSchema, isErr } from "@kernel";
@@ -24,7 +25,7 @@ const WritePlanSchema = z.object({
     .describe("Task definitions"),
 });
 
-export function createWritePlanTool(useCase: WritePlanUseCase) {
+export function createWritePlanTool(useCase: WritePlanUseCase, reviewUI: ReviewUIPort) {
   return createZodTool({
     name: "tff_write_plan",
     label: "TFF Write Plan",
@@ -33,12 +34,29 @@ export function createWritePlanTool(useCase: WritePlanUseCase) {
     execute: async (params) => {
       const result = await useCase.execute(params);
       if (isErr(result)) return textResult(`Error: ${result.error.message}`);
+
+      const approvalResult = await reviewUI.presentForApproval({
+        sliceId: params.sliceId,
+        sliceLabel: params.sliceLabel,
+        artifactType: "plan",
+        artifactPath: result.data.path,
+        summary: `PLAN.md for ${params.sliceLabel} (${result.data.taskCount} tasks, ${result.data.waveCount} waves)`,
+      });
+
+      const approval = approvalResult.ok ? approvalResult.data : undefined;
       return textResult(
         JSON.stringify({
           ok: true,
           path: result.data.path,
           taskCount: result.data.taskCount,
           waveCount: result.data.waveCount,
+          approval: approval
+            ? {
+                decision: approval.decision,
+                feedback: approval.feedback,
+                formattedOutput: approval.formattedOutput,
+              }
+            : undefined,
         }),
       );
     },
