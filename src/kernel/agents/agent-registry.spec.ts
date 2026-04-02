@@ -18,7 +18,14 @@ function makeTestCard(type: AgentType): AgentCard {
     purpose: `Purpose of ${type}`,
     scope: "slice",
     freshReviewerRule: type === "fixer" || type === "executor" ? "none" : "must-not-be-executor",
-    capabilities: type === "fixer" ? ["fix"] : type === "executor" ? ["execute"] : ["review"],
+    capabilities:
+      type === "fixer"
+        ? ["fix"]
+        : type === "executor"
+          ? ["execute"]
+          : type === "verifier"
+            ? ["verify"]
+            : ["review"],
     defaultModelProfile: type === "fixer" || type === "executor" ? "budget" : "quality",
     skills: [{ name: "std", prompt: "prompts/std.md", strategy: "standard" }],
     requiredTools: ["Read"],
@@ -54,7 +61,7 @@ describe("AgentRegistry", () => {
 
     it("getAll() returns all cards", () => {
       const registry = AgentRegistry.fromCards(makeTestCards());
-      expect(registry.getAll().size).toBe(5);
+      expect(registry.getAll().size).toBe(6);
     });
   });
 });
@@ -86,7 +93,7 @@ describe("backward-compat wrappers", () => {
 
   it("getAll() returns all cards via registry instance", () => {
     const registry = AgentRegistry.fromCards(makeTestCards());
-    expect(registry.getAll().size).toBe(5);
+    expect(registry.getAll().size).toBe(6);
   });
 });
 

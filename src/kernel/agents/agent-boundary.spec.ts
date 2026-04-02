@@ -15,14 +15,14 @@ describe("Agent boundary enforcement", () => {
     expect(result.ok, result.ok ? "" : result.error.message).toBe(true);
   });
 
-  it("all 5 agents are present (migration guard)", () => {
+  it("all 6 agents are present (migration guard)", () => {
     const result = loader.loadAll(RESOURCES_DIR);
     if (!result.ok) throw new Error(result.error.message);
     const types = [...result.data.keys()];
     for (const expected of AgentTypeSchema.options) {
       expect(types, `Missing agent: ${expected}`).toContain(expected);
     }
-    expect(types).toHaveLength(5);
+    expect(types).toHaveLength(6);
   });
 
   it("every agent passes validation", () => {

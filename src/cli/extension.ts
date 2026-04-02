@@ -15,12 +15,15 @@ import { InMemoryProjectRepository } from "@hexagons/project/infrastructure/in-m
 import { NodeProjectFileSystemAdapter } from "@hexagons/project/infrastructure/node-project-filesystem.adapter";
 import { ConductReviewUseCase } from "@hexagons/review/application/conduct-review.use-case";
 import { ReviewPromptBuilder } from "@hexagons/review/application/review-prompt-builder";
+import { VerifyAcceptanceCriteriaUseCase } from "@hexagons/review/application/verify-acceptance-criteria.use-case";
 import { CritiqueReflectionService } from "@hexagons/review/domain/services/critique-reflection.service";
 import { FreshReviewerService } from "@hexagons/review/domain/services/fresh-reviewer.service";
 import { BeadSliceSpecAdapter } from "@hexagons/review/infrastructure/bead-slice-spec.adapter";
 import { CachedExecutorQueryAdapter } from "@hexagons/review/infrastructure/cached-executor-query.adapter";
 import { GitChangedFilesAdapter } from "@hexagons/review/infrastructure/git-changed-files.adapter";
 import { InMemoryReviewRepository } from "@hexagons/review/infrastructure/in-memory-review.repository";
+import { InMemoryReviewUIAdapter } from "@hexagons/review/infrastructure/in-memory-review-ui.adapter";
+import { InMemoryVerificationRepository } from "@hexagons/review/infrastructure/in-memory-verification.repository";
 import { PiFixerAdapter } from "@hexagons/review/infrastructure/pi-fixer.adapter";
 import { PlannotatorReviewUIAdapter } from "@hexagons/review/infrastructure/plannotator-review-ui.adapter";
 import { TerminalReviewUIAdapter } from "@hexagons/review/infrastructure/terminal-review-ui.adapter";
@@ -212,4 +215,22 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     logger,
   );
   void _conductReviewUseCase; // TODO(M05-S09): wire to ship command
+
+  // --- Verify pipeline wiring ---
+  const verificationRepository = new InMemoryVerificationRepository();
+  const _verifyUseCase = new VerifyAcceptanceCriteriaUseCase(
+    beadSliceSpecAdapter,
+    freshReviewerService,
+    new PiAgentDispatchAdapter(),
+    piFixerAdapter,
+    verificationRepository,
+    new InMemoryReviewUIAdapter(), // TODO(M05-S09): wire ReviewUIPort adapter selection
+    modelResolver,
+    eventBus,
+    dateProvider,
+    () => crypto.randomUUID(),
+    logger,
+    templateLoader,
+  );
+  void _verifyUseCase; // TODO(M05-S09): wire to verify command
 }

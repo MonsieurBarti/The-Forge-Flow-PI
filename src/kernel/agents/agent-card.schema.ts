@@ -7,10 +7,11 @@ export const AgentTypeSchema = z.enum([
   "security-auditor",
   "fixer",
   "executor",
+  "verifier",
 ]);
 export type AgentType = z.infer<typeof AgentTypeSchema>;
 
-export const AgentCapabilitySchema = z.enum(["review", "fix", "execute"]);
+export const AgentCapabilitySchema = z.enum(["review", "fix", "execute", "verify"]);
 export type AgentCapability = z.infer<typeof AgentCapabilitySchema>;
 
 export const FreshReviewerRuleSchema = z.enum(["must-not-be-executor", "none"]);
