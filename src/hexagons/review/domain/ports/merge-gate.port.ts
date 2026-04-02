@@ -1,7 +1,8 @@
 import type { MergeGateDecision } from "../ship.schemas";
 
 export interface MergeGateContext {
-  sliceId: string;
+  subjectId: string;
+  subjectLabel?: string;
   prUrl: string;
   prNumber: number;
   cycle: number;

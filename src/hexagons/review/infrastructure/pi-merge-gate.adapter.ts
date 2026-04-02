@@ -33,7 +33,7 @@ export function buildMergeGateOptions(): MergeGateOption[] {
 
 export function buildMergeGateQuestionText(context: MergeGateContext): string {
   const lines: string[] = [
-    `Merge gate check for slice "${context.sliceId}"`,
+    `Merge gate check for "${context.subjectLabel ?? context.subjectId}"`,
     `PR #${context.prNumber}: ${context.prUrl}`,
     `Fix cycle: ${context.cycle}`,
   ];

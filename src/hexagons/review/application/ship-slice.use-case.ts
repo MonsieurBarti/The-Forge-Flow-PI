@@ -126,7 +126,8 @@ export class ShipSliceUseCase {
 
     while (true) {
       const decision = await this.mergeGatePort.askMergeStatus({
-        sliceId: parsed.sliceId,
+        subjectId: parsed.sliceId,
+        subjectLabel: spec.sliceLabel,
         prUrl,
         prNumber,
         cycle,
