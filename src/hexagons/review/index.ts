@@ -5,6 +5,8 @@ export { ConductReviewUseCase } from "./application/conduct-review.use-case";
 export type { ReviewPromptConfig } from "./application/review-prompt-builder";
 // Application
 export { ReviewPromptBuilder } from "./application/review-prompt-builder";
+// Application — Verify
+export { VerifyAcceptanceCriteriaUseCase } from "./application/verify-acceptance-criteria.use-case";
 // Domain — ConductReview schemas
 export type { ConductReviewRequest, ConductReviewResult } from "./domain/conduct-review.schemas";
 export {
@@ -37,10 +39,12 @@ export { FreshReviewerViolationError } from "./domain/errors/fresh-reviewer-viol
 export { ChangedFilesError, SliceSpecError } from "./domain/errors/review-context.error";
 // Domain — ReviewUI Errors
 export { ReviewUIError } from "./domain/errors/review-ui.error";
+export { VerifyError } from "./domain/errors/verify.error";
 // Domain — New Events
 export { ReviewPipelineCompletedEvent } from "./domain/events/review-pipeline-completed.event";
 // Domain -- Events
 export { ReviewRecordedEvent } from "./domain/events/review-recorded.event";
+export { VerificationCompletedEvent } from "./domain/events/verification-completed.event";
 export { FindingBuilder } from "./domain/finding.builder";
 export type {
   ConflictProps,
@@ -64,6 +68,7 @@ export { ReviewUIPort } from "./domain/ports/review-ui.port";
 export type { SliceSpec } from "./domain/ports/slice-spec.port";
 // Domain — New Ports
 export { SliceSpecPort, SliceSpecSchema } from "./domain/ports/slice-spec.port";
+export { VerificationRepositoryPort } from "./domain/ports/verification-repository.port";
 // Domain -- Aggregates & Value Objects
 export { Review } from "./domain/review.aggregate";
 export { ReviewBuilder } from "./domain/review.builder";
@@ -109,6 +114,22 @@ export {
 // Domain -- Services
 export { CritiqueReflectionService } from "./domain/services/critique-reflection.service";
 export { FreshReviewerService } from "./domain/services/fresh-reviewer.service";
+// Domain — Verification
+export { Verification } from "./domain/verification.aggregate";
+export type {
+  CriterionVerdictProps,
+  VerificationProps,
+  VerificationVerdict,
+  VerifyRequest,
+  VerifyResult,
+} from "./domain/verification.schemas";
+export {
+  CriterionVerdictSchema,
+  VerificationPropsSchema,
+  VerificationVerdictSchema,
+  VerifyRequestSchema,
+  VerifyResultSchema,
+} from "./domain/verification.schemas";
 export { BeadSliceSpecAdapter } from "./infrastructure/bead-slice-spec.adapter";
 // Infrastructure -- Adapters
 export { CachedExecutorQueryAdapter } from "./infrastructure/cached-executor-query.adapter";
@@ -116,8 +137,11 @@ export { GitChangedFilesAdapter } from "./infrastructure/git-changed-files.adapt
 export { InMemoryReviewRepository } from "./infrastructure/in-memory-review.repository";
 // Infrastructure — ReviewUI Adapters
 export { InMemoryReviewUIAdapter } from "./infrastructure/in-memory-review-ui.adapter";
+// Infrastructure — Verification
+export { InMemoryVerificationRepository } from "./infrastructure/in-memory-verification.repository";
 export { PlannotatorReviewUIAdapter } from "./infrastructure/plannotator-review-ui.adapter";
 export { SqliteReviewRepository } from "./infrastructure/sqlite-review.repository";
+export { SqliteVerificationRepository } from "./infrastructure/sqlite-verification.repository";
 // Infrastructure — New Adapters
 export { StubFixerAdapter } from "./infrastructure/stub-fixer.adapter";
 export { TerminalReviewUIAdapter } from "./infrastructure/terminal-review-ui.adapter";
