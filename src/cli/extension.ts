@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ExecuteSliceUseCase } from "@hexagons/execution/application/execute-slice.use-case";
 import { ReplayJournalUseCase } from "@hexagons/execution/application/replay-journal.use-case";
+import { GitWorktreeAdapter } from "@hexagons/execution/infrastructure/git-worktree.adapter";
 import { InMemoryCheckpointRepository } from "@hexagons/execution/infrastructure/in-memory-checkpoint.repository";
 import { InMemoryJournalRepository } from "@hexagons/execution/infrastructure/in-memory-journal.repository";
 import { MarkdownExecutionSessionAdapter } from "@hexagons/execution/infrastructure/markdown-execution-session.adapter";
@@ -15,6 +16,7 @@ import { InMemoryProjectRepository } from "@hexagons/project/infrastructure/in-m
 import { NodeProjectFileSystemAdapter } from "@hexagons/project/infrastructure/node-project-filesystem.adapter";
 import { ConductReviewUseCase } from "@hexagons/review/application/conduct-review.use-case";
 import { ReviewPromptBuilder } from "@hexagons/review/application/review-prompt-builder";
+import { ShipSliceUseCase } from "@hexagons/review/application/ship-slice.use-case";
 import { VerifyAcceptanceCriteriaUseCase } from "@hexagons/review/application/verify-acceptance-criteria.use-case";
 import { CritiqueReflectionService } from "@hexagons/review/domain/services/critique-reflection.service";
 import { FreshReviewerService } from "@hexagons/review/domain/services/fresh-reviewer.service";
@@ -23,8 +25,10 @@ import { CachedExecutorQueryAdapter } from "@hexagons/review/infrastructure/cach
 import { GitChangedFilesAdapter } from "@hexagons/review/infrastructure/git-changed-files.adapter";
 import { InMemoryReviewRepository } from "@hexagons/review/infrastructure/in-memory-review.repository";
 import { InMemoryReviewUIAdapter } from "@hexagons/review/infrastructure/in-memory-review-ui.adapter";
+import { InMemoryShipRecordRepository } from "@hexagons/review/infrastructure/in-memory-ship-record.repository";
 import { InMemoryVerificationRepository } from "@hexagons/review/infrastructure/in-memory-verification.repository";
 import { PiFixerAdapter } from "@hexagons/review/infrastructure/pi-fixer.adapter";
+import { PiMergeGateAdapter } from "@hexagons/review/infrastructure/pi-merge-gate.adapter";
 import { PlannotatorReviewUIAdapter } from "@hexagons/review/infrastructure/plannotator-review-ui.adapter";
 import { TerminalReviewUIAdapter } from "@hexagons/review/infrastructure/terminal-review-ui.adapter";
 import { MergeSettingsUseCase } from "@hexagons/settings";
@@ -57,6 +61,7 @@ import {
   type ResolvedModel,
   SystemDateProvider,
 } from "@kernel";
+import { GhCliAdapter } from "@kernel/infrastructure/gh-cli.adapter";
 
 function detectPlannotator(): string | undefined {
   try {
@@ -185,14 +190,43 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   });
   const beadSliceSpecAdapter = new BeadSliceSpecAdapter(
     (milestoneLabel, sliceLabel) => artifactFile.read(milestoneLabel, sliceLabel, "spec"),
-    // TODO(M05-S09): Wire real label resolver from bead metadata
-    (_sliceId) => ({
-      milestoneLabel: "M05",
-      sliceLabel: "S04",
-      sliceTitle: "Review pipeline",
-    }),
+    (sliceId) => {
+      // Bead IDs: "The-Forge-Flow-PI-4t7.X.Y" where X=milestone, Y=slice
+      const match = sliceId.match(/\.(\d+)\.(\d+)$/);
+      if (!match) {
+        // Fallback: try parsing "M05-S09" format directly
+        const labelMatch = sliceId.match(/M(\d+)-S(\d+)/);
+        if (labelMatch) {
+          const mLabel = `M${labelMatch[1].padStart(2, "0")}`;
+          const sLabel = `${mLabel}-S${labelMatch[2].padStart(2, "0")}`;
+          return { milestoneLabel: mLabel, sliceLabel: sLabel, sliceTitle: sLabel };
+        }
+        throw new Error(`Cannot resolve labels for sliceId: ${sliceId}`);
+      }
+      const milestoneLabel = `M${match[1].padStart(2, "0")}`;
+      const sliceLabel = `${milestoneLabel}-S${match[2].padStart(2, "0")}`;
+      try {
+        const output = execFileSync("bd", ["show", sliceId, "--json"], { encoding: "utf-8" });
+        const parsed: unknown = JSON.parse(output);
+        const entry: unknown = Array.isArray(parsed) ? parsed[0] : parsed;
+        let titleStr = sliceLabel;
+        if (entry !== null && typeof entry === "object" && "title" in entry) {
+          const val = (entry as { title: unknown }).title;
+          if (typeof val === "string") titleStr = val;
+        }
+        return { milestoneLabel, sliceLabel, sliceTitle: titleStr.replace(/^M\d+-S\d+:\s*/, "") };
+      } catch {
+        return { milestoneLabel, sliceLabel, sliceTitle: sliceLabel };
+      }
+    },
   );
-  const gitChangedFilesAdapter = new GitChangedFilesAdapter(gitPort, (_sliceId) => "milestone/M05");
+  const gitChangedFilesAdapter = new GitChangedFilesAdapter(gitPort, (sliceId) => {
+    const match = sliceId.match(/\.(\d+)\.\d+$/);
+    if (match) return `milestone/M${match[1].padStart(2, "0")}`;
+    const labelMatch = sliceId.match(/M(\d+)/);
+    if (labelMatch) return `milestone/M${labelMatch[1].padStart(2, "0")}`;
+    return "milestone/M05";
+  });
   const piFixerAdapter = new PiFixerAdapter(
     new PiAgentDispatchAdapter(),
     templateLoader,
@@ -200,7 +234,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     logger,
   );
 
-  const _conductReviewUseCase = new ConductReviewUseCase(
+  const conductReviewUseCase = new ConductReviewUseCase(
     beadSliceSpecAdapter,
     gitChangedFilesAdapter,
     freshReviewerService,
@@ -214,11 +248,10 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     dateProvider,
     logger,
   );
-  void _conductReviewUseCase; // TODO(M05-S09): wire to ship command
 
   // --- Verify pipeline wiring ---
   const verificationRepository = new InMemoryVerificationRepository();
-  const _verifyUseCase = new VerifyAcceptanceCriteriaUseCase(
+  const verifyUseCase = new VerifyAcceptanceCriteriaUseCase(
     beadSliceSpecAdapter,
     freshReviewerService,
     new PiAgentDispatchAdapter(),
@@ -232,5 +265,28 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     logger,
     templateLoader,
   );
-  void _verifyUseCase; // TODO(M05-S09): wire to verify command
+  void verifyUseCase; // Available for verify command wiring
+
+  // --- Ship pipeline wiring ---
+  const worktreeAdapter = new GitWorktreeAdapter(gitPort, options.projectRoot);
+  const ghCliAdapter = new GhCliAdapter(options.projectRoot);
+  const mergeGateAdapter = new PiMergeGateAdapter();
+  const shipRecordRepository = new InMemoryShipRecordRepository();
+
+  const shipSliceUseCase = new ShipSliceUseCase(
+    beadSliceSpecAdapter,
+    ghCliAdapter,
+    mergeGateAdapter,
+    shipRecordRepository,
+    conductReviewUseCase,
+    piFixerAdapter,
+    gitPort,
+    worktreeAdapter,
+    sliceTransitionPort,
+    eventBus,
+    dateProvider,
+    () => crypto.randomUUID(),
+    logger,
+  );
+  void shipSliceUseCase; // Available for ship command wiring
 }
