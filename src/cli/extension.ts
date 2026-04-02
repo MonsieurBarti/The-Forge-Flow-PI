@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ExecuteSliceUseCase } from "@hexagons/execution/application/execute-slice.use-case";
 import { ReplayJournalUseCase } from "@hexagons/execution/application/replay-journal.use-case";
@@ -25,11 +25,11 @@ import { CachedExecutorQueryAdapter } from "@hexagons/review/infrastructure/cach
 import { GitChangedFilesAdapter } from "@hexagons/review/infrastructure/git-changed-files.adapter";
 import { InMemoryReviewRepository } from "@hexagons/review/infrastructure/in-memory-review.repository";
 import { InMemoryReviewUIAdapter } from "@hexagons/review/infrastructure/in-memory-review-ui.adapter";
-import { InMemoryShipRecordRepository } from "@hexagons/review/infrastructure/in-memory-ship-record.repository";
 import { InMemoryVerificationRepository } from "@hexagons/review/infrastructure/in-memory-verification.repository";
 import { PiFixerAdapter } from "@hexagons/review/infrastructure/pi-fixer.adapter";
 import { PiMergeGateAdapter } from "@hexagons/review/infrastructure/pi-merge-gate.adapter";
 import { PlannotatorReviewUIAdapter } from "@hexagons/review/infrastructure/plannotator-review-ui.adapter";
+import { SqliteShipRecordRepository } from "@hexagons/review/infrastructure/sqlite-ship-record.repository";
 import { TerminalReviewUIAdapter } from "@hexagons/review/infrastructure/terminal-review-ui.adapter";
 import { MergeSettingsUseCase } from "@hexagons/settings";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
@@ -62,6 +62,7 @@ import {
   SystemDateProvider,
 } from "@kernel";
 import { GhCliAdapter } from "@kernel/infrastructure/gh-cli.adapter";
+import Database from "better-sqlite3";
 
 function detectPlannotator(): string | undefined {
   try {
@@ -271,7 +272,10 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const worktreeAdapter = new GitWorktreeAdapter(gitPort, options.projectRoot);
   const ghCliAdapter = new GhCliAdapter(options.projectRoot);
   const mergeGateAdapter = new PiMergeGateAdapter();
-  const shipRecordRepository = new InMemoryShipRecordRepository();
+  const tffDir = join(options.projectRoot, ".tff");
+  mkdirSync(tffDir, { recursive: true });
+  const shipRecordDb = new Database(join(tffDir, "ship-records.db"));
+  const shipRecordRepository = new SqliteShipRecordRepository(shipRecordDb);
 
   const shipSliceUseCase = new ShipSliceUseCase(
     beadSliceSpecAdapter,

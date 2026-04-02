@@ -190,8 +190,10 @@ function makeStubGitPort(overrides?: { pushResult?: Result<void, GitError> }): G
 
 function makeStubWorktreePort(overrides?: {
   deleteResult?: Result<void, WorktreeError>;
+  existsResult?: boolean;
 }): WorktreePort {
   return {
+    exists: vi.fn().mockResolvedValue(overrides?.existsResult ?? true),
     delete: vi.fn().mockResolvedValue(overrides?.deleteResult ?? ok(undefined)),
   } as unknown as WorktreePort;
 }
@@ -385,6 +387,28 @@ describe("ShipSliceUseCase", () => {
       // createPullRequest should NOT have been called
       const createFn = gitHubPort.createPullRequest as ReturnType<typeof vi.fn>;
       expect(createFn).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("prerequisite failure: worktree does not exist", () => {
+    it("returns ShipError.prerequisiteFailed before any PR operation", async () => {
+      resetIdCounter();
+      const worktreePort = makeStubWorktreePort({ existsResult: false });
+      const gitHubPort = makeStubGitHubPort();
+
+      const { useCase } = buildUseCase({ worktreePort, gitHubPort });
+
+      const result = await useCase.execute(makeRequest());
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toBeInstanceOf(ShipError);
+        expect(result.error.code).toBe("SHIP.PREREQUISITE_FAILED");
+      }
+
+      // No PR operations should have been triggered
+      const listFn = gitHubPort.listPullRequests as ReturnType<typeof vi.fn>;
+      expect(listFn).not.toHaveBeenCalled();
     });
   });
 

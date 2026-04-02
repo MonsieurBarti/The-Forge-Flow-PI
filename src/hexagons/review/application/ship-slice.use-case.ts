@@ -68,6 +68,12 @@ export class ShipSliceUseCase {
   async execute(request: ShipRequest): Promise<Result<ShipResult, ShipError>> {
     const parsed = ShipRequestSchema.parse(request);
 
+    // Step 0: Prerequisite check — worktree must exist for the slice to be in a shippable state
+    const worktreeExists = await this.worktreePort.exists(parsed.sliceId);
+    if (!worktreeExists) {
+      return err(ShipError.prerequisiteFailed(parsed.sliceId, "worktree does not exist"));
+    }
+
     // Step 1: Prerequisite check — resolve spec
     const specResult = await this.sliceSpecPort.getSpec(parsed.sliceId);
     if (!specResult.ok) {
