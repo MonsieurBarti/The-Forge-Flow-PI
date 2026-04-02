@@ -42,12 +42,13 @@ export class AgentValidationService {
       return err(AgentValidationError.methodologyDetected(matches));
     }
 
-    const hasReviewCapability = card.capabilities.includes("review");
-    if (hasReviewCapability && card.freshReviewerRule !== "must-not-be-executor") {
+    const needsFreshReviewer =
+      card.capabilities.includes("review") || card.capabilities.includes("verify");
+    if (needsFreshReviewer && card.freshReviewerRule !== "must-not-be-executor") {
       return err(AgentValidationError.missingFreshReviewerRule(card.type));
     }
 
-    if (!hasReviewCapability && card.freshReviewerRule !== "none") {
+    if (!needsFreshReviewer && card.freshReviewerRule !== "none") {
       return err(AgentValidationError.invalidFreshReviewerRule(card.type));
     }
 
