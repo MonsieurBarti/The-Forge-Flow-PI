@@ -11,7 +11,7 @@ import { err, ok, type Result } from "@kernel/result";
 
 const GH_PR_FIELDS = "number,title,url,state,headRefName,baseRefName,createdAt";
 
-const RawPrSchema = PullRequestInfoSchema.omit({ state: true, head: true, base: true }).extend({
+const _RawPrSchema = PullRequestInfoSchema.omit({ state: true, head: true, base: true }).extend({
   state: PullRequestInfoSchema.shape.state.or(
     PullRequestInfoSchema.shape.state.transform((v) => v),
   ),
@@ -22,13 +22,13 @@ const RawPrSchema = PullRequestInfoSchema.omit({ state: true, head: true, base: 
 /** Pure helper: normalise raw `gh pr` JSON into a validated PullRequestInfo. */
 export function transformPrJson(raw: Record<string, unknown>): PullRequestInfo {
   const normalised = {
-    number: raw["number"],
-    title: raw["title"],
-    url: raw["url"],
-    state: typeof raw["state"] === "string" ? raw["state"].toLowerCase() : raw["state"],
-    head: raw["headRefName"],
-    base: raw["baseRefName"],
-    createdAt: raw["createdAt"],
+    number: raw.number,
+    title: raw.title,
+    url: raw.url,
+    state: typeof raw.state === "string" ? raw.state.toLowerCase() : raw.state,
+    head: raw.headRefName,
+    base: raw.baseRefName,
+    createdAt: raw.createdAt,
   };
   return PullRequestInfoSchema.parse(normalised);
 }
