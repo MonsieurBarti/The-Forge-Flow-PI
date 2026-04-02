@@ -2,7 +2,7 @@ import { MilestoneBuilder } from "@hexagons/milestone/domain/milestone.builder";
 import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/in-memory-milestone.repository";
 import { SliceBuilder } from "@hexagons/slice/domain/slice.builder";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
-import { createMockExtensionAPI, createMockExtensionContext } from "@infrastructure/pi";
+import { createMockExtensionAPI, createMockExtensionContext } from "@infrastructure/pi/testing";
 import { err } from "@kernel";
 import { describe, expect, it, vi } from "vitest";
 import { FileIOError } from "../../domain/errors/file-io.error";

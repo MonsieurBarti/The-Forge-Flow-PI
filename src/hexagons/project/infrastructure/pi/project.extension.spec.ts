@@ -1,5 +1,5 @@
 import { MergeSettingsUseCase } from "@hexagons/settings";
-import { createMockExtensionAPI } from "@infrastructure/pi";
+import { createMockExtensionAPI } from "@infrastructure/pi/testing";
 import { DateProviderPort, InProcessEventBus, SilentLoggerAdapter } from "@kernel";
 import { describe, expect, it } from "vitest";
 import { InMemoryProjectRepository } from "../in-memory-project.repository";

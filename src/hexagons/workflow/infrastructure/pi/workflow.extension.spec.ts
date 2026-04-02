@@ -6,7 +6,7 @@ import { WorkflowSliceTransitionAdapter } from "@hexagons/slice/infrastructure/w
 import { CreateTasksUseCase } from "@hexagons/task/application/create-tasks.use-case";
 import { DetectWavesUseCase } from "@hexagons/task/domain/detect-waves.use-case";
 import { InMemoryTaskRepository } from "@hexagons/task/infrastructure/in-memory-task.repository";
-import { createMockExtensionAPI } from "@infrastructure/pi";
+import { createMockExtensionAPI } from "@infrastructure/pi/testing";
 import type { Result } from "@kernel";
 import { InProcessEventBus, SilentLoggerAdapter, SystemDateProvider } from "@kernel";
 import { describe, expect, it } from "vitest";

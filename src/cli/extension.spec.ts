@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createMockExtensionAPI } from "@infrastructure/pi";
+import { createMockExtensionAPI } from "@infrastructure/pi/testing";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createTffExtension } from "./extension";
 

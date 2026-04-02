@@ -10,4 +10,3 @@ export type {
 } from "./pi.types";
 export type { Api, KnownProvider, Model, Provider, Usage } from "./pi.types";
 export { textResult } from "./tool-result.helper";
-export { createMockExtensionAPI, createMockExtensionContext } from "./testing";

@@ -1,6 +1,6 @@
 import { SliceBuilder } from "@hexagons/slice/domain/slice.builder";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
-import { createMockExtensionContext } from "@infrastructure/pi";
+import { createMockExtensionContext } from "@infrastructure/pi/testing";
 import { describe, expect, it } from "vitest";
 
 import { InMemoryArtifactFileAdapter } from "../../infrastructure/in-memory-artifact-file.adapter";
