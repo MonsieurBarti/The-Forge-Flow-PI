@@ -1,8 +1,11 @@
-import { DomainEvent, DomainEventPropsSchema, type EventName, IdSchema } from "@kernel";
+import {
+  DomainEvent,
+  DomainEventPropsSchema,
+  EVENT_NAMES,
+  type EventName,
+  IdSchema,
+} from "@kernel";
 import { z } from "zod";
-
-// Inline until T01 adds to EVENT_NAMES (parallel execution)
-const VERIFICATION_COMPLETED_EVENT = "review.verification-completed" as EventName;
 
 const VerificationVerdictSchema = z.enum(["PASS", "FAIL"]);
 
@@ -18,7 +21,7 @@ const VerificationCompletedEventPropsSchema = DomainEventPropsSchema.extend({
 type VerificationCompletedEventProps = z.infer<typeof VerificationCompletedEventPropsSchema>;
 
 export class VerificationCompletedEvent extends DomainEvent {
-  readonly eventName: EventName = VERIFICATION_COMPLETED_EVENT;
+  readonly eventName: EventName = EVENT_NAMES.VERIFICATION_COMPLETED;
   readonly sliceId: string;
   readonly finalVerdict: string;
   readonly criteriaCount: number;
