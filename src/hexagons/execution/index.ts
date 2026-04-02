@@ -1,4 +1,7 @@
 // Application -- Use Cases
+
+// Domain -- Ports
+export { AgentDispatchError, AgentDispatchPort } from "@kernel/agents";
 export { AggregateMetricsUseCase } from "./application/aggregate-metrics.use-case";
 export { CleanupOrphanedWorktreesUseCase } from "./application/cleanup-orphaned-worktrees.use-case";
 // Application -- Collaborators
@@ -25,6 +28,8 @@ export {
   ExecutionCoordinator,
   type ExecutionCoordinatorDeps,
 } from "./application/execution-coordinator.use-case";
+// Application -- Queries
+export { GetSliceExecutorsUseCase } from "./application/get-slice-executors.use-case";
 export { JournalEventHandler } from "./application/journal-event-handler";
 export type { PromptBuilderConfig, PromptBuilderTask } from "./application/prompt-builder";
 export { PromptBuilder } from "./application/prompt-builder";
@@ -35,12 +40,13 @@ export {
   type RollbackResult,
   RollbackSliceUseCase,
 } from "./application/rollback-slice.use-case";
+// Domain -- Aggregates (for downstream test wiring)
+export { Checkpoint } from "./domain/checkpoint.aggregate";
 // Domain -- Schemas
 export type { CheckpointDTO, CheckpointProps, ExecutorLogEntry } from "./domain/checkpoint.schemas";
 export { CheckpointPropsSchema, ExecutorLogEntrySchema } from "./domain/checkpoint.schemas";
 // Domain -- Guardrail Context
 export type { EnrichedGuardrailContext } from "./domain/enriched-guardrail-context";
-export { AgentDispatchError } from "./domain/errors/agent-dispatch.error";
 export { CheckpointNotFoundError } from "./domain/errors/checkpoint-not-found.error";
 export { ExecutionError } from "./domain/errors/execution.error";
 // Domain -- Errors
@@ -135,8 +141,6 @@ export {
 } from "./domain/overseer.schemas";
 // Domain -- Overseer Strategy
 export type { OverseerStrategy } from "./domain/overseer-strategy";
-// Domain -- Ports
-export { AgentDispatchPort } from "./domain/ports/agent-dispatch.port";
 export { CheckpointRepositoryPort } from "./domain/ports/checkpoint-repository.port";
 // Domain -- ExecutionSession Ports
 export { ExecutionSessionRepositoryPort } from "./domain/ports/execution-session-repository.port";

@@ -1,5 +1,6 @@
 import type { MilestoneRepositoryPort } from "@hexagons/milestone";
 import type { ProjectRepositoryPort } from "@hexagons/project";
+import type { ReviewUIPort } from "@hexagons/review";
 import type { SliceRepositoryPort } from "@hexagons/slice";
 import type { CreateTasksPort, TaskRepositoryPort } from "@hexagons/task";
 import type { ExtensionAPI } from "@infrastructure/pi";
@@ -42,6 +43,7 @@ export interface WorkflowExtensionDeps {
   artifactFile: ArtifactFilePort;
   workflowSessionRepo: WorkflowSessionRepositoryPort;
   autonomyModeProvider: AutonomyModeProvider;
+  reviewUI: ReviewUIPort;
   maxRetries: number;
 }
 
@@ -158,7 +160,7 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
   );
 
   // --- Discuss tools ---
-  api.registerTool(createWriteSpecTool(writeSpec));
+  api.registerTool(createWriteSpecTool(writeSpec, deps.reviewUI));
   api.registerTool(createClassifyComplexityTool(classifyComplexity));
   api.registerTool(
     createWorkflowTransitionTool({
@@ -201,7 +203,7 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
     deps.createTasksPort,
     deps.dateProvider,
   );
-  api.registerTool(createWritePlanTool(writePlan));
+  api.registerTool(createWritePlanTool(writePlan, deps.reviewUI));
 
   // --- Plan command ---
   registerPlanCommand(api, {

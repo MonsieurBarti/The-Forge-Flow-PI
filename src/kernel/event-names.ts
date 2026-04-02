@@ -11,6 +11,7 @@ export const EVENT_NAMES = {
   TASK_BLOCKED: "task.blocked",
   ALL_TASKS_COMPLETED: "execution.all-tasks-completed",
   REVIEW_RECORDED: "review.recorded",
+  REVIEW_PIPELINE_COMPLETED: "review.pipeline-completed",
   SKILL_REFINED: "intelligence.skill-refined",
   WORKFLOW_PHASE_CHANGED: "workflow.phase-changed",
   WORKFLOW_ESCALATION_RAISED: "workflow.escalation-raised",
@@ -21,6 +22,9 @@ export const EVENT_NAMES = {
   EXECUTION_RESUMED: "execution.resumed",
   EXECUTION_COMPLETED: "execution.completed",
   EXECUTION_FAILED: "execution.failed",
+  VERIFICATION_COMPLETED: "review.verification-completed",
+  SLICE_SHIPPED: "review.slice-shipped",
+  MILESTONE_COMPLETED: "review.milestone-completed",
 } as const;
 
 export type EventName = (typeof EVENT_NAMES)[keyof typeof EVENT_NAMES];
@@ -36,6 +40,7 @@ export const EventNameSchema = z.enum([
   EVENT_NAMES.TASK_BLOCKED,
   EVENT_NAMES.ALL_TASKS_COMPLETED,
   EVENT_NAMES.REVIEW_RECORDED,
+  EVENT_NAMES.REVIEW_PIPELINE_COMPLETED,
   EVENT_NAMES.SKILL_REFINED,
   EVENT_NAMES.WORKFLOW_PHASE_CHANGED,
   EVENT_NAMES.WORKFLOW_ESCALATION_RAISED,
@@ -46,4 +51,7 @@ export const EventNameSchema = z.enum([
   EVENT_NAMES.EXECUTION_RESUMED,
   EVENT_NAMES.EXECUTION_COMPLETED,
   EVENT_NAMES.EXECUTION_FAILED,
+  EVENT_NAMES.VERIFICATION_COMPLETED,
+  EVENT_NAMES.SLICE_SHIPPED,
+  EVENT_NAMES.MILESTONE_COMPLETED,
 ]);

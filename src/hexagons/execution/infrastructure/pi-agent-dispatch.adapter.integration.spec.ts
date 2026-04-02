@@ -1,3 +1,4 @@
+import type { AgentDispatchError } from "@kernel/agents";
 import {
   type Api,
   fauxAssistantMessage,
@@ -6,7 +7,6 @@ import {
 } from "@mariozechner/pi-ai";
 import { AuthStorage, ModelRegistry } from "@mariozechner/pi-coding-agent";
 import { afterEach, describe } from "vitest";
-import type { AgentDispatchError } from "../domain/errors/agent-dispatch.error";
 import { runContractTests, type TestConfigurator } from "./agent-dispatch.contract.spec";
 import { PiAgentDispatchAdapter } from "./pi-agent-dispatch.adapter";
 

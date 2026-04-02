@@ -1,84 +1,78 @@
+import type { Result } from "@kernel/result";
+import { ok } from "@kernel/result";
 import type { AgentCapability, AgentCard, AgentType } from "./agent-card.schema";
+import type { AgentLoadError } from "./agent-errors";
+import { AgentRegistryError } from "./agent-errors";
+import type { AgentResourceLoader } from "./agent-resource-loader";
 
-export const AGENT_REGISTRY: ReadonlyMap<AgentType, AgentCard> = new Map<AgentType, AgentCard>([
-  [
-    "spec-reviewer",
-    {
-      type: "spec-reviewer",
-      displayName: "Spec Reviewer",
-      description: "Reviews specifications for completeness, buildability, and correctness",
-      capabilities: ["review"],
-      defaultModelProfile: "quality",
-      requiredTools: ["Read", "Glob", "Grep"],
-      optionalTools: [],
-    },
-  ],
-  [
-    "code-reviewer",
-    {
-      type: "code-reviewer",
-      displayName: "Code Reviewer",
-      description: "Reviews code for correctness, patterns, and security",
-      capabilities: ["review"],
-      defaultModelProfile: "quality",
-      requiredTools: ["Read", "Glob", "Grep"],
-      optionalTools: [],
-    },
-  ],
-  [
-    "security-auditor",
-    {
-      type: "security-auditor",
-      displayName: "Security Auditor",
-      description: "Audits code for security vulnerabilities and OWASP compliance",
-      capabilities: ["review"],
-      defaultModelProfile: "quality",
-      requiredTools: ["Read", "Glob", "Grep"],
-      optionalTools: [],
-    },
-  ],
-  [
-    "fixer",
-    {
-      type: "fixer",
-      displayName: "Fixer",
-      description: "Diagnoses and fixes bugs, test failures, and review feedback",
-      capabilities: ["fix"],
-      defaultModelProfile: "budget",
-      requiredTools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
-      optionalTools: [],
-    },
-  ],
-  [
-    "executor",
-    {
-      type: "executor",
-      displayName: "Executor",
-      description: "Executes slice tasks via wave-based parallelism with agent dispatch",
-      capabilities: ["execute"],
-      defaultModelProfile: "budget",
-      requiredTools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
-      optionalTools: [],
-    },
-  ],
-]);
+let _singleton: AgentRegistry | undefined;
+
+export class AgentRegistry {
+  private constructor(private readonly cards: ReadonlyMap<AgentType, AgentCard>) {}
+
+  static fromCards(cards: Map<AgentType, AgentCard>): AgentRegistry {
+    return new AgentRegistry(cards);
+  }
+
+  static loadFromResources(
+    loader: AgentResourceLoader,
+    resourceDir: string,
+  ): Result<AgentRegistry, AgentLoadError> {
+    const result = loader.loadAll(resourceDir);
+    if (!result.ok) return result;
+    return ok(AgentRegistry.fromCards(result.data));
+  }
+
+  get(type: AgentType): AgentCard | undefined {
+    return this.cards.get(type);
+  }
+
+  getAll(): ReadonlyMap<AgentType, AgentCard> {
+    return this.cards;
+  }
+
+  has(type: AgentType): boolean {
+    return this.cards.has(type);
+  }
+
+  findByCapability(capability: AgentCapability): AgentCard[] {
+    const result: AgentCard[] = [];
+    for (const card of this.cards.values()) {
+      if (card.capabilities.includes(capability)) result.push(card);
+    }
+    return result;
+  }
+}
+
+function requireSingleton(): AgentRegistry {
+  if (!_singleton) {
+    throw AgentRegistryError.notLoaded();
+  }
+  return _singleton;
+}
 
 export function getAgentCard(type: AgentType): AgentCard {
-  const card = AGENT_REGISTRY.get(type);
+  const card = requireSingleton().get(type);
   if (!card) {
     throw new Error(
-      `[BUG] Missing registry entry for agent type "${type}". This is a programming error — every AgentType must have a card.`,
+      `[BUG] Missing registry entry for agent type "${type}". This is a programming error.`,
     );
   }
   return card;
 }
 
 export function findAgentsByCapability(capability: AgentCapability): AgentCard[] {
-  const result: AgentCard[] = [];
-  for (const card of AGENT_REGISTRY.values()) {
-    if (card.capabilities.includes(capability)) {
-      result.push(card);
-    }
-  }
-  return result;
+  return requireSingleton().findByCapability(capability);
+}
+
+export function initializeAgentRegistry(registry: AgentRegistry): void {
+  _singleton = registry;
+}
+
+export function resetAgentRegistry(): void {
+  _singleton = undefined;
+}
+
+export function isAgentRegistryInitialized(): boolean {
+  return _singleton !== undefined;
 }

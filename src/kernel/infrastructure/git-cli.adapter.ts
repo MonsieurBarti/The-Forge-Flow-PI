@@ -252,6 +252,10 @@ export class GitCliAdapter extends GitPort {
     return this.runGit(["-C", cwd, "diff"]);
   }
 
+  async diffAgainst(base: string, cwd: string): Promise<Result<string, GitError>> {
+    return this.runGit(["-C", cwd, "diff", `${base}...HEAD`]);
+  }
+
   async restoreWorktree(cwd: string): Promise<Result<void, GitError>> {
     const result = await this.runGit(["-C", cwd, "restore", "."]);
     if (!result.ok) {
@@ -259,6 +263,12 @@ export class GitCliAdapter extends GitPort {
       if (result.error.message.includes("did not match any file")) return ok(undefined);
       return result;
     }
+    return ok(undefined);
+  }
+
+  async pushFrom(cwd: string, branch: string): Promise<Result<void, GitError>> {
+    const result = await this.runGit(["-C", cwd, "push", "origin", branch]);
+    if (!result.ok) return result;
     return ok(undefined);
   }
 }
