@@ -12,7 +12,7 @@ describe("buildMergeGateOptions", () => {
 describe("buildMergeGateQuestionText", () => {
   it("includes prUrl", () => {
     const text = buildMergeGateQuestionText({
-      sliceId: "s1",
+      subjectId: "s1",
       prUrl: "https://url",
       prNumber: 42,
       cycle: 0,
@@ -22,7 +22,7 @@ describe("buildMergeGateQuestionText", () => {
 
   it("includes lastError when present", () => {
     const text = buildMergeGateQuestionText({
-      sliceId: "s1",
+      subjectId: "s1",
       prUrl: "https://url",
       prNumber: 42,
       cycle: 1,

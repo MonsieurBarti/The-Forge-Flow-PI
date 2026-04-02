@@ -14,6 +14,7 @@ import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/
 import { registerProjectExtension } from "@hexagons/project";
 import { InMemoryProjectRepository } from "@hexagons/project/infrastructure/in-memory-project.repository";
 import { NodeProjectFileSystemAdapter } from "@hexagons/project/infrastructure/node-project-filesystem.adapter";
+import { CompleteMilestoneUseCase } from "@hexagons/review/application/complete-milestone.use-case";
 import { ConductReviewUseCase } from "@hexagons/review/application/conduct-review.use-case";
 import { ReviewPromptBuilder } from "@hexagons/review/application/review-prompt-builder";
 import { ShipSliceUseCase } from "@hexagons/review/application/ship-slice.use-case";
@@ -26,9 +27,13 @@ import { GitChangedFilesAdapter } from "@hexagons/review/infrastructure/git-chan
 import { InMemoryReviewRepository } from "@hexagons/review/infrastructure/in-memory-review.repository";
 import { InMemoryReviewUIAdapter } from "@hexagons/review/infrastructure/in-memory-review-ui.adapter";
 import { InMemoryVerificationRepository } from "@hexagons/review/infrastructure/in-memory-verification.repository";
+import { MilestoneQueryAdapter } from "@hexagons/review/infrastructure/milestone-query.adapter";
+import { MilestoneTransitionAdapter } from "@hexagons/review/infrastructure/milestone-transition.adapter";
+import { PiAuditAdapter } from "@hexagons/review/infrastructure/pi-audit.adapter";
 import { PiFixerAdapter } from "@hexagons/review/infrastructure/pi-fixer.adapter";
 import { PiMergeGateAdapter } from "@hexagons/review/infrastructure/pi-merge-gate.adapter";
 import { PlannotatorReviewUIAdapter } from "@hexagons/review/infrastructure/plannotator-review-ui.adapter";
+import { SqliteCompletionRecordRepository } from "@hexagons/review/infrastructure/sqlite-completion-record.repository";
 import { SqliteShipRecordRepository } from "@hexagons/review/infrastructure/sqlite-ship-record.repository";
 import { TerminalReviewUIAdapter } from "@hexagons/review/infrastructure/terminal-review-ui.adapter";
 import { MergeSettingsUseCase } from "@hexagons/settings";
@@ -293,4 +298,36 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     logger,
   );
   void shipSliceUseCase; // Available for ship command wiring
+
+  // --- Complete milestone pipeline wiring ---
+  const milestoneQueryAdapter = new MilestoneQueryAdapter(
+    sliceRepo,
+    milestoneRepo,
+    options.projectRoot,
+  );
+  const milestoneTransitionAdapter = new MilestoneTransitionAdapter(milestoneRepo, dateProvider);
+  const piAuditAdapter = new PiAuditAdapter(
+    new PiAgentDispatchAdapter(),
+    templateLoader,
+    modelResolver,
+    logger,
+  );
+  const completionRecordDb = new Database(join(tffDir, "completion-records.db"));
+  const completionRecordRepository = new SqliteCompletionRecordRepository(completionRecordDb);
+
+  const completeMilestoneUseCase = new CompleteMilestoneUseCase(
+    milestoneQueryAdapter,
+    piAuditAdapter,
+    ghCliAdapter,
+    mergeGateAdapter,
+    completionRecordRepository,
+    piFixerAdapter,
+    gitPort,
+    milestoneTransitionAdapter,
+    eventBus,
+    dateProvider,
+    () => crypto.randomUUID(),
+    logger,
+  );
+  void completeMilestoneUseCase;
 }
