@@ -265,4 +265,10 @@ export class GitCliAdapter extends GitPort {
     }
     return ok(undefined);
   }
+
+  async pushFrom(cwd: string, branch: string): Promise<Result<void, GitError>> {
+    const result = await this.runGit(["-C", cwd, "push", "origin", branch]);
+    if (!result.ok) return result;
+    return ok(undefined);
+  }
 }

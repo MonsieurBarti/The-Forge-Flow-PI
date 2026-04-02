@@ -116,4 +116,8 @@ export class InMemoryGitAdapter extends GitPort {
     this.restoreWorktreeCalls.push(cwd);
     return Promise.resolve(ok(undefined));
   }
+
+  override pushFrom(_cwd: string, _branch: string): Promise<Result<void, GitError>> {
+    return Promise.resolve(ok(undefined));
+  }
 }

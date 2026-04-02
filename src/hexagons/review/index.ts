@@ -5,6 +5,8 @@ export { ConductReviewUseCase } from "./application/conduct-review.use-case";
 export type { ReviewPromptConfig } from "./application/review-prompt-builder";
 // Application
 export { ReviewPromptBuilder } from "./application/review-prompt-builder";
+// Application — Ship
+export { ShipSliceUseCase } from "./application/ship-slice.use-case";
 // Application — Verify
 export { VerifyAcceptanceCriteriaUseCase } from "./application/verify-acceptance-criteria.use-case";
 // Domain — ConductReview schemas
@@ -39,11 +41,14 @@ export { FreshReviewerViolationError } from "./domain/errors/fresh-reviewer-viol
 export { ChangedFilesError, SliceSpecError } from "./domain/errors/review-context.error";
 // Domain — ReviewUI Errors
 export { ReviewUIError } from "./domain/errors/review-ui.error";
+export { ShipError } from "./domain/errors/ship.error";
 export { VerifyError } from "./domain/errors/verify.error";
 // Domain — New Events
 export { ReviewPipelineCompletedEvent } from "./domain/events/review-pipeline-completed.event";
 // Domain -- Events
 export { ReviewRecordedEvent } from "./domain/events/review-recorded.event";
+// Domain — Ship Events
+export { SliceShippedEvent } from "./domain/events/slice-shipped.event";
 export { VerificationCompletedEvent } from "./domain/events/verification-completed.event";
 export { FindingBuilder } from "./domain/finding.builder";
 export type {
@@ -62,9 +67,13 @@ export { ChangedFilesPort } from "./domain/ports/changed-files.port";
 export { ExecutorQueryPort } from "./domain/ports/executor-query.port";
 export type { FixRequest, FixResult } from "./domain/ports/fixer.port";
 export { FixerPort, FixRequestSchema, FixResultSchema } from "./domain/ports/fixer.port";
+export type { MergeGateContext } from "./domain/ports/merge-gate.port";
+// Domain — Ship Ports
+export { MergeGatePort } from "./domain/ports/merge-gate.port";
 export { ReviewRepositoryPort } from "./domain/ports/review-repository.port";
 // Domain — ReviewUI Port
 export { ReviewUIPort } from "./domain/ports/review-ui.port";
+export { ShipRecordRepositoryPort } from "./domain/ports/ship-record-repository.port";
 export type { SliceSpec } from "./domain/ports/slice-spec.port";
 // Domain — New Ports
 export { SliceSpecPort, SliceSpecSchema } from "./domain/ports/slice-spec.port";
@@ -114,6 +123,21 @@ export {
 // Domain -- Services
 export { CritiqueReflectionService } from "./domain/services/critique-reflection.service";
 export { FreshReviewerService } from "./domain/services/fresh-reviewer.service";
+// Domain — Ship schemas
+export type {
+  MergeGateDecision,
+  ShipRecordProps,
+  ShipRequest,
+  ShipResult,
+} from "./domain/ship.schemas";
+export {
+  MergeGateDecisionSchema,
+  ShipRecordPropsSchema,
+  ShipRequestSchema,
+  ShipResultSchema,
+} from "./domain/ship.schemas";
+// Domain — ShipRecord aggregate
+export { ShipRecord } from "./domain/ship-record.aggregate";
 // Domain — Verification
 export { Verification } from "./domain/verification.aggregate";
 export type {
@@ -137,10 +161,14 @@ export { GitChangedFilesAdapter } from "./infrastructure/git-changed-files.adapt
 export { InMemoryReviewRepository } from "./infrastructure/in-memory-review.repository";
 // Infrastructure — ReviewUI Adapters
 export { InMemoryReviewUIAdapter } from "./infrastructure/in-memory-review-ui.adapter";
+// Infrastructure — Ship
+export { InMemoryShipRecordRepository } from "./infrastructure/in-memory-ship-record.repository";
 // Infrastructure — Verification
 export { InMemoryVerificationRepository } from "./infrastructure/in-memory-verification.repository";
+export { PiMergeGateAdapter } from "./infrastructure/pi-merge-gate.adapter";
 export { PlannotatorReviewUIAdapter } from "./infrastructure/plannotator-review-ui.adapter";
 export { SqliteReviewRepository } from "./infrastructure/sqlite-review.repository";
+export { SqliteShipRecordRepository } from "./infrastructure/sqlite-ship-record.repository";
 export { SqliteVerificationRepository } from "./infrastructure/sqlite-verification.repository";
 // Infrastructure — New Adapters
 export { StubFixerAdapter } from "./infrastructure/stub-fixer.adapter";
