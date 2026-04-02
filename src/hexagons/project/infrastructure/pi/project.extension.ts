@@ -19,7 +19,7 @@ export function registerProjectExtension(api: ExtensionAPI, deps: ProjectExtensi
   api.registerCommand("tff:new", {
     description: "Initialize a new TFF project in the current directory",
     handler: async (_args, ctx) => {
-      ctx.sendUserMessage(
+      api.sendUserMessage(
         "I'll initialize a TFF project. Please provide a project name and vision, then I'll call the tff_init_project tool.",
       );
     },
@@ -44,6 +44,7 @@ export function registerProjectExtension(api: ExtensionAPI, deps: ProjectExtensi
         if (!result.ok) {
           return {
             content: [{ type: "text", text: `Init failed: ${result.error.message}` }],
+            details: undefined,
           };
         }
         return {
@@ -53,6 +54,7 @@ export function registerProjectExtension(api: ExtensionAPI, deps: ProjectExtensi
               text: `Project "${params.name}" initialized at ${params.projectRoot}/.tff/`,
             },
           ],
+          details: undefined,
         };
       },
     }),

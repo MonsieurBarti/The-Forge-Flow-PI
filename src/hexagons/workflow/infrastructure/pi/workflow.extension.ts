@@ -100,7 +100,7 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
   api.registerCommand("tff:status", {
     description: "Show current TFF project status",
     handler: async (_args, ctx) => {
-      ctx.sendUserMessage("Fetching project status...");
+      api.sendUserMessage("Fetching project status...");
     },
   });
 
@@ -116,6 +116,7 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
         if (!result.ok) {
           return {
             content: [{ type: "text", text: `Status failed: ${result.error.message}` }],
+            details: undefined,
           };
         }
 
@@ -137,6 +138,7 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
 
         return {
           content: [{ type: "text", text: report + nextStepLine + nextStepJson }],
+          details: undefined,
         };
       },
     }),

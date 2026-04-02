@@ -1,56 +1,31 @@
 /**
- * Thin type aliases for PI SDK types.
+ * Re-export barrel for PI SDK types.
  *
- * These decouple TFF hexagons from the PI SDK's exact type surface.
- * When the PI SDK is installed, replace placeholders with real imports.
+ * Downstream consumers import from @infrastructure/pi — this barrel
+ * resolves to real SDK types at compilation. No hand-written replicas.
  */
 
-/** Content block in a tool result */
-export type ContentBlock = { type: "text"; text: string } | { type: "object"; data: unknown };
+// Extension types from pi-coding-agent (originally from pi-agent-core)
+export type {
+  AgentToolResult,
+  ExtensionAPI,
+  ExtensionCommandContext,
+  ExtensionContext,
+  RegisteredCommand,
+  ToolDefinition,
+} from "@mariozechner/pi-coding-agent";
 
-/** Result returned by a tool execution */
-export interface AgentToolResult<TDetails = unknown> {
-  content: ContentBlock[];
-  details?: TDetails;
-}
+// AI types from pi-ai
+export type {
+  Api,
+  KnownProvider,
+  Model,
+  Provider,
+  Usage,
+} from "@mariozechner/pi-ai";
 
-/** Context passed to tool execute and command handlers */
-export interface ExtensionContext {
-  cwd: string;
-  isIdle(): boolean;
-  abort(): void;
-}
-
-/** Command handler context (extends ExtensionContext) */
-export interface ExtensionCommandContext extends ExtensionContext {
-  sendUserMessage(content: string): void;
-}
-
-/** Command registration options */
-export interface RegisterCommandOptions {
-  description?: string;
-  handler: (args: string, ctx: ExtensionCommandContext) => Promise<void>;
-}
-
-/** Tool definition compatible with PI SDK's ToolDefinition */
-export interface ToolDefinition<TDetails = unknown> {
-  name: string;
-  label: string;
-  description: string;
-  promptSnippet?: string;
-  promptGuidelines?: string[];
-  parameters: Record<string, unknown>;
-  execute(
-    toolCallId: string,
-    params: unknown,
-    signal: AbortSignal | undefined,
-    onUpdate: unknown,
-    ctx: ExtensionContext,
-  ): Promise<AgentToolResult<TDetails>>;
-}
-
-/** Extension API surface — subset we use */
-export interface ExtensionAPI {
-  registerTool(tool: ToolDefinition): void;
-  registerCommand(name: string, options: RegisterCommandOptions): void;
-}
+// Convenience alias — pi-coding-agent's registerCommand accepts this shape
+export type RegisterCommandOptions = Omit<
+  import("@mariozechner/pi-coding-agent").RegisteredCommand,
+  "name" | "sourceInfo"
+>;
