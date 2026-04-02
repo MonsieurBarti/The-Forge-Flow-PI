@@ -1,6 +1,6 @@
 import type { MilestoneRepositoryPort } from "@hexagons/milestone";
 import type { SliceRepositoryPort } from "@hexagons/slice";
-import type { ExtensionAPI, ExtensionCommandContext } from "@infrastructure/pi";
+import type { ExtensionAPI } from "@infrastructure/pi";
 import { isErr, isOk } from "@kernel";
 import type { StartDiscussUseCase } from "../../use-cases/start-discuss.use-case";
 import type { SuggestNextStepUseCase } from "../../use-cases/suggest-next-step.use-case";
@@ -16,41 +16,41 @@ export interface DiscussCommandDeps {
 export function registerDiscussCommand(api: ExtensionAPI, deps: DiscussCommandDeps): void {
   api.registerCommand("tff:discuss", {
     description: "Start the discuss phase for a slice -- multi-turn Q&A producing SPEC.md",
-    handler: async (args: string, ctx: ExtensionCommandContext) => {
+    handler: async (args: string) => {
       // 1. Resolve target slice from args (label or ID)
       const identifier = args.trim();
       if (!identifier) {
-        ctx.sendUserMessage("Usage: /tff:discuss <slice-label-or-id>");
+        api.sendUserMessage("Usage: /tff:discuss <slice-label-or-id>");
         return;
       }
 
       // Try findByLabel first (e.g., "M03-S05"), fall back to findById (UUID)
       let sliceResult = await deps.sliceRepo.findByLabel(identifier);
       if (isErr(sliceResult)) {
-        ctx.sendUserMessage(`Error loading slice: ${sliceResult.error.message}`);
+        api.sendUserMessage(`Error loading slice: ${sliceResult.error.message}`);
         return;
       }
       if (!sliceResult.data) {
         sliceResult = await deps.sliceRepo.findById(identifier);
         if (isErr(sliceResult)) {
-          ctx.sendUserMessage(`Error loading slice: ${sliceResult.error.message}`);
+          api.sendUserMessage(`Error loading slice: ${sliceResult.error.message}`);
           return;
         }
       }
       const slice = sliceResult.data;
       if (!slice) {
-        ctx.sendUserMessage(`Slice not found: ${identifier}`);
+        api.sendUserMessage(`Slice not found: ${identifier}`);
         return;
       }
 
       // 2. Load milestone
       const msResult = await deps.milestoneRepo.findById(slice.milestoneId);
       if (isErr(msResult)) {
-        ctx.sendUserMessage(`Error loading milestone: ${msResult.error.message}`);
+        api.sendUserMessage(`Error loading milestone: ${msResult.error.message}`);
         return;
       }
       if (!msResult.data) {
-        ctx.sendUserMessage(`Milestone not found for slice ${slice.label}`);
+        api.sendUserMessage(`Milestone not found for slice ${slice.label}`);
         return;
       }
       const milestone = msResult.data;
@@ -62,7 +62,7 @@ export function registerDiscussCommand(api: ExtensionAPI, deps: DiscussCommandDe
       });
 
       if (isErr(result)) {
-        ctx.sendUserMessage(`Error starting discuss: ${result.error.message}`);
+        api.sendUserMessage(`Error starting discuss: ${result.error.message}`);
         return;
       }
 
@@ -74,7 +74,7 @@ export function registerDiscussCommand(api: ExtensionAPI, deps: DiscussCommandDe
         isOk(nextStepResult) && nextStepResult.data ? nextStepResult.data.displayText : "";
 
       // 5. Send protocol message
-      ctx.sendUserMessage(
+      api.sendUserMessage(
         buildDiscussProtocolMessage({
           sliceId: slice.id,
           sliceLabel: slice.label,

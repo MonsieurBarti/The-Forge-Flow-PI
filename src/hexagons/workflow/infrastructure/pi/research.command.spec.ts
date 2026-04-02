@@ -2,6 +2,7 @@ import { MilestoneBuilder } from "@hexagons/milestone/domain/milestone.builder";
 import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/in-memory-milestone.repository";
 import { SliceBuilder } from "@hexagons/slice/domain/slice.builder";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
+import { createMockExtensionAPI, createMockExtensionContext } from "@infrastructure/pi";
 import { err } from "@kernel";
 import { describe, expect, it, vi } from "vitest";
 import { FileIOError } from "../../domain/errors/file-io.error";
@@ -12,25 +13,9 @@ import { InMemoryWorkflowSessionRepository } from "../in-memory-workflow-session
 import type { ResearchCommandDeps } from "./research.command";
 import { registerResearchCommand } from "./research.command";
 
-function makeMockApi() {
-  return {
-    registerTool: vi.fn(),
-    registerCommand: vi.fn(),
-  };
-}
-
-function makeMockCtx() {
-  return {
-    cwd: "/tmp",
-    isIdle: vi.fn(() => true),
-    abort: vi.fn(),
-    sendUserMessage: vi.fn(),
-  };
-}
-
 describe("registerResearchCommand", () => {
   it("registers tff:research command", () => {
-    const api = makeMockApi();
+    const { api, fns } = createMockExtensionAPI();
     const sessionRepo = new InMemoryWorkflowSessionRepository();
     const sliceRepo = new InMemorySliceRepository();
     const deps: ResearchCommandDeps = {
@@ -41,7 +26,7 @@ describe("registerResearchCommand", () => {
       suggestNextStep: new SuggestNextStepUseCase(sessionRepo, sliceRepo),
     };
     registerResearchCommand(api, deps);
-    expect(api.registerCommand).toHaveBeenCalledWith(
+    expect(fns.registerCommand).toHaveBeenCalledWith(
       "tff:research",
       expect.objectContaining({ description: expect.any(String) }),
     );
@@ -61,24 +46,24 @@ describe("registerResearchCommand", () => {
     }
 
     async function invokeHandler(deps: ReturnType<typeof makeDeps>, args: string) {
-      const api = makeMockApi();
+      const { api, fns } = createMockExtensionAPI();
       registerResearchCommand(api, deps);
-      const [, options] = api.registerCommand.mock.calls[0];
-      const ctx = makeMockCtx();
+      const [, options] = fns.registerCommand.mock.calls[0];
+      const ctx = createMockExtensionContext();
       await options.handler(args, ctx);
-      return ctx;
+      return { fns };
     }
 
     it("returns error if no args provided", async () => {
       const deps = makeDeps();
-      const ctx = await invokeHandler(deps, "  ");
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("Usage"));
+      const { fns } = await invokeHandler(deps, "  ");
+      expect(fns.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("Usage"));
     });
 
     it("returns error if slice not found", async () => {
       const deps = makeDeps();
-      const ctx = await invokeHandler(deps, "M03-S99");
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("Slice not found"));
+      const { fns } = await invokeHandler(deps, "M03-S99");
+      expect(fns.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("Slice not found"));
     });
 
     it("returns error if no workflow session exists for the milestone", async () => {
@@ -88,8 +73,8 @@ describe("registerResearchCommand", () => {
       deps.milestoneRepo.seed(milestone);
       deps.sliceRepo.seed(slice);
 
-      const ctx = await invokeHandler(deps, "M03-S06");
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith(
+      const { fns } = await invokeHandler(deps, "M03-S06");
+      expect(fns.sendUserMessage).toHaveBeenCalledWith(
         "No workflow session found, run /tff:discuss first",
       );
     });
@@ -106,8 +91,8 @@ describe("registerResearchCommand", () => {
       deps.sliceRepo.seed(slice);
       deps.sessionRepo.seed(session);
 
-      const ctx = await invokeHandler(deps, "M03-S06");
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith("not researching, run /tff:discuss first");
+      const { fns } = await invokeHandler(deps, "M03-S06");
+      expect(fns.sendUserMessage).toHaveBeenCalledWith("not researching, run /tff:discuss first");
     });
 
     it("returns error if SPEC.md not found", async () => {
@@ -121,10 +106,9 @@ describe("registerResearchCommand", () => {
       deps.milestoneRepo.seed(milestone);
       deps.sliceRepo.seed(slice);
       deps.sessionRepo.seed(session);
-      // artifactFile is empty — no SPEC.md written
 
-      const ctx = await invokeHandler(deps, "M03-S06");
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith("No SPEC.md found, run /tff:discuss first");
+      const { fns } = await invokeHandler(deps, "M03-S06");
+      expect(fns.sendUserMessage).toHaveBeenCalledWith("No SPEC.md found, run /tff:discuss first");
     });
 
     it("returns error if ArtifactFilePort.read returns FileIOError", async () => {
@@ -138,11 +122,10 @@ describe("registerResearchCommand", () => {
       deps.milestoneRepo.seed(milestone);
       deps.sliceRepo.seed(slice);
       deps.sessionRepo.seed(session);
-      // Override read to simulate FileIOError
       deps.artifactFile.read = vi.fn().mockResolvedValue(err(new FileIOError("disk read failed")));
 
-      const ctx = await invokeHandler(deps, "M03-S06");
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith("Failed to read SPEC.md");
+      const { fns } = await invokeHandler(deps, "M03-S06");
+      expect(fns.sendUserMessage).toHaveBeenCalledWith("Failed to read SPEC.md");
     });
 
     it("sends research protocol message when session is in researching phase with SPEC.md", async () => {
@@ -164,8 +147,8 @@ describe("registerResearchCommand", () => {
       deps.sessionRepo.seed(session);
       await deps.artifactFile.write("M03", "M03-S06", "spec", "# SPEC\n\nsome content");
 
-      const ctx = await invokeHandler(deps, "M03-S06");
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("RESEARCHING —"));
+      const { fns } = await invokeHandler(deps, "M03-S06");
+      expect(fns.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("RESEARCHING —"));
     });
 
     it("resolves slice by UUID when label lookup returns null", async () => {
@@ -182,8 +165,8 @@ describe("registerResearchCommand", () => {
       deps.sessionRepo.seed(session);
       await deps.artifactFile.write("M03", "M03-S06", "spec", "# SPEC content");
 
-      const ctx = await invokeHandler(deps, slice.id);
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("RESEARCHING —"));
+      const { fns } = await invokeHandler(deps, slice.id);
+      expect(fns.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("RESEARCHING —"));
     });
   });
 });

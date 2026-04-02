@@ -2,6 +2,7 @@ import { MilestoneBuilder } from "@hexagons/milestone/domain/milestone.builder";
 import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/in-memory-milestone.repository";
 import { SliceBuilder } from "@hexagons/slice/domain/slice.builder";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
+import { createMockExtensionAPI, createMockExtensionContext } from "@infrastructure/pi";
 import { err } from "@kernel";
 import { describe, expect, it, vi } from "vitest";
 import { FileIOError } from "../../domain/errors/file-io.error";
@@ -12,25 +13,9 @@ import { InMemoryWorkflowSessionRepository } from "../in-memory-workflow-session
 import type { PlanCommandDeps } from "./plan.command";
 import { registerPlanCommand } from "./plan.command";
 
-function makeMockApi() {
-  return {
-    registerTool: vi.fn(),
-    registerCommand: vi.fn(),
-  };
-}
-
-function makeMockCtx() {
-  return {
-    cwd: "/tmp",
-    isIdle: vi.fn(() => true),
-    abort: vi.fn(),
-    sendUserMessage: vi.fn(),
-  };
-}
-
 describe("registerPlanCommand", () => {
   it("registers tff:plan command", () => {
-    const api = makeMockApi();
+    const { api, fns } = createMockExtensionAPI();
     const sessionRepo = new InMemoryWorkflowSessionRepository();
     const sliceRepo = new InMemorySliceRepository();
     const deps: PlanCommandDeps = {
@@ -41,7 +26,7 @@ describe("registerPlanCommand", () => {
       suggestNextStep: new SuggestNextStepUseCase(sessionRepo, sliceRepo),
     };
     registerPlanCommand(api, deps);
-    expect(api.registerCommand).toHaveBeenCalledWith(
+    expect(fns.registerCommand).toHaveBeenCalledWith(
       "tff:plan",
       expect.objectContaining({ description: expect.any(String) }),
     );
@@ -61,24 +46,24 @@ describe("registerPlanCommand", () => {
     }
 
     async function invokeHandler(deps: ReturnType<typeof makeDeps>, args: string) {
-      const api = makeMockApi();
+      const { api, fns } = createMockExtensionAPI();
       registerPlanCommand(api, deps);
-      const [, options] = api.registerCommand.mock.calls[0];
-      const ctx = makeMockCtx();
+      const [, options] = fns.registerCommand.mock.calls[0];
+      const ctx = createMockExtensionContext();
       await options.handler(args, ctx);
-      return ctx;
+      return { fns };
     }
 
     it("returns error if no args provided", async () => {
       const deps = makeDeps();
-      const ctx = await invokeHandler(deps, "  ");
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith("Usage: /tff:plan <slice-label-or-id>");
+      const { fns } = await invokeHandler(deps, "  ");
+      expect(fns.sendUserMessage).toHaveBeenCalledWith("Usage: /tff:plan <slice-label-or-id>");
     });
 
     it("returns error if slice not found", async () => {
       const deps = makeDeps();
-      const ctx = await invokeHandler(deps, "M03-S99");
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("Slice not found"));
+      const { fns } = await invokeHandler(deps, "M03-S99");
+      expect(fns.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("Slice not found"));
     });
 
     it("returns error if no workflow session exists", async () => {
@@ -88,8 +73,8 @@ describe("registerPlanCommand", () => {
       deps.milestoneRepo.seed(milestone);
       deps.sliceRepo.seed(slice);
 
-      const ctx = await invokeHandler(deps, "M03-S07");
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith(
+      const { fns } = await invokeHandler(deps, "M03-S07");
+      expect(fns.sendUserMessage).toHaveBeenCalledWith(
         "No workflow session found. Run /tff:discuss first.",
       );
     });
@@ -106,8 +91,8 @@ describe("registerPlanCommand", () => {
       deps.sliceRepo.seed(slice);
       deps.sessionRepo.seed(session);
 
-      const ctx = await invokeHandler(deps, "M03-S07");
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith("not planning");
+      const { fns } = await invokeHandler(deps, "M03-S07");
+      expect(fns.sendUserMessage).toHaveBeenCalledWith("not planning");
     });
 
     it("returns error if SPEC.md not found", async () => {
@@ -121,10 +106,9 @@ describe("registerPlanCommand", () => {
       deps.milestoneRepo.seed(milestone);
       deps.sliceRepo.seed(slice);
       deps.sessionRepo.seed(session);
-      // artifactFile is empty — no SPEC.md written
 
-      const ctx = await invokeHandler(deps, "M03-S07");
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith("No SPEC.md found. Run /tff:discuss first.");
+      const { fns } = await invokeHandler(deps, "M03-S07");
+      expect(fns.sendUserMessage).toHaveBeenCalledWith("No SPEC.md found. Run /tff:discuss first.");
     });
 
     it("returns error if reading SPEC.md returns FileIOError", async () => {
@@ -138,11 +122,10 @@ describe("registerPlanCommand", () => {
       deps.milestoneRepo.seed(milestone);
       deps.sliceRepo.seed(slice);
       deps.sessionRepo.seed(session);
-      // Override read to simulate FileIOError
       deps.artifactFile.read = vi.fn().mockResolvedValue(err(new FileIOError("disk read failed")));
 
-      const ctx = await invokeHandler(deps, "M03-S07");
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith("Failed to read SPEC.md");
+      const { fns } = await invokeHandler(deps, "M03-S07");
+      expect(fns.sendUserMessage).toHaveBeenCalledWith("Failed to read SPEC.md");
     });
 
     it("sends plan protocol when phase is planning and SPEC.md exists", async () => {
@@ -165,8 +148,8 @@ describe("registerPlanCommand", () => {
       await deps.artifactFile.write("M03", "M03-S07", "spec", "# SPEC\n\nsome content");
       await deps.artifactFile.write("M03", "M03-S07", "research", "# RESEARCH\n\nsome research");
 
-      const ctx = await invokeHandler(deps, "M03-S07");
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("PLANNING —"));
+      const { fns } = await invokeHandler(deps, "M03-S07");
+      expect(fns.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("PLANNING —"));
     });
 
     it("proceeds without RESEARCH.md when not present", async () => {
@@ -187,10 +170,9 @@ describe("registerPlanCommand", () => {
       deps.sliceRepo.seed(slice);
       deps.sessionRepo.seed(session);
       await deps.artifactFile.write("M03", "M03-S07", "spec", "# SPEC\n\nsome content");
-      // No RESEARCH.md written
 
-      const ctx = await invokeHandler(deps, "M03-S07");
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("PLANNING —"));
+      const { fns } = await invokeHandler(deps, "M03-S07");
+      expect(fns.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("PLANNING —"));
     });
 
     it("resolves slice by UUID when label lookup returns null", async () => {
@@ -207,8 +189,8 @@ describe("registerPlanCommand", () => {
       deps.sessionRepo.seed(session);
       await deps.artifactFile.write("M03", "M03-S07", "spec", "# SPEC content");
 
-      const ctx = await invokeHandler(deps, slice.id);
-      expect(ctx.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("PLANNING —"));
+      const { fns } = await invokeHandler(deps, slice.id);
+      expect(fns.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("PLANNING —"));
     });
   });
 });

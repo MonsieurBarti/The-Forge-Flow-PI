@@ -1,6 +1,7 @@
+import type { TSchema } from "@mariozechner/pi-ai";
+import type { AgentToolResult, ExtensionContext, ToolDefinition } from "@mariozechner/pi-coding-agent";
 import type { z } from "zod";
 import { toJSONSchema } from "zod";
-import type { AgentToolResult, ExtensionContext, ToolDefinition } from "./pi.types";
 
 export interface ZodToolConfig<T extends z.ZodObject<z.ZodRawShape>> {
   name: string;
@@ -13,7 +14,7 @@ export interface ZodToolConfig<T extends z.ZodObject<z.ZodRawShape>> {
     params: z.infer<T>,
     signal: AbortSignal,
     ctx: ExtensionContext,
-  ) => Promise<AgentToolResult>;
+  ) => Promise<AgentToolResult<undefined>>;
 }
 
 export function createZodTool<T extends z.ZodObject<z.ZodRawShape>>(
@@ -30,17 +31,13 @@ export function createZodTool<T extends z.ZodObject<z.ZodRawShape>>(
     description: config.description,
     promptSnippet: config.promptSnippet,
     promptGuidelines: config.promptGuidelines,
-    parameters: Object.assign({}, jsonSchema),
+    parameters: jsonSchema as unknown as TSchema,
     async execute(_toolCallId, rawParams, signal, _onUpdate, ctx) {
       const parsed = config.schema.safeParse(rawParams);
       if (!parsed.success) {
         return {
-          content: [
-            {
-              type: "text",
-              text: `Validation error: ${parsed.error.message}`,
-            },
-          ],
+          content: [{ type: "text" as const, text: `Validation error: ${parsed.error.message}` }],
+          details: undefined,
         };
       }
       return config.execute(parsed.data, signal ?? new AbortController().signal, ctx);
