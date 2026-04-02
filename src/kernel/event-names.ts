@@ -24,6 +24,7 @@ export const EVENT_NAMES = {
   EXECUTION_FAILED: "execution.failed",
   VERIFICATION_COMPLETED: "review.verification-completed",
   SLICE_SHIPPED: "review.slice-shipped",
+  MILESTONE_COMPLETED: "review.milestone-completed",
 } as const;
 
 export type EventName = (typeof EVENT_NAMES)[keyof typeof EVENT_NAMES];
@@ -52,4 +53,5 @@ export const EventNameSchema = z.enum([
   EVENT_NAMES.EXECUTION_FAILED,
   EVENT_NAMES.VERIFICATION_COMPLETED,
   EVENT_NAMES.SLICE_SHIPPED,
+  EVENT_NAMES.MILESTONE_COMPLETED,
 ]);
