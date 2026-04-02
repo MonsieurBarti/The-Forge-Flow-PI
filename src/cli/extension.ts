@@ -212,8 +212,8 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
         const entry: unknown = Array.isArray(parsed) ? parsed[0] : parsed;
         let titleStr = sliceLabel;
         if (entry !== null && typeof entry === "object" && "title" in entry) {
-          const val = (entry as { title: unknown }).title;
-          if (typeof val === "string") titleStr = val;
+          const { title } = entry;
+          if (typeof title === "string") titleStr = title;
         }
         return { milestoneLabel, sliceLabel, sliceTitle: titleStr.replace(/^M\d+-S\d+:\s*/, "") };
       } catch {

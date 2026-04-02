@@ -66,20 +66,20 @@ export class ShipRecord extends AggregateRoot<ShipRecordProps> {
     return new ShipRecord(props);
   }
 
-  recordMerge(fixCyclesUsed: number): void {
+  recordMerge(fixCyclesUsed: number, now: Date): void {
     if (this.props.outcome !== null) {
       throw new Error(`Cannot recordMerge: outcome already set to "${this.props.outcome}"`);
     }
     this.props.outcome = "merged";
     this.props.fixCyclesUsed = fixCyclesUsed;
-    this.props.completedAt = new Date();
+    this.props.completedAt = now;
   }
 
-  recordAbort(): void {
+  recordAbort(now: Date): void {
     if (this.props.outcome !== null) {
       throw new Error(`Cannot recordAbort: outcome already set to "${this.props.outcome}"`);
     }
     this.props.outcome = "abort";
-    this.props.completedAt = new Date();
+    this.props.completedAt = now;
   }
 }

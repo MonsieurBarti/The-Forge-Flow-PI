@@ -31,7 +31,7 @@ describe("ShipRecord", () => {
       baseBranch: "milestone/M05",
       now: NOW,
     });
-    r.recordMerge(1);
+    r.recordMerge(1, NOW);
     expect(r.isMerged).toBe(true);
     expect(r.isAborted).toBe(false);
   });
@@ -46,7 +46,7 @@ describe("ShipRecord", () => {
       baseBranch: "milestone/M05",
       now: NOW,
     });
-    r.recordAbort();
+    r.recordAbort(NOW);
     expect(r.isAborted).toBe(true);
     expect(r.isMerged).toBe(false);
   });
@@ -61,8 +61,8 @@ describe("ShipRecord", () => {
       baseBranch: "milestone/M05",
       now: NOW,
     });
-    r.recordAbort();
-    expect(() => r.recordMerge(0)).toThrow();
+    r.recordAbort(NOW);
+    expect(() => r.recordMerge(0, NOW)).toThrow();
   });
 
   it("recordAbort throws if outcome already set", () => {
@@ -75,8 +75,8 @@ describe("ShipRecord", () => {
       baseBranch: "milestone/M05",
       now: NOW,
     });
-    r.recordMerge(0);
-    expect(() => r.recordAbort()).toThrow();
+    r.recordMerge(0, NOW);
+    expect(() => r.recordAbort(NOW)).toThrow();
   });
 
   it("reconstitute round-trips via toJSON", () => {
@@ -89,7 +89,7 @@ describe("ShipRecord", () => {
       baseBranch: "milestone/M05",
       now: NOW,
     });
-    r.recordMerge(2);
+    r.recordMerge(2, NOW);
     const json = r.toJSON();
     const r2 = ShipRecord.reconstitute(json);
     expect(r2.toJSON()).toEqual(json);

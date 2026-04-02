@@ -11,13 +11,9 @@ import { err, ok, type Result } from "@kernel/result";
 
 const GH_PR_FIELDS = "number,title,url,state,headRefName,baseRefName,createdAt";
 
-const _RawPrSchema = PullRequestInfoSchema.omit({ state: true, head: true, base: true }).extend({
-  state: PullRequestInfoSchema.shape.state.or(
-    PullRequestInfoSchema.shape.state.transform((v) => v),
-  ),
-  headRefName: PullRequestInfoSchema.shape.head,
-  baseRefName: PullRequestInfoSchema.shape.base,
-});
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
 
 /** Pure helper: normalise raw `gh pr` JSON into a validated PullRequestInfo. */
 export function transformPrJson(raw: Record<string, unknown>): PullRequestInfo {
@@ -93,12 +89,12 @@ export class GhCliAdapter extends GitHubPort {
       return err(new GitHubError("COMMAND_FAILED", "Failed to parse gh pr create output"));
     }
 
-    if (typeof raw !== "object" || raw === null) {
+    if (!isRecord(raw)) {
       return err(new GitHubError("COMMAND_FAILED", "Unexpected gh pr create output shape"));
     }
 
     try {
-      const info = transformPrJson(raw as Record<string, unknown>);
+      const info = transformPrJson(raw);
       return ok(info);
     } catch (_zodError: unknown) {
       return err(new GitHubError("COMMAND_FAILED", "Invalid pr data returned by gh"));
@@ -130,9 +126,9 @@ export class GhCliAdapter extends GitHubPort {
 
     const infos: PullRequestInfo[] = [];
     for (const item of rawList) {
-      if (typeof item !== "object" || item === null) continue;
+      if (!isRecord(item)) continue;
       try {
-        infos.push(transformPrJson(item as Record<string, unknown>));
+        infos.push(transformPrJson(item));
       } catch (_zodError: unknown) {
         return err(new GitHubError("COMMAND_FAILED", "Invalid pr entry in gh pr list output"));
       }

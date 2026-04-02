@@ -138,7 +138,7 @@ export class ShipSliceUseCase {
       }
 
       if (decision === "abort") {
-        record.recordAbort();
+        record.recordAbort(this.dateProvider.now());
         await this.shipRecordRepository.save(record);
         return err(ShipError.mergeDeclined(parsed.sliceId));
       }
@@ -168,7 +168,7 @@ export class ShipSliceUseCase {
     }
 
     // Step 6: Record merge and save
-    record.recordMerge(cycle);
+    record.recordMerge(cycle, this.dateProvider.now());
     await this.shipRecordRepository.save(record);
 
     // Step 7: Emit event

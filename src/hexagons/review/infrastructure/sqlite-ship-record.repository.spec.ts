@@ -47,7 +47,7 @@ describe("SqliteShipRecordRepository", () => {
 
     await repo.save(record);
 
-    record.recordMerge(2);
+    record.recordMerge(2, NOW);
     await repo.save(record);
 
     const result = await repo.findBySliceId(sliceId);
