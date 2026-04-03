@@ -187,6 +187,7 @@ export class PiAgentDispatchAdapter extends AgentDispatchPort {
         selfReview,
         cost,
         durationMs,
+        turns: [],
       } satisfies AgentResult);
     } catch (e) {
       this.running.delete(config.taskId);

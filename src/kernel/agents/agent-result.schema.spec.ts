@@ -112,4 +112,54 @@ describe("AgentResultSchema", () => {
       }),
     ).toThrow();
   });
+
+  it("defaults turns to empty array", () => {
+    const result = AgentResultSchema.parse({
+      taskId: faker.string.uuid(),
+      agentType: "fixer",
+      status: "DONE",
+      output: "Done",
+      selfReview: { dimensions: ALL_PASSED_DIMS, overallConfidence: "high" },
+      cost: {
+        provider: "anthropic",
+        modelId: "claude-sonnet-4-6",
+        inputTokens: 100,
+        outputTokens: 50,
+        costUsd: 0.001,
+      },
+      durationMs: 1000,
+    });
+    expect(result.turns).toEqual([]);
+  });
+
+  it("parses result with turn metrics", () => {
+    const result = AgentResultSchema.parse({
+      taskId: faker.string.uuid(),
+      agentType: "fixer",
+      status: "DONE",
+      output: "Done",
+      selfReview: { dimensions: ALL_PASSED_DIMS, overallConfidence: "high" },
+      cost: {
+        provider: "anthropic",
+        modelId: "claude-sonnet-4-6",
+        inputTokens: 100,
+        outputTokens: 50,
+        costUsd: 0.001,
+      },
+      durationMs: 5000,
+      turns: [
+        {
+          turnIndex: 0,
+          toolCalls: [
+            { toolCallId: "tc_1", toolName: "Read", durationMs: 50, isError: false },
+          ],
+          durationMs: 3000,
+        },
+        { turnIndex: 1, durationMs: 2000 },
+      ],
+    });
+    expect(result.turns).toHaveLength(2);
+    expect(result.turns[0].toolCalls).toHaveLength(1);
+    expect(result.turns[1].toolCalls).toEqual([]);
+  });
 });
