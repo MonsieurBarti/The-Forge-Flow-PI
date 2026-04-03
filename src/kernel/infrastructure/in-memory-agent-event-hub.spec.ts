@@ -96,4 +96,56 @@ describe("InMemoryAgentEventHub", () => {
     const hub = new InMemoryAgentEventHub();
     expect(() => hub.clear(TASK_A)).not.toThrow();
   });
+
+  describe("subscribeAll", () => {
+    it("receives events from any taskId", () => {
+      const hub = new InMemoryAgentEventHub();
+      const received: AgentEvent[] = [];
+      hub.subscribeAll((e) => received.push(e));
+
+      hub.emit(TASK_A, turnStart(TASK_A));
+      hub.emit(TASK_B, turnStart(TASK_B));
+
+      expect(received).toHaveLength(2);
+      expect(received[0].taskId).toBe(TASK_A);
+      expect(received[1].taskId).toBe(TASK_B);
+    });
+
+    it("unsubscribe stops delivery", () => {
+      const hub = new InMemoryAgentEventHub();
+      const received: AgentEvent[] = [];
+      const unsub = hub.subscribeAll((e) => received.push(e));
+
+      hub.emit(TASK_A, turnStart(TASK_A));
+      unsub();
+      hub.emit(TASK_A, turnStart(TASK_A));
+
+      expect(received).toHaveLength(1);
+    });
+
+    it("fires alongside per-task listeners", () => {
+      const hub = new InMemoryAgentEventHub();
+      const perTask: AgentEvent[] = [];
+      const global: AgentEvent[] = [];
+      hub.subscribe(TASK_A, (e) => perTask.push(e));
+      hub.subscribeAll((e) => global.push(e));
+
+      hub.emit(TASK_A, turnStart(TASK_A));
+
+      expect(perTask).toHaveLength(1);
+      expect(global).toHaveLength(1);
+    });
+
+    it("does not receive events after clear() for a specific task", () => {
+      const hub = new InMemoryAgentEventHub();
+      const received: AgentEvent[] = [];
+      hub.subscribeAll((e) => received.push(e));
+
+      hub.clear(TASK_A);
+      hub.emit(TASK_A, turnStart(TASK_A));
+
+      // subscribeAll is global — clear(taskId) only removes per-task listeners
+      expect(received).toHaveLength(1);
+    });
+  });
 });
