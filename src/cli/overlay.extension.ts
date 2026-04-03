@@ -4,9 +4,13 @@ import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@i
 import type { OverlayDataPort } from "@kernel/ports/overlay-data.port";
 import type { LoggerPort } from "@kernel/ports/logger.port";
 import type { HotkeysConfig } from "@hexagons/settings/domain/project-settings.schemas";
+import type { EventBusPort } from "@kernel/ports/event-bus.port";
+import type { BudgetTrackingPort } from "@hexagons/settings/domain/ports/budget-tracking.port";
 
 export interface OverlayExtensionDeps {
   overlayDataPort: OverlayDataPort;
+  budgetTrackingPort: BudgetTrackingPort;
+  eventBus: EventBusPort;
   hotkeys: HotkeysConfig;
   logger: LoggerPort;
 }
