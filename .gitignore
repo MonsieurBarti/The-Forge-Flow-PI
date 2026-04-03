@@ -1,7 +1,8 @@
-node_modules/
+.DS_Store
+Thumbs.db
+*.swp
+.tff/
+build/
 dist/
 coverage/
-*.tsbuildinfo
-.tff/
-.beads/
-build/
+node_modules/
