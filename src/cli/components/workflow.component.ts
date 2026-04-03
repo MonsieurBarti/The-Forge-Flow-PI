@@ -1,3 +1,7 @@
+import type { Component, TUI } from "@mariozechner/pi-tui";
+import { Markdown } from "@mariozechner/pi-tui";
+import type { MarkdownTheme } from "@mariozechner/pi-tui";
+import type { OverlayDataPort, OverlayProjectSnapshot } from "@kernel/ports/overlay-data.port";
 import type { SliceStatus } from "@hexagons/slice/domain/slice.schemas";
 
 export const PHASE_ORDER: SliceStatus[] = [
@@ -54,4 +58,85 @@ export function renderMetadata(
     `**Phase:** ${status} (${formatDuration(durationMs)})`,
     `**Artifacts:** ${spec}  ${plan}  ${research}`,
   ].join("\n");
+}
+
+// --- buildWorkflowMarkdown ---
+
+interface WorkflowSlice {
+  label: string;
+  title: string;
+  status: SliceStatus;
+  complexity: string | null;
+  specPath: string | null;
+  planPath: string | null;
+  researchPath: string | null;
+  updatedAt: Date;
+}
+
+export function buildWorkflowMarkdown(snapshot: OverlayProjectSnapshot): string {
+  const project = snapshot.project as { name: string } | null;
+  if (!project) return "# No project data\n\nRun `/tff:new` to initialize a project.";
+  if (!snapshot.milestone) return "# No active milestone\n\nRun `/tff:new-milestone` to start a new milestone.";
+
+  const allSlices = snapshot.slices as WorkflowSlice[];
+  const active = allSlices
+    .filter((s) => s.status !== "closed")
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+
+  if (active.length === 0) {
+    return "# All slices closed\n\nRun `/tff:status` for overview.";
+  }
+
+  const blocks = active.map((slice) => {
+    const tierSuffix = slice.complexity ? ` (${slice.complexity})` : "";
+    const header = `**${slice.label} — ${slice.title}${tierSuffix}**`;
+    const pipeline = renderPipeline(slice.status);
+    const durationMs = Date.now() - new Date(slice.updatedAt).getTime();
+    const metadata = renderMetadata(slice.status, durationMs, slice);
+    return [header, "", pipeline, "", metadata].join("\n");
+  });
+
+  if (active.length === 1) return blocks[0];
+  return blocks.join("\n\n───\n\n");
+}
+
+// --- WorkflowComponent ---
+
+export class WorkflowComponent implements Component {
+  private readonly markdown: Markdown;
+  private readonly tui: TUI;
+  private readonly overlayData: OverlayDataPort;
+
+  constructor(
+    tui: TUI,
+    overlayData: OverlayDataPort,
+    markdownTheme: MarkdownTheme,
+    paddingX: number,
+    paddingY: number,
+  ) {
+    this.tui = tui;
+    this.overlayData = overlayData;
+    this.markdown = new Markdown("Loading workflow...", paddingX, paddingY, markdownTheme);
+    void this.refresh();
+  }
+
+  async refresh(): Promise<void> {
+    const result = await this.overlayData.getProjectSnapshot();
+    const fallback: OverlayProjectSnapshot = {
+      project: null, milestone: null, slices: [], taskCounts: new Map(),
+    };
+    const snapshot = result.ok ? result.data : fallback;
+    const md = buildWorkflowMarkdown(snapshot);
+    this.markdown.setText(md);
+    this.markdown.invalidate();
+    this.tui.requestRender();
+  }
+
+  invalidate(): void {
+    this.markdown.invalidate();
+  }
+
+  render(width: number): string[] {
+    return this.markdown.render(width);
+  }
 }
