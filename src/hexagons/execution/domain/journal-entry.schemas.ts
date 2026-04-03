@@ -102,6 +102,26 @@ export const ExecutionLifecycleEntrySchema = JournalEntryBaseSchema.extend({
 });
 export type ExecutionLifecycleEntry = z.infer<typeof ExecutionLifecycleEntrySchema>;
 
+export const ToolExecutionEntrySchema = JournalEntryBaseSchema.extend({
+  type: z.literal("tool-execution"),
+  taskId: IdSchema,
+  turnIndex: z.number().int().min(0),
+  toolCallId: z.string().min(1),
+  toolName: z.string().min(1),
+  durationMs: z.number().int().min(0),
+  isError: z.boolean(),
+});
+export type ToolExecutionEntry = z.infer<typeof ToolExecutionEntrySchema>;
+
+export const TurnBoundaryEntrySchema = JournalEntryBaseSchema.extend({
+  type: z.literal("turn-boundary"),
+  taskId: IdSchema,
+  turnIndex: z.number().int().min(0),
+  boundary: z.enum(["start", "end"]),
+  toolCallCount: z.number().int().min(0).optional(),
+});
+export type TurnBoundaryEntry = z.infer<typeof TurnBoundaryEntrySchema>;
+
 // ---------------------------------------------------------------------------
 // Discriminated union
 // ---------------------------------------------------------------------------
@@ -116,5 +136,7 @@ export const JournalEntrySchema = z.discriminatedUnion("type", [
   GuardrailViolationEntrySchema,
   OverseerInterventionEntrySchema,
   ExecutionLifecycleEntrySchema,
+  ToolExecutionEntrySchema,
+  TurnBoundaryEntrySchema,
 ]);
 export type JournalEntry = z.infer<typeof JournalEntrySchema>;

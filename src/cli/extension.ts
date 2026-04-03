@@ -36,7 +36,7 @@ import { PlannotatorReviewUIAdapter } from "@hexagons/review/infrastructure/plan
 import { SqliteCompletionRecordRepository } from "@hexagons/review/infrastructure/sqlite-completion-record.repository";
 import { SqliteShipRecordRepository } from "@hexagons/review/infrastructure/sqlite-ship-record.repository";
 import { TerminalReviewUIAdapter } from "@hexagons/review/infrastructure/terminal-review-ui.adapter";
-import { MergeSettingsUseCase } from "@hexagons/settings";
+import { HOTKEYS_DEFAULTS, MergeSettingsUseCase } from "@hexagons/settings";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
 import { WorkflowSliceTransitionAdapter } from "@hexagons/slice/infrastructure/workflow-slice-transition.adapter";
 import { CreateTasksUseCase } from "@hexagons/task/application/create-tasks.use-case";
@@ -50,6 +50,9 @@ import {
   registerWorkflowExtension,
 } from "@hexagons/workflow";
 import { NodeArtifactFileAdapter } from "@hexagons/workflow/infrastructure/node-artifact-file.adapter";
+import { AlwaysUnderBudgetAdapter } from "@hexagons/settings/infrastructure/always-under-budget.adapter";
+import { OverlayDataAdapter } from "./infrastructure/overlay-data.adapter";
+import { registerOverlayExtension } from "./overlay.extension";
 import type { ExtensionAPI } from "@infrastructure/pi";
 import type { Result } from "@kernel";
 import {
@@ -58,6 +61,7 @@ import {
   ConsoleLoggerAdapter,
   err,
   GitCliAdapter,
+  InMemoryAgentEventHub,
   InProcessEventBus,
   initializeAgentRegistry,
   isAgentRegistryInitialized,
@@ -92,6 +96,8 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const logger = new ConsoleLoggerAdapter();
   const eventBus = new InProcessEventBus(logger);
   const dateProvider = new SystemDateProvider();
+  const agentEventHub = new InMemoryAgentEventHub();
+  const sharedAgentDispatch = new PiAgentDispatchAdapter({ agentEventPort: agentEventHub });
 
   // --- Agent registry ---
   if (!isAgentRegistryInitialized()) {
@@ -234,7 +240,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     return "milestone/M05";
   });
   const piFixerAdapter = new PiFixerAdapter(
-    new PiAgentDispatchAdapter(),
+    sharedAgentDispatch,
     templateLoader,
     modelResolver,
     logger,
@@ -244,7 +250,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     beadSliceSpecAdapter,
     gitChangedFilesAdapter,
     freshReviewerService,
-    new PiAgentDispatchAdapter(),
+    sharedAgentDispatch,
     critiqueReflectionService,
     reviewPromptBuilder,
     modelResolver,
@@ -260,7 +266,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const verifyUseCase = new VerifyAcceptanceCriteriaUseCase(
     beadSliceSpecAdapter,
     freshReviewerService,
-    new PiAgentDispatchAdapter(),
+    sharedAgentDispatch,
     piFixerAdapter,
     verificationRepository,
     new InMemoryReviewUIAdapter(), // TODO(M05-S09): wire ReviewUIPort adapter selection
@@ -330,4 +336,26 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     logger,
   );
   void completeMilestoneUseCase;
+
+  // --- Overlay extension wiring ---
+  const overlayDataAdapter = new OverlayDataAdapter(
+    projectRepo,
+    milestoneRepo,
+    sliceRepo,
+    taskRepo,
+  );
+
+  const mergeSettings = new MergeSettingsUseCase();
+  const settingsResult = mergeSettings.execute({ team: null, local: null, env: {} });
+  const hotkeys = settingsResult.ok ? settingsResult.data.hotkeys : HOTKEYS_DEFAULTS;
+
+  const budgetTrackingPort = new AlwaysUnderBudgetAdapter();
+  registerOverlayExtension(api, {
+    overlayDataPort: overlayDataAdapter,
+    budgetTrackingPort,
+    eventBus,
+    agentEventPort: agentEventHub,
+    hotkeys,
+    logger,
+  });
 }

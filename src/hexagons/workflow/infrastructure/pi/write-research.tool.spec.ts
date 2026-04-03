@@ -1,12 +1,13 @@
 import { SliceBuilder } from "@hexagons/slice/domain/slice.builder";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
+import { createMockExtensionContext } from "@infrastructure/pi/testing";
 import { describe, expect, it } from "vitest";
 
 import { InMemoryArtifactFileAdapter } from "../../infrastructure/in-memory-artifact-file.adapter";
 import { WriteResearchUseCase } from "../../use-cases/write-research.use-case";
 import { createWriteResearchTool } from "./write-research.tool";
 
-const mockCtx = { cwd: "/tmp", isIdle: () => true, abort: () => {} };
+const mockCtx = createMockExtensionContext();
 
 function setup() {
   const sliceRepo = new InMemorySliceRepository();

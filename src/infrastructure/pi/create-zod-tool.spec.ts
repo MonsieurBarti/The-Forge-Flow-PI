@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { createZodTool } from "./create-zod-tool";
+import { createMockExtensionContext } from "./testing";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -31,6 +32,7 @@ describe("createZodTool", () => {
       schema,
       execute: async (params) => ({
         content: [{ type: "text", text: JSON.stringify(params) }],
+        details: undefined,
       }),
     });
 
@@ -87,7 +89,7 @@ describe("createZodTool", () => {
         { name: "test", count: 1, active: true, status: "open", tags: ["a"] },
         undefined,
         undefined,
-        { cwd: "/tmp", isIdle: () => true, abort: () => {} },
+        createMockExtensionContext(),
       );
       const text = result.content[0];
       expect(text.type).toBe("text");
@@ -105,7 +107,7 @@ describe("createZodTool", () => {
         { name: 123, count: "not-a-number" },
         undefined,
         undefined,
-        { cwd: "/tmp", isIdle: () => true, abort: () => {} },
+        createMockExtensionContext(),
       );
       expect(result.content[0].type).toBe("text");
       if (result.content[0].type === "text") {

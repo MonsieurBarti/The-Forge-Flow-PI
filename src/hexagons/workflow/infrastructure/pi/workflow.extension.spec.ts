@@ -6,9 +6,10 @@ import { WorkflowSliceTransitionAdapter } from "@hexagons/slice/infrastructure/w
 import { CreateTasksUseCase } from "@hexagons/task/application/create-tasks.use-case";
 import { DetectWavesUseCase } from "@hexagons/task/domain/detect-waves.use-case";
 import { InMemoryTaskRepository } from "@hexagons/task/infrastructure/in-memory-task.repository";
+import { createMockExtensionAPI } from "@infrastructure/pi/testing";
 import type { Result } from "@kernel";
 import { InProcessEventBus, SilentLoggerAdapter, SystemDateProvider } from "@kernel";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { ContextPackage } from "../../domain/context-package.value-object";
 import type { ContextStagingError } from "../../domain/errors/context-staging.error";
 import { ContextStagingPort } from "../../domain/ports/context-staging.port";
@@ -21,13 +22,6 @@ class StubContextStaging extends ContextStagingPort {
   async stage(): Promise<Result<ContextPackage, ContextStagingError>> {
     throw new Error("Not implemented");
   }
-}
-
-function makeMockApi() {
-  return {
-    registerTool: vi.fn(),
-    registerCommand: vi.fn(),
-  };
 }
 
 function makeDeps(): WorkflowExtensionDeps {
@@ -54,77 +48,77 @@ function makeDeps(): WorkflowExtensionDeps {
 
 describe("registerWorkflowExtension", () => {
   it("registers tff:status command", () => {
-    const api = makeMockApi();
+    const { api, fns } = createMockExtensionAPI();
     registerWorkflowExtension(api, makeDeps());
-    expect(api.registerCommand).toHaveBeenCalledWith(
+    expect(fns.registerCommand).toHaveBeenCalledWith(
       "tff:status",
       expect.objectContaining({ description: expect.any(String) }),
     );
   });
 
   it("registers tff_status tool", () => {
-    const api = makeMockApi();
+    const { api, fns } = createMockExtensionAPI();
     registerWorkflowExtension(api, makeDeps());
-    expect(api.registerTool).toHaveBeenCalledWith(expect.objectContaining({ name: "tff_status" }));
+    expect(fns.registerTool).toHaveBeenCalledWith(expect.objectContaining({ name: "tff_status" }));
   });
 
   it("registers tff:discuss command", () => {
-    const api = makeMockApi();
+    const { api, fns } = createMockExtensionAPI();
     registerWorkflowExtension(api, makeDeps());
-    expect(api.registerCommand).toHaveBeenCalledWith(
+    expect(fns.registerCommand).toHaveBeenCalledWith(
       "tff:discuss",
       expect.objectContaining({ description: expect.any(String) }),
     );
   });
 
   it("registers discuss-related tools", () => {
-    const api = makeMockApi();
+    const { api, fns } = createMockExtensionAPI();
     registerWorkflowExtension(api, makeDeps());
-    const toolNames = api.registerTool.mock.calls.map((call) => call[0].name);
+    const toolNames = fns.registerTool.mock.calls.map((call) => call[0].name);
     expect(toolNames).toContain("tff_write_spec");
     expect(toolNames).toContain("tff_classify_complexity");
     expect(toolNames).toContain("tff_workflow_transition");
   });
 
   it("registers tff:research command", () => {
-    const api = makeMockApi();
+    const { api, fns } = createMockExtensionAPI();
     registerWorkflowExtension(api, makeDeps());
-    expect(api.registerCommand).toHaveBeenCalledWith(
+    expect(fns.registerCommand).toHaveBeenCalledWith(
       "tff:research",
       expect.objectContaining({ description: expect.any(String) }),
     );
   });
 
   it("registers tff_write_research tool", () => {
-    const api = makeMockApi();
+    const { api, fns } = createMockExtensionAPI();
     registerWorkflowExtension(api, makeDeps());
-    const toolNames = api.registerTool.mock.calls.map((call) => call[0].name);
+    const toolNames = fns.registerTool.mock.calls.map((call) => call[0].name);
     expect(toolNames).toContain("tff_write_research");
   });
 
   it("registers tff:plan command", () => {
-    const api = makeMockApi();
+    const { api, fns } = createMockExtensionAPI();
     registerWorkflowExtension(api, makeDeps());
-    expect(api.registerCommand).toHaveBeenCalledWith(
+    expect(fns.registerCommand).toHaveBeenCalledWith(
       "tff:plan",
       expect.objectContaining({ description: expect.any(String) }),
     );
   });
 
   it("registers tff_write_plan tool", () => {
-    const api = makeMockApi();
+    const { api, fns } = createMockExtensionAPI();
     registerWorkflowExtension(api, makeDeps());
-    const toolNames = api.registerTool.mock.calls.map((call) => call[0].name);
+    const toolNames = fns.registerTool.mock.calls.map((call) => call[0].name);
     expect(toolNames).toContain("tff_write_plan");
   });
 
   it("write-spec tool calls ReviewUIPort.presentForApproval after write (AC5, AC6)", () => {
-    const api = makeMockApi();
+    const { api, fns } = createMockExtensionAPI();
     const deps = makeDeps();
     const reviewUI = deps.reviewUI as InMemoryReviewUIAdapter;
     registerWorkflowExtension(api, deps);
 
-    const writeSpecCall = api.registerTool.mock.calls.find(
+    const writeSpecCall = fns.registerTool.mock.calls.find(
       (call: unknown[]) => (call[0] as { name: string }).name === "tff_write_spec",
     );
     expect(writeSpecCall).toBeDefined();

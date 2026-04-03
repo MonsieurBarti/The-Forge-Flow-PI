@@ -9,6 +9,8 @@ import {
   TaskCompletedEntrySchema,
   TaskFailedEntrySchema,
   TaskStartedEntrySchema,
+  ToolExecutionEntrySchema,
+  TurnBoundaryEntrySchema,
 } from "./journal-entry.schemas";
 
 // ---------------------------------------------------------------------------
@@ -366,6 +368,32 @@ describe("JournalEntrySchema", () => {
     expect(entry.type).toBe("artifact-written");
   });
 
+  it("routes tool-execution correctly", () => {
+    const entry = JournalEntrySchema.parse({
+      ...baseFields,
+      type: "tool-execution",
+      taskId: crypto.randomUUID(),
+      turnIndex: 0,
+      toolCallId: "tc_001",
+      toolName: "Bash",
+      durationMs: 200,
+      isError: false,
+    });
+    expect(entry.type).toBe("tool-execution");
+  });
+
+  it("routes turn-boundary correctly", () => {
+    const entry = JournalEntrySchema.parse({
+      ...baseFields,
+      type: "turn-boundary",
+      taskId: crypto.randomUUID(),
+      turnIndex: 1,
+      boundary: "end",
+      toolCallCount: 2,
+    });
+    expect(entry.type).toBe("turn-boundary");
+  });
+
   it("throws on unknown type discriminator", () => {
     expect(() =>
       JournalEntrySchema.parse({
@@ -457,5 +485,83 @@ describe("OverseerInterventionEntrySchema", () => {
       });
       expect(result.success).toBe(true);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ToolExecutionEntrySchema
+// ---------------------------------------------------------------------------
+describe("ToolExecutionEntrySchema", () => {
+  const valid = {
+    ...baseFields,
+    type: "tool-execution" as const,
+    taskId: crypto.randomUUID(),
+    turnIndex: 0,
+    toolCallId: "tc_001",
+    toolName: "Read",
+    durationMs: 150,
+    isError: false,
+  };
+
+  it("parses a valid tool-execution entry", () => {
+    const result = ToolExecutionEntrySchema.parse(valid);
+    expect(result.type).toBe("tool-execution");
+    expect(result.toolName).toBe("Read");
+    expect(result.durationMs).toBe(150);
+  });
+
+  it("rejects empty toolName", () => {
+    expect(() => ToolExecutionEntrySchema.parse({ ...valid, toolName: "" })).toThrow();
+  });
+
+  it("rejects negative durationMs", () => {
+    expect(() => ToolExecutionEntrySchema.parse({ ...valid, durationMs: -1 })).toThrow();
+  });
+
+  it("rejects negative turnIndex", () => {
+    expect(() => ToolExecutionEntrySchema.parse({ ...valid, turnIndex: -1 })).toThrow();
+  });
+
+  it("rejects missing toolCallId", () => {
+    const { toolCallId: _, ...noId } = valid;
+    expect(() => ToolExecutionEntrySchema.parse(noId)).toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TurnBoundaryEntrySchema
+// ---------------------------------------------------------------------------
+describe("TurnBoundaryEntrySchema", () => {
+  const valid = {
+    ...baseFields,
+    type: "turn-boundary" as const,
+    taskId: crypto.randomUUID(),
+    turnIndex: 0,
+    boundary: "start" as const,
+  };
+
+  it("parses a valid turn-boundary start entry", () => {
+    const result = TurnBoundaryEntrySchema.parse(valid);
+    expect(result.type).toBe("turn-boundary");
+    expect(result.boundary).toBe("start");
+    expect(result.toolCallCount).toBeUndefined();
+  });
+
+  it("parses turn-boundary end with toolCallCount", () => {
+    const result = TurnBoundaryEntrySchema.parse({
+      ...valid,
+      boundary: "end",
+      toolCallCount: 3,
+    });
+    expect(result.boundary).toBe("end");
+    expect(result.toolCallCount).toBe(3);
+  });
+
+  it("rejects invalid boundary value", () => {
+    expect(() => TurnBoundaryEntrySchema.parse({ ...valid, boundary: "middle" })).toThrow();
+  });
+
+  it("rejects negative turnIndex", () => {
+    expect(() => TurnBoundaryEntrySchema.parse({ ...valid, turnIndex: -1 })).toThrow();
   });
 });

@@ -3,13 +3,24 @@ export type {
   AgentCard,
   AgentCost,
   AgentDispatchConfig,
+  AgentEvent,
+  AgentMessageEnd,
+  AgentMessageStart,
+  AgentMessageUpdate,
   AgentResult,
   AgentScope,
   AgentSkill,
+  AgentToolExecutionEnd,
+  AgentToolExecutionStart,
+  AgentToolExecutionUpdate,
+  AgentTurnEnd,
+  AgentTurnStart,
   AgentType,
   CreateAgentOptions,
   FreshReviewerRule,
   ResolvedModel,
+  ToolCallMetrics,
+  TurnMetrics,
 } from "./agents";
 // Agent artifacts
 export {
@@ -18,7 +29,11 @@ export {
   AgentCostSchema,
   AgentDispatchConfigBuilder,
   AgentDispatchConfigSchema,
+  AgentEventSchema,
   AgentLoadError,
+  AgentMessageEndSchema,
+  AgentMessageStartSchema,
+  AgentMessageUpdateSchema,
   AgentRegistry,
   AgentRegistryError,
   AgentResourceLoader,
@@ -26,6 +41,11 @@ export {
   AgentResultSchema,
   AgentScopeSchema,
   AgentSkillSchema,
+  AgentToolExecutionEndSchema,
+  AgentToolExecutionStartSchema,
+  AgentToolExecutionUpdateSchema,
+  AgentTurnEndSchema,
+  AgentTurnStartSchema,
   AgentTypeSchema,
   AgentValidationError,
   AgentValidationService,
@@ -37,6 +57,8 @@ export {
   isAgentRegistryInitialized,
   ResolvedModelSchema,
   resetAgentRegistry,
+  ToolCallMetricsSchema,
+  TurnMetricsSchema,
 } from "./agents";
 export { AggregateRoot } from "./aggregate-root.base";
 export type { DomainEventProps } from "./domain-event.base";
@@ -55,12 +77,14 @@ export { EVENT_NAMES, EventNameSchema } from "./event-names";
 export {
   ConsoleLoggerAdapter,
   GitCliAdapter,
+  InMemoryAgentEventHub,
   InMemoryGitAdapter,
   InProcessEventBus,
   SilentLoggerAdapter,
   SystemDateProvider,
 } from "./infrastructure";
 export type {
+  AgentEventListener,
   GitFileStatus,
   GitLogEntry,
   GitStatus,
@@ -70,8 +94,10 @@ export type {
   PullRequestConfig,
   PullRequestInfo,
   SyncReport,
+  Unsubscribe,
 } from "./ports";
 export {
+  AgentEventPort,
   DateProviderPort,
   EventBusPort,
   GitFileStatusSchema,
