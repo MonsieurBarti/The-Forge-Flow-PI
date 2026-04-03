@@ -1,10 +1,10 @@
-import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@infrastructure/pi";
-import type { OverlayDataPort } from "@kernel/ports/overlay-data.port";
-import type { LoggerPort } from "@kernel/ports/logger.port";
-import type { HotkeysConfig } from "@hexagons/settings/domain/project-settings.schemas";
-import type { EventBusPort } from "@kernel/ports/event-bus.port";
 import type { BudgetTrackingPort } from "@hexagons/settings/domain/ports/budget-tracking.port";
+import type { HotkeysConfig } from "@hexagons/settings/domain/project-settings.schemas";
+import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@infrastructure/pi";
 import { EVENT_NAMES } from "@kernel/event-names";
+import type { EventBusPort } from "@kernel/ports/event-bus.port";
+import type { LoggerPort } from "@kernel/ports/logger.port";
+import type { OverlayDataPort } from "@kernel/ports/overlay-data.port";
 import { describe, expect, it, vi } from "vitest";
 import { registerOverlayExtension } from "./overlay.extension";
 
@@ -181,7 +181,7 @@ describe("registerOverlayExtension", () => {
     expect(api.shortcuts.has("ctrl+e")).toBe(true);
   });
 
-  it("registers 4 EventBus subscriptions with correct event names", () => {
+  it("registers 7 EventBus subscriptions (4 dashboard + 3 workflow)", () => {
     const api = mockApi();
     const eventBus = mockEventBus();
 
@@ -193,11 +193,21 @@ describe("registerOverlayExtension", () => {
       logger: mockLogger(),
     });
 
-    expect(eventBus.subscribe).toHaveBeenCalledTimes(4);
-    expect(eventBus.handlers.has(EVENT_NAMES.SLICE_STATUS_CHANGED)).toBe(true);
-    expect(eventBus.handlers.has(EVENT_NAMES.TASK_COMPLETED)).toBe(true);
-    expect(eventBus.handlers.has(EVENT_NAMES.TASK_CREATED)).toBe(true);
-    expect(eventBus.handlers.has(EVENT_NAMES.MILESTONE_CLOSED)).toBe(true);
+    // Dashboard: SLICE_STATUS_CHANGED, TASK_COMPLETED, TASK_CREATED, MILESTONE_CLOSED
+    // Workflow: SLICE_STATUS_CHANGED, SLICE_CREATED, MILESTONE_CLOSED
+    expect(eventBus.subscribe).toHaveBeenCalledTimes(7);
+
+    const subscribedEvents = [...eventBus.handlers.keys()];
+    expect(subscribedEvents).toContain(EVENT_NAMES.SLICE_STATUS_CHANGED);
+    expect(subscribedEvents).toContain(EVENT_NAMES.TASK_COMPLETED);
+    expect(subscribedEvents).toContain(EVENT_NAMES.TASK_CREATED);
+    expect(subscribedEvents).toContain(EVENT_NAMES.MILESTONE_CLOSED);
+    expect(subscribedEvents).toContain(EVENT_NAMES.SLICE_CREATED);
+
+    // SLICE_STATUS_CHANGED and MILESTONE_CLOSED should have 2 handlers each (dashboard + workflow)
+    expect(eventBus.handlers.get(EVENT_NAMES.SLICE_STATUS_CHANGED)?.length).toBe(2);
+    expect(eventBus.handlers.get(EVENT_NAMES.MILESTONE_CLOSED)?.length).toBe(2);
+    expect(eventBus.handlers.get(EVENT_NAMES.SLICE_CREATED)?.length).toBe(1);
   });
 
   it("EventBus subscription is no-op when dashboard not yet opened", async () => {
