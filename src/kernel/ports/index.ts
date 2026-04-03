@@ -23,3 +23,5 @@ export { LoggerPort } from "./logger.port";
 export { StateSyncPort } from "./state-sync.port";
 export type { SyncReport } from "./state-sync.schemas";
 export { SyncReportSchema } from "./state-sync.schemas";
+export type { AgentEventListener, Unsubscribe } from "./agent-event.port";
+export { AgentEventPort } from "./agent-event.port";

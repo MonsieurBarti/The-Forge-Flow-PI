@@ -83,6 +83,7 @@ export {
   SystemDateProvider,
 } from "./infrastructure";
 export type {
+  AgentEventListener,
   GitFileStatus,
   GitLogEntry,
   GitStatus,
@@ -92,8 +93,10 @@ export type {
   PullRequestConfig,
   PullRequestInfo,
   SyncReport,
+  Unsubscribe,
 } from "./ports";
 export {
+  AgentEventPort,
   DateProviderPort,
   EventBusPort,
   GitFileStatusSchema,
