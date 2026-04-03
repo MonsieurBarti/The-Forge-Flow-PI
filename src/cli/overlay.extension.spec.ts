@@ -1,10 +1,10 @@
-import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@infrastructure/pi";
-import type { OverlayDataPort } from "@kernel/ports/overlay-data.port";
-import type { LoggerPort } from "@kernel/ports/logger.port";
-import type { HotkeysConfig } from "@hexagons/settings/domain/project-settings.schemas";
-import type { EventBusPort } from "@kernel/ports/event-bus.port";
 import type { BudgetTrackingPort } from "@hexagons/settings/domain/ports/budget-tracking.port";
+import type { HotkeysConfig } from "@hexagons/settings/domain/project-settings.schemas";
+import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@infrastructure/pi";
 import { EVENT_NAMES } from "@kernel/event-names";
+import type { EventBusPort } from "@kernel/ports/event-bus.port";
+import type { LoggerPort } from "@kernel/ports/logger.port";
+import type { OverlayDataPort } from "@kernel/ports/overlay-data.port";
 import { describe, expect, it, vi } from "vitest";
 import { registerOverlayExtension } from "./overlay.extension";
 

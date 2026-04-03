@@ -1,16 +1,16 @@
+import type { BudgetTrackingPort } from "@hexagons/settings/domain/ports/budget-tracking.port";
+import type { HotkeysConfig } from "@hexagons/settings/domain/project-settings.schemas";
+import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@infrastructure/pi";
+import type { EventName } from "@kernel/event-names";
+import { EVENT_NAMES } from "@kernel/event-names";
+import type { EventBusPort } from "@kernel/ports/event-bus.port";
+import type { LoggerPort } from "@kernel/ports/logger.port";
+import type { OverlayDataPort } from "@kernel/ports/overlay-data.port";
+import { getMarkdownTheme } from "@mariozechner/pi-coding-agent";
 import type { KeyId, OverlayHandle } from "@mariozechner/pi-tui";
 import { Box, Text } from "@mariozechner/pi-tui";
-import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@infrastructure/pi";
-import type { OverlayDataPort } from "@kernel/ports/overlay-data.port";
-import type { LoggerPort } from "@kernel/ports/logger.port";
-import type { HotkeysConfig } from "@hexagons/settings/domain/project-settings.schemas";
-import type { EventBusPort } from "@kernel/ports/event-bus.port";
-import type { BudgetTrackingPort } from "@hexagons/settings/domain/ports/budget-tracking.port";
 import { DashboardComponent } from "./components/dashboard.component";
 import { WorkflowComponent } from "./components/workflow.component";
-import { getMarkdownTheme } from "@mariozechner/pi-coding-agent";
-import { EVENT_NAMES } from "@kernel/event-names";
-import type { EventName } from "@kernel/event-names";
 
 export interface OverlayExtensionDeps {
   overlayDataPort: OverlayDataPort;
@@ -20,10 +20,7 @@ export interface OverlayExtensionDeps {
   logger: LoggerPort;
 }
 
-export function registerOverlayExtension(
-  api: ExtensionAPI,
-  deps: OverlayExtensionDeps,
-): void {
+export function registerOverlayExtension(api: ExtensionAPI, deps: OverlayExtensionDeps): void {
   let dashboardHandle: OverlayHandle | undefined;
   let workflowHandle: OverlayHandle | undefined;
   let executionMonitorHandle: OverlayHandle | undefined;
@@ -61,10 +58,9 @@ export function registerOverlayExtension(
     try {
       api.registerShortcut(keyId as KeyId, { description, handler });
     } catch (e) {
-      deps.logger.warn(
-        `Shortcut registration failed for ${keyId} — use slash command instead`,
-        { error: e },
-      );
+      deps.logger.warn(`Shortcut registration failed for ${keyId} — use slash command instead`, {
+        error: e,
+      });
     }
   };
 

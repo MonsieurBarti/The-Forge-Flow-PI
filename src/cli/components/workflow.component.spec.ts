@@ -1,16 +1,15 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import type { TUI } from "@mariozechner/pi-tui";
-import type { MarkdownTheme } from "@mariozechner/pi-tui";
-import type { OverlayDataPort, OverlayProjectSnapshot } from "@kernel/ports/overlay-data.port";
 import type { SliceStatus } from "@hexagons/slice/domain/slice.schemas";
-import { ok, err } from "@kernel/result";
+import type { OverlayDataPort, OverlayProjectSnapshot } from "@kernel/ports/overlay-data.port";
+import { err, ok } from "@kernel/result";
+import type { MarkdownTheme, TUI } from "@mariozechner/pi-tui";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  PHASE_ORDER,
-  PHASE_DISPLAY_NAMES,
-  renderPipeline,
-  formatDuration,
-  renderMetadata,
   buildWorkflowMarkdown,
+  formatDuration,
+  PHASE_DISPLAY_NAMES,
+  PHASE_ORDER,
+  renderMetadata,
+  renderPipeline,
   WorkflowComponent,
 } from "./workflow.component";
 
@@ -19,9 +18,20 @@ import {
 function identityTheme(): MarkdownTheme {
   const id = (text: string) => text;
   return {
-    heading: id, link: id, linkUrl: id, code: id, codeBlock: id,
-    codeBlockBorder: id, quote: id, quoteBorder: id, hr: id,
-    listBullet: id, bold: id, italic: id, strikethrough: id, underline: id,
+    heading: id,
+    link: id,
+    linkUrl: id,
+    code: id,
+    codeBlock: id,
+    codeBlockBorder: id,
+    quote: id,
+    quoteBorder: id,
+    hr: id,
+    listBullet: id,
+    bold: id,
+    italic: id,
+    strikethrough: id,
+    underline: id,
   };
 }
 
@@ -39,8 +49,14 @@ function mockOverlayDataPort(): OverlayDataPort {
 describe("PHASE_ORDER", () => {
   it("contains all 8 slice statuses in order", () => {
     expect(PHASE_ORDER).toEqual([
-      "discussing", "researching", "planning", "executing",
-      "verifying", "reviewing", "completing", "closed",
+      "discussing",
+      "researching",
+      "planning",
+      "executing",
+      "verifying",
+      "reviewing",
+      "completing",
+      "closed",
     ]);
   });
 });
@@ -158,13 +174,23 @@ describe("buildWorkflowMarkdown", () => {
       milestone: { label: "M01", title: "First" },
       slices: [
         {
-          label: "M01-S01", title: "Slice A", status: "planning" as SliceStatus,
-          complexity: "F-lite", specPath: "/spec", planPath: null, researchPath: "/research",
+          label: "M01-S01",
+          title: "Slice A",
+          status: "planning" as SliceStatus,
+          complexity: "F-lite",
+          specPath: "/spec",
+          planPath: null,
+          researchPath: "/research",
           updatedAt: new Date(Date.now() - 90 * 60_000),
         },
         {
-          label: "M01-S02", title: "Slice B", status: "closed" as SliceStatus,
-          complexity: "S", specPath: "/spec", planPath: "/plan", researchPath: null,
+          label: "M01-S02",
+          title: "Slice B",
+          status: "closed" as SliceStatus,
+          complexity: "S",
+          specPath: "/spec",
+          planPath: "/plan",
+          researchPath: null,
           updatedAt: new Date(Date.now() - 60_000),
         },
       ],
@@ -186,8 +212,13 @@ describe("buildWorkflowMarkdown", () => {
       milestone: { label: "M01", title: "First" },
       slices: [
         {
-          label: "M01-S01", title: "Done", status: "closed" as SliceStatus,
-          complexity: null, specPath: null, planPath: null, researchPath: null,
+          label: "M01-S01",
+          title: "Done",
+          status: "closed" as SliceStatus,
+          complexity: null,
+          specPath: null,
+          planPath: null,
+          researchPath: null,
           updatedAt: new Date(),
         },
       ],
@@ -225,8 +256,13 @@ describe("buildWorkflowMarkdown", () => {
       milestone: { label: "M01", title: "First" },
       slices: [
         {
-          label: "M01-S01", title: "Only", status: "executing" as SliceStatus,
-          complexity: null, specPath: null, planPath: null, researchPath: null,
+          label: "M01-S01",
+          title: "Only",
+          status: "executing" as SliceStatus,
+          complexity: null,
+          specPath: null,
+          planPath: null,
+          researchPath: null,
           updatedAt: new Date(),
         },
       ],
@@ -244,13 +280,23 @@ describe("buildWorkflowMarkdown", () => {
       milestone: { label: "M01", title: "First" },
       slices: [
         {
-          label: "M01-S01", title: "Older", status: "discussing" as SliceStatus,
-          complexity: null, specPath: null, planPath: null, researchPath: null,
+          label: "M01-S01",
+          title: "Older",
+          status: "discussing" as SliceStatus,
+          complexity: null,
+          specPath: null,
+          planPath: null,
+          researchPath: null,
           updatedAt: new Date(now - 120_000),
         },
         {
-          label: "M01-S02", title: "Newer", status: "planning" as SliceStatus,
-          complexity: null, specPath: null, planPath: null, researchPath: null,
+          label: "M01-S02",
+          title: "Newer",
+          status: "planning" as SliceStatus,
+          complexity: null,
+          specPath: null,
+          planPath: null,
+          researchPath: null,
           updatedAt: new Date(now - 10_000),
         },
       ],
@@ -268,8 +314,13 @@ describe("buildWorkflowMarkdown", () => {
       milestone: { label: "M01", title: "First" },
       slices: [
         {
-          label: "M01-S01", title: "Slice A", status: "executing" as SliceStatus,
-          complexity: "F-lite", specPath: null, planPath: null, researchPath: null,
+          label: "M01-S01",
+          title: "Slice A",
+          status: "executing" as SliceStatus,
+          complexity: "F-lite",
+          specPath: null,
+          planPath: null,
+          researchPath: null,
           updatedAt: new Date(),
         },
       ],
@@ -297,8 +348,13 @@ describe("WorkflowComponent", () => {
       milestone: { label: "M01", title: "First" },
       slices: [
         {
-          label: "M01-S01", title: "Active", status: "executing" as SliceStatus,
-          complexity: null, specPath: null, planPath: null, researchPath: null,
+          label: "M01-S01",
+          title: "Active",
+          status: "executing" as SliceStatus,
+          complexity: null,
+          specPath: null,
+          planPath: null,
+          researchPath: null,
           updatedAt: new Date(),
         },
       ],
@@ -317,8 +373,13 @@ describe("WorkflowComponent", () => {
       milestone: { label: "M01", title: "First" },
       slices: [
         {
-          label: "M01-S01", title: "Active", status: "planning" as SliceStatus,
-          complexity: null, specPath: "/spec", planPath: null, researchPath: null,
+          label: "M01-S01",
+          title: "Active",
+          status: "planning" as SliceStatus,
+          complexity: null,
+          specPath: "/spec",
+          planPath: null,
+          researchPath: null,
           updatedAt: new Date(),
         },
       ],
@@ -333,14 +394,18 @@ describe("WorkflowComponent", () => {
   });
 
   it("render() shows loading text before refresh", () => {
-    (overlayData.getProjectSnapshot as ReturnType<typeof vi.fn>).mockResolvedValue(new Promise(() => {}));
+    (overlayData.getProjectSnapshot as ReturnType<typeof vi.fn>).mockResolvedValue(
+      new Promise(() => {}),
+    );
     const component = new WorkflowComponent(tui as unknown as TUI, overlayData, theme, 1, 0);
     const lines = component.render(80);
     expect(lines.join("\n")).toContain("Loading");
   });
 
   it("handles port error gracefully", async () => {
-    (overlayData.getProjectSnapshot as ReturnType<typeof vi.fn>).mockResolvedValue(err(new Error("fail")));
+    (overlayData.getProjectSnapshot as ReturnType<typeof vi.fn>).mockResolvedValue(
+      err(new Error("fail")),
+    );
     const component = new WorkflowComponent(tui as unknown as TUI, overlayData, theme, 1, 0);
     await component.refresh();
     expect(tui.requestRender).toHaveBeenCalled();
@@ -349,7 +414,9 @@ describe("WorkflowComponent", () => {
   });
 
   it("invalidate() delegates to internal markdown", () => {
-    (overlayData.getProjectSnapshot as ReturnType<typeof vi.fn>).mockResolvedValue(new Promise(() => {}));
+    (overlayData.getProjectSnapshot as ReturnType<typeof vi.fn>).mockResolvedValue(
+      new Promise(() => {}),
+    );
     const component = new WorkflowComponent(tui as unknown as TUI, overlayData, theme, 1, 0);
     expect(() => component.invalidate()).not.toThrow();
   });

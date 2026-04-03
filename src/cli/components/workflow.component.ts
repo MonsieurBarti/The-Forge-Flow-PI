@@ -1,12 +1,17 @@
-import type { Component, TUI } from "@mariozechner/pi-tui";
-import { Markdown } from "@mariozechner/pi-tui";
-import type { MarkdownTheme } from "@mariozechner/pi-tui";
-import type { OverlayDataPort, OverlayProjectSnapshot } from "@kernel/ports/overlay-data.port";
 import type { SliceStatus } from "@hexagons/slice/domain/slice.schemas";
+import type { OverlayDataPort, OverlayProjectSnapshot } from "@kernel/ports/overlay-data.port";
+import type { Component, MarkdownTheme, TUI } from "@mariozechner/pi-tui";
+import { Markdown } from "@mariozechner/pi-tui";
 
 export const PHASE_ORDER: SliceStatus[] = [
-  "discussing", "researching", "planning", "executing",
-  "verifying", "reviewing", "completing", "closed",
+  "discussing",
+  "researching",
+  "planning",
+  "executing",
+  "verifying",
+  "reviewing",
+  "completing",
+  "closed",
 ];
 
 export const PHASE_DISPLAY_NAMES: Record<SliceStatus, string> = {
@@ -76,7 +81,8 @@ interface WorkflowSlice {
 export function buildWorkflowMarkdown(snapshot: OverlayProjectSnapshot): string {
   const project = snapshot.project as { name: string } | null;
   if (!project) return "# No project data\n\nRun `/tff:new` to initialize a project.";
-  if (!snapshot.milestone) return "# No active milestone\n\nRun `/tff:new-milestone` to start a new milestone.";
+  if (!snapshot.milestone)
+    return "# No active milestone\n\nRun `/tff:new-milestone` to start a new milestone.";
 
   const allSlices = snapshot.slices as WorkflowSlice[];
   const active = allSlices
@@ -123,7 +129,10 @@ export class WorkflowComponent implements Component {
   async refresh(): Promise<void> {
     const result = await this.overlayData.getProjectSnapshot();
     const fallback: OverlayProjectSnapshot = {
-      project: null, milestone: null, slices: [], taskCounts: new Map(),
+      project: null,
+      milestone: null,
+      slices: [],
+      taskCounts: new Map(),
     };
     const snapshot = result.ok ? result.data : fallback;
     const md = buildWorkflowMarkdown(snapshot);
