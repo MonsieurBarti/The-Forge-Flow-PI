@@ -6,6 +6,7 @@ import {
   AgentStatusSchema,
   SelfReviewChecklistSchema,
 } from "./agent-status.schema";
+import { TurnMetricsSchema } from "./turn-metrics.schema";
 
 export const AgentCostSchema = z.object({
   provider: z.string().min(1),
@@ -26,6 +27,7 @@ export const AgentResultSchema = z.object({
   selfReview: SelfReviewChecklistSchema,
   cost: AgentCostSchema,
   durationMs: z.number().int().nonnegative(),
+  turns: z.array(TurnMetricsSchema).default([]),
   error: z.string().optional(),
 });
 export type AgentResult = z.infer<typeof AgentResultSchema>;

@@ -64,4 +64,21 @@ describe("AgentResultBuilder", () => {
     expect(result.output).toBe("Fixed the bug");
     expect(result.durationMs).toBe(5000);
   });
+
+  it("defaults turns to empty array", () => {
+    const result = new AgentResultBuilder().build();
+    expect(result.turns).toEqual([]);
+  });
+
+  it("overrides turns with withTurns()", () => {
+    const turns = [
+      {
+        turnIndex: 0,
+        toolCalls: [{ toolCallId: "tc_1", toolName: "Read", durationMs: 100, isError: false }],
+        durationMs: 5000,
+      },
+    ];
+    const result = new AgentResultBuilder().withTurns(turns).build();
+    expect(result.turns).toEqual(turns);
+  });
 });

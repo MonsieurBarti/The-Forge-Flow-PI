@@ -3,6 +3,7 @@ import type { AgentType } from "./agent-card.schema";
 import type { AgentCost, AgentResult } from "./agent-result.schema";
 import { AgentResultSchema } from "./agent-result.schema";
 import type { AgentConcern, AgentStatus, SelfReviewChecklist } from "./agent-status.schema";
+import type { TurnMetrics } from "./turn-metrics.schema";
 
 const DEFAULT_SELF_REVIEW: SelfReviewChecklist = {
   dimensions: [
@@ -31,6 +32,7 @@ export class AgentResultBuilder {
   };
   private _durationMs: number = faker.number.int({ min: 1000, max: 120000 });
   private _error?: string;
+  private _turns: TurnMetrics[] = [];
 
   withTaskId(taskId: string): this {
     this._taskId = taskId;
@@ -72,6 +74,10 @@ export class AgentResultBuilder {
     this._error = error;
     return this;
   }
+  withTurns(turns: TurnMetrics[]): this {
+    this._turns = turns;
+    return this;
+  }
 
   asDone(): this {
     this._status = "DONE";
@@ -104,6 +110,7 @@ export class AgentResultBuilder {
       selfReview: this._selfReview,
       cost: this._cost,
       durationMs: this._durationMs,
+      turns: this._turns,
       error: this._error,
     });
   }
