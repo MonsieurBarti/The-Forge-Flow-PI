@@ -96,7 +96,8 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const logger = new ConsoleLoggerAdapter();
   const eventBus = new InProcessEventBus(logger);
   const dateProvider = new SystemDateProvider();
-  const _agentEventHub = new InMemoryAgentEventHub();
+  const agentEventHub = new InMemoryAgentEventHub();
+  const sharedAgentDispatch = new PiAgentDispatchAdapter({ agentEventPort: agentEventHub });
 
   // --- Agent registry ---
   if (!isAgentRegistryInitialized()) {
@@ -239,7 +240,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     return "milestone/M05";
   });
   const piFixerAdapter = new PiFixerAdapter(
-    new PiAgentDispatchAdapter(),
+    sharedAgentDispatch,
     templateLoader,
     modelResolver,
     logger,
@@ -249,7 +250,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     beadSliceSpecAdapter,
     gitChangedFilesAdapter,
     freshReviewerService,
-    new PiAgentDispatchAdapter(),
+    sharedAgentDispatch,
     critiqueReflectionService,
     reviewPromptBuilder,
     modelResolver,
@@ -265,7 +266,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const verifyUseCase = new VerifyAcceptanceCriteriaUseCase(
     beadSliceSpecAdapter,
     freshReviewerService,
-    new PiAgentDispatchAdapter(),
+    sharedAgentDispatch,
     piFixerAdapter,
     verificationRepository,
     new InMemoryReviewUIAdapter(), // TODO(M05-S09): wire ReviewUIPort adapter selection
@@ -353,6 +354,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     overlayDataPort: overlayDataAdapter,
     budgetTrackingPort,
     eventBus,
+    agentEventPort: agentEventHub,
     hotkeys,
     logger,
   });
