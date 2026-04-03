@@ -3,6 +3,7 @@ import type { HotkeysConfig } from "@hexagons/settings/domain/project-settings.s
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@infrastructure/pi";
 import { EVENT_NAMES } from "@kernel/event-names";
 import type { EventBusPort } from "@kernel/ports/event-bus.port";
+import type { AgentEventPort } from "@kernel/ports/agent-event.port";
 import type { LoggerPort } from "@kernel/ports/logger.port";
 import type { OverlayDataPort } from "@kernel/ports/overlay-data.port";
 import { describe, expect, it, vi } from "vitest";
@@ -39,6 +40,15 @@ function mockLogger(): LoggerPort {
   };
 }
 
+function mockAgentEventPort(): AgentEventPort {
+  return {
+    subscribe: vi.fn(),
+    subscribeAll: vi.fn(() => () => {}),
+    emit: vi.fn(),
+    clear: vi.fn(),
+  } as unknown as AgentEventPort;
+}
+
 function mockOverlayDataPort(): OverlayDataPort {
   return {
     getProjectSnapshot: vi.fn(),
@@ -72,6 +82,7 @@ describe("registerOverlayExtension", () => {
       overlayDataPort: mockOverlayDataPort(),
       budgetTrackingPort: { getUsagePercent: vi.fn() } as unknown as BudgetTrackingPort,
       eventBus: { publish: vi.fn(), subscribe: vi.fn() } as unknown as EventBusPort,
+      agentEventPort: mockAgentEventPort(),
       hotkeys: DEFAULT_HOTKEYS,
       logger: mockLogger(),
     });
@@ -88,6 +99,7 @@ describe("registerOverlayExtension", () => {
       overlayDataPort: mockOverlayDataPort(),
       budgetTrackingPort: { getUsagePercent: vi.fn() } as unknown as BudgetTrackingPort,
       eventBus: { publish: vi.fn(), subscribe: vi.fn() } as unknown as EventBusPort,
+      agentEventPort: mockAgentEventPort(),
       hotkeys: DEFAULT_HOTKEYS,
       logger: mockLogger(),
     });
@@ -104,6 +116,7 @@ describe("registerOverlayExtension", () => {
       overlayDataPort: mockOverlayDataPort(),
       budgetTrackingPort: { getUsagePercent: vi.fn() } as unknown as BudgetTrackingPort,
       eventBus: { publish: vi.fn(), subscribe: vi.fn() } as unknown as EventBusPort,
+      agentEventPort: mockAgentEventPort(),
       hotkeys: DEFAULT_HOTKEYS,
       logger: mockLogger(),
     });
@@ -121,6 +134,7 @@ describe("registerOverlayExtension", () => {
       overlayDataPort: mockOverlayDataPort(),
       budgetTrackingPort: { getUsagePercent: vi.fn() } as unknown as BudgetTrackingPort,
       eventBus: { publish: vi.fn(), subscribe: vi.fn() } as unknown as EventBusPort,
+      agentEventPort: mockAgentEventPort(),
       hotkeys: DEFAULT_HOTKEYS,
       logger: mockLogger(),
     });
@@ -172,6 +186,7 @@ describe("registerOverlayExtension", () => {
       overlayDataPort: mockOverlayDataPort(),
       budgetTrackingPort: { getUsagePercent: vi.fn() } as unknown as BudgetTrackingPort,
       eventBus: { publish: vi.fn(), subscribe: vi.fn() } as unknown as EventBusPort,
+      agentEventPort: mockAgentEventPort(),
       hotkeys: customHotkeys,
       logger: mockLogger(),
     });
@@ -189,6 +204,7 @@ describe("registerOverlayExtension", () => {
       overlayDataPort: mockOverlayDataPort(),
       budgetTrackingPort: { getUsagePercent: vi.fn() } as unknown as BudgetTrackingPort,
       eventBus,
+      agentEventPort: mockAgentEventPort(),
       hotkeys: DEFAULT_HOTKEYS,
       logger: mockLogger(),
     });
@@ -218,6 +234,7 @@ describe("registerOverlayExtension", () => {
       overlayDataPort: mockOverlayDataPort(),
       budgetTrackingPort: { getUsagePercent: vi.fn() } as unknown as BudgetTrackingPort,
       eventBus,
+      agentEventPort: mockAgentEventPort(),
       hotkeys: DEFAULT_HOTKEYS,
       logger: mockLogger(),
     });
@@ -236,6 +253,7 @@ describe("registerOverlayExtension", () => {
       overlayDataPort: mockOverlayDataPort(),
       budgetTrackingPort: { getUsagePercent: vi.fn() } as unknown as BudgetTrackingPort,
       eventBus: { publish: vi.fn(), subscribe: vi.fn() } as unknown as EventBusPort,
+      agentEventPort: mockAgentEventPort(),
       hotkeys: DEFAULT_HOTKEYS,
       logger: mockLogger(),
     });
