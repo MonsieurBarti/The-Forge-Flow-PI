@@ -164,6 +164,7 @@ describe("registerOverlayExtension", () => {
       overlayDataPort: mockOverlayDataPort(),
       budgetTrackingPort: { getUsagePercent: vi.fn() } as unknown as BudgetTrackingPort,
       eventBus: { publish: vi.fn(), subscribe: vi.fn() } as unknown as EventBusPort,
+      agentEventPort: mockAgentEventPort(),
       hotkeys: DEFAULT_HOTKEYS,
       logger,
     });
