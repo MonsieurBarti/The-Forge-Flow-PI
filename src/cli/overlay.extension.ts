@@ -1,4 +1,4 @@
-import type { OverlayHandle } from "@mariozechner/pi-tui";
+import type { KeyId, OverlayHandle } from "@mariozechner/pi-tui";
 import { Box, Text } from "@mariozechner/pi-tui";
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@infrastructure/pi";
 import type { OverlayDataPort } from "@kernel/ports/overlay-data.port";
@@ -50,7 +50,7 @@ export function registerOverlayExtension(
     handler: (ctx: ExtensionContext) => Promise<void> | void,
   ): void => {
     try {
-      api.registerShortcut(keyId, { description, handler });
+      api.registerShortcut(keyId as KeyId, { description, handler });
     } catch (e) {
       deps.logger.warn(
         `Shortcut registration failed for ${keyId} — use slash command instead`,

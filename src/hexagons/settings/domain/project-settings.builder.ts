@@ -4,6 +4,7 @@ import type {
   AutonomyMode,
   BeadsConfig,
   GuardrailsConfig,
+  HotkeysConfig,
   ModelRoutingConfig,
   OverseerConfig,
   SettingsProps,
@@ -13,6 +14,7 @@ import {
   AUTONOMY_DEFAULTS,
   BEADS_DEFAULTS,
   GUARDRAILS_DEFAULTS,
+  HOTKEYS_DEFAULTS,
   MODEL_ROUTING_DEFAULTS,
   OVERSEER_DEFAULTS,
 } from "./project-settings.schemas";
@@ -25,6 +27,7 @@ export class ProjectSettingsBuilder {
   private _beads: BeadsConfig = { ...BEADS_DEFAULTS };
   private _guardrails: GuardrailsConfig = { ...GUARDRAILS_DEFAULTS };
   private _overseer: OverseerConfig = { ...OVERSEER_DEFAULTS };
+  private _hotkeys: HotkeysConfig = { ...HOTKEYS_DEFAULTS };
 
   withModelRouting(config: Partial<ModelRoutingConfig>): this {
     Object.assign(this._modelRouting, config);
@@ -56,6 +59,11 @@ export class ProjectSettingsBuilder {
     return this;
   }
 
+  withHotkeys(config: Partial<HotkeysConfig>): this {
+    Object.assign(this._hotkeys, config);
+    return this;
+  }
+
   withAutonomyMode(mode: AutonomyMode): this {
     this._autonomy.mode = mode;
     return this;
@@ -78,6 +86,7 @@ export class ProjectSettingsBuilder {
       beads: this._beads,
       guardrails: this._guardrails,
       overseer: this._overseer,
+      hotkeys: this._hotkeys,
     };
   }
 }
