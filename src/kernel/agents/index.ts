@@ -1,3 +1,29 @@
+// Agent event streaming
+export type {
+  AgentEvent,
+  AgentMessageEnd,
+  AgentMessageStart,
+  AgentMessageUpdate,
+  AgentToolExecutionEnd,
+  AgentToolExecutionStart,
+  AgentToolExecutionUpdate,
+  AgentTurnEnd,
+  AgentTurnStart,
+} from "./agent-event.schema";
+export {
+  AgentEventSchema,
+  AgentMessageEndSchema,
+  AgentMessageStartSchema,
+  AgentMessageUpdateSchema,
+  AgentToolExecutionEndSchema,
+  AgentToolExecutionStartSchema,
+  AgentToolExecutionUpdateSchema,
+  AgentTurnEndSchema,
+  AgentTurnStartSchema,
+} from "./agent-event.schema";
+// Turn metrics
+export type { ToolCallMetrics, TurnMetrics } from "./turn-metrics.schema";
+export { ToolCallMetricsSchema, TurnMetricsSchema } from "./turn-metrics.schema";
 // Schemas
 // New schema types
 export type {
