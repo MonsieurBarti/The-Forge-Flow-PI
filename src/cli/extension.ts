@@ -58,6 +58,7 @@ import {
   ConsoleLoggerAdapter,
   err,
   GitCliAdapter,
+  InMemoryAgentEventHub,
   InProcessEventBus,
   initializeAgentRegistry,
   isAgentRegistryInitialized,
@@ -92,6 +93,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const logger = new ConsoleLoggerAdapter();
   const eventBus = new InProcessEventBus(logger);
   const dateProvider = new SystemDateProvider();
+  const _agentEventHub = new InMemoryAgentEventHub();
 
   // --- Agent registry ---
   if (!isAgentRegistryInitialized()) {

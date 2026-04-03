@@ -47,8 +47,7 @@ export class TurnMetricsCollector {
     return this.turns.map((t) => ({
       turnIndex: t.turnIndex,
       toolCalls: [...t.toolCalls],
-      durationMs:
-        t.endTimestamp !== null ? t.endTimestamp - t.startTimestamp : 0,
+      durationMs: t.endTimestamp !== null ? t.endTimestamp - t.startTimestamp : 0,
     }));
   }
 

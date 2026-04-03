@@ -74,9 +74,7 @@ describe("AgentResultBuilder", () => {
     const turns = [
       {
         turnIndex: 0,
-        toolCalls: [
-          { toolCallId: "tc_1", toolName: "Read", durationMs: 100, isError: false },
-        ],
+        toolCalls: [{ toolCallId: "tc_1", toolName: "Read", durationMs: 100, isError: false }],
         durationMs: 5000,
       },
     ];

@@ -13,9 +13,6 @@ import { GUARDRAIL_PROMPT } from "@kernel/agents/guardrail-prompt";
 import type { AgentEventPort } from "@kernel/ports";
 import type { Api, AssistantMessageEvent, KnownProvider, Model } from "@mariozechner/pi-ai";
 import { getModels, getProviders } from "@mariozechner/pi-ai";
-import type { ToolExecutionEntry, TurnBoundaryEntry } from "../domain/journal-entry.schemas";
-import type { JournalRepositoryPort } from "../domain/ports/journal-repository.port";
-import { TurnMetricsCollector } from "../domain/turn-metrics-collector";
 import {
   type AgentSession,
   type AuthStorage,
@@ -31,6 +28,9 @@ import {
   SessionManager,
   writeTool,
 } from "@mariozechner/pi-coding-agent";
+import type { ToolExecutionEntry, TurnBoundaryEntry } from "../domain/journal-entry.schemas";
+import type { JournalRepositoryPort } from "../domain/ports/journal-repository.port";
+import { TurnMetricsCollector } from "../domain/turn-metrics-collector";
 
 /** Tool type matching CreateAgentSessionOptions["tools"] elements. */
 type PiTool = (typeof codingTools)[number];
@@ -139,10 +139,10 @@ export class PiAgentDispatchAdapter extends AgentDispatchPort {
       const journalRepo = this.deps.journalRepository;
 
       if (agentEventPort) {
-        collector = new TurnMetricsCollector();
-        const unsubCollector = agentEventPort.subscribe(
-          config.taskId,
-          (e) => collector!.record(e),
+        const metricsCollector = new TurnMetricsCollector();
+        collector = metricsCollector;
+        const unsubCollector = agentEventPort.subscribe(config.taskId, (e) =>
+          metricsCollector.record(e),
         );
 
         let turnIndex = -1;

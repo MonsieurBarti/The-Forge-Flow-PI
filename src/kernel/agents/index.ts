@@ -1,29 +1,5 @@
 // Agent event streaming
-export type {
-  AgentEvent,
-  AgentMessageEnd,
-  AgentMessageStart,
-  AgentMessageUpdate,
-  AgentToolExecutionEnd,
-  AgentToolExecutionStart,
-  AgentToolExecutionUpdate,
-  AgentTurnEnd,
-  AgentTurnStart,
-} from "./agent-event.schema";
-export {
-  AgentEventSchema,
-  AgentMessageEndSchema,
-  AgentMessageStartSchema,
-  AgentMessageUpdateSchema,
-  AgentToolExecutionEndSchema,
-  AgentToolExecutionStartSchema,
-  AgentToolExecutionUpdateSchema,
-  AgentTurnEndSchema,
-  AgentTurnStartSchema,
-} from "./agent-event.schema";
-// Turn metrics
-export type { ToolCallMetrics, TurnMetrics } from "./turn-metrics.schema";
-export { ToolCallMetricsSchema, TurnMetricsSchema } from "./turn-metrics.schema";
+
 // Schemas
 // New schema types
 export type {
@@ -50,6 +26,28 @@ export type { AgentDispatchConfig, ResolvedModel } from "./agent-dispatch.schema
 export { AgentDispatchConfigSchema, ResolvedModelSchema } from "./agent-dispatch.schema";
 // Errors
 export { AgentLoadError, AgentRegistryError, AgentValidationError } from "./agent-errors";
+export type {
+  AgentEvent,
+  AgentMessageEnd,
+  AgentMessageStart,
+  AgentMessageUpdate,
+  AgentToolExecutionEnd,
+  AgentToolExecutionStart,
+  AgentToolExecutionUpdate,
+  AgentTurnEnd,
+  AgentTurnStart,
+} from "./agent-event.schema";
+export {
+  AgentEventSchema,
+  AgentMessageEndSchema,
+  AgentMessageStartSchema,
+  AgentMessageUpdateSchema,
+  AgentToolExecutionEndSchema,
+  AgentToolExecutionStartSchema,
+  AgentToolExecutionUpdateSchema,
+  AgentTurnEndSchema,
+  AgentTurnStartSchema,
+} from "./agent-event.schema";
 // Registry
 export {
   AgentRegistry,
@@ -96,3 +94,6 @@ export { createAgentTemplate } from "./agent-template";
 // Services
 export { AgentValidationService } from "./agent-validation.service";
 export { GUARDRAIL_PROMPT } from "./guardrail-prompt";
+// Turn metrics
+export type { ToolCallMetrics, TurnMetrics } from "./turn-metrics.schema";
+export { ToolCallMetricsSchema, TurnMetricsSchema } from "./turn-metrics.schema";

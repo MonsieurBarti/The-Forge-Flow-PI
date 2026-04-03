@@ -4,9 +4,7 @@ import { TurnMetricsCollector } from "./turn-metrics-collector";
 
 const TASK_ID = crypto.randomUUID();
 
-function event(
-  overrides: Partial<AgentEvent> & { type: AgentEvent["type"] },
-): AgentEvent {
+function event(overrides: Partial<AgentEvent> & { type: AgentEvent["type"] }): AgentEvent {
   return {
     taskId: TASK_ID,
     turnIndex: 0,
@@ -23,9 +21,7 @@ describe("TurnMetricsCollector", () => {
 
   it("produces one turn from turn_start + turn_end", () => {
     const collector = new TurnMetricsCollector();
-    collector.record(
-      event({ type: "turn_start", turnIndex: 0, timestamp: 1000 }),
-    );
+    collector.record(event({ type: "turn_start", turnIndex: 0, timestamp: 1000 }));
     collector.record(
       event({
         type: "turn_end",
@@ -44,9 +40,7 @@ describe("TurnMetricsCollector", () => {
 
   it("accumulates tool calls within a turn", () => {
     const collector = new TurnMetricsCollector();
-    collector.record(
-      event({ type: "turn_start", turnIndex: 0, timestamp: 1000 }),
-    );
+    collector.record(event({ type: "turn_start", turnIndex: 0, timestamp: 1000 }));
     collector.record(
       event({
         type: "tool_execution_end",
@@ -86,9 +80,7 @@ describe("TurnMetricsCollector", () => {
 
   it("tracks multiple turns", () => {
     const collector = new TurnMetricsCollector();
-    collector.record(
-      event({ type: "turn_start", turnIndex: 0, timestamp: 1000 }),
-    );
+    collector.record(event({ type: "turn_start", turnIndex: 0, timestamp: 1000 }));
     collector.record(
       event({
         type: "turn_end",
@@ -97,9 +89,7 @@ describe("TurnMetricsCollector", () => {
         timestamp: 2000,
       }),
     );
-    collector.record(
-      event({ type: "turn_start", turnIndex: 1, timestamp: 2000 }),
-    );
+    collector.record(event({ type: "turn_start", turnIndex: 1, timestamp: 2000 }));
     collector.record(
       event({
         type: "tool_execution_end",
@@ -129,9 +119,7 @@ describe("TurnMetricsCollector", () => {
 
   it("handles partial turn (no turn_end) with durationMs = 0", () => {
     const collector = new TurnMetricsCollector();
-    collector.record(
-      event({ type: "turn_start", turnIndex: 0, timestamp: 1000 }),
-    );
+    collector.record(event({ type: "turn_start", turnIndex: 0, timestamp: 1000 }));
     collector.record(
       event({
         type: "tool_execution_end",
@@ -152,9 +140,7 @@ describe("TurnMetricsCollector", () => {
 
   it("toMetrics() is idempotent", () => {
     const collector = new TurnMetricsCollector();
-    collector.record(
-      event({ type: "turn_start", turnIndex: 0, timestamp: 1000 }),
-    );
+    collector.record(event({ type: "turn_start", turnIndex: 0, timestamp: 1000 }));
     collector.record(
       event({
         type: "turn_end",
@@ -171,12 +157,8 @@ describe("TurnMetricsCollector", () => {
 
   it("ignores message events", () => {
     const collector = new TurnMetricsCollector();
-    collector.record(
-      event({ type: "turn_start", turnIndex: 0, timestamp: 1000 }),
-    );
-    collector.record(
-      event({ type: "message_start", turnIndex: 0, timestamp: 1100 }),
-    );
+    collector.record(event({ type: "turn_start", turnIndex: 0, timestamp: 1000 }));
+    collector.record(event({ type: "message_start", turnIndex: 0, timestamp: 1100 }));
     collector.record(
       event({
         type: "message_update",
@@ -185,9 +167,7 @@ describe("TurnMetricsCollector", () => {
         timestamp: 1200,
       }),
     );
-    collector.record(
-      event({ type: "message_end", turnIndex: 0, timestamp: 1300 }),
-    );
+    collector.record(event({ type: "message_end", turnIndex: 0, timestamp: 1300 }));
     collector.record(
       event({
         type: "turn_end",
@@ -204,9 +184,7 @@ describe("TurnMetricsCollector", () => {
 
   it("ignores tool_execution_start and tool_execution_update", () => {
     const collector = new TurnMetricsCollector();
-    collector.record(
-      event({ type: "turn_start", turnIndex: 0, timestamp: 1000 }),
-    );
+    collector.record(event({ type: "turn_start", turnIndex: 0, timestamp: 1000 }));
     collector.record(
       event({
         type: "tool_execution_start",

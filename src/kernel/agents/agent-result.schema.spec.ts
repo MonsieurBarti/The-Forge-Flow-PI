@@ -150,9 +150,7 @@ describe("AgentResultSchema", () => {
       turns: [
         {
           turnIndex: 0,
-          toolCalls: [
-            { toolCallId: "tc_1", toolName: "Read", durationMs: 50, isError: false },
-          ],
+          toolCalls: [{ toolCallId: "tc_1", toolName: "Read", durationMs: 50, isError: false }],
           durationMs: 3000,
         },
         { turnIndex: 1, durationMs: 2000 },
