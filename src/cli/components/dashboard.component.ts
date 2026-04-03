@@ -1,22 +1,11 @@
-import type { Component, TUI } from "@mariozechner/pi-tui";
-import { Markdown } from "@mariozechner/pi-tui";
-import type { MarkdownTheme } from "@mariozechner/pi-tui";
-import type { OverlayDataPort, OverlayProjectSnapshot } from "@kernel/ports/overlay-data.port";
 import type { BudgetTrackingPort } from "@hexagons/settings/domain/ports/budget-tracking.port";
 import type { SliceStatus } from "@hexagons/slice/domain/slice.schemas";
+import type { OverlayDataPort, OverlayProjectSnapshot } from "@kernel/ports/overlay-data.port";
+import type { Component, MarkdownTheme, TUI } from "@mariozechner/pi-tui";
+import { Markdown } from "@mariozechner/pi-tui";
+import { NEXT_ACTION } from "./slice-display.constants";
 
-// --- Exported helpers ---
-
-export const NEXT_ACTION: Record<SliceStatus, { cmd: string; desc: string }> = {
-  discussing: { cmd: "/tff:research", desc: "Research the current slice" },
-  researching: { cmd: "/tff:plan", desc: "Plan the current slice" },
-  planning: { cmd: "/tff:execute", desc: "Execute the current slice" },
-  executing: { cmd: "/tff:verify", desc: "Verify acceptance criteria" },
-  verifying: { cmd: "/tff:ship", desc: "Ship the slice PR" },
-  reviewing: { cmd: "/tff:ship", desc: "Complete the review" },
-  completing: { cmd: "/tff:complete-milestone", desc: "Complete the milestone" },
-  closed: { cmd: "/tff:status", desc: "All slices closed" },
-};
+export { NEXT_ACTION };
 
 export function progressBar(percent: number, width = 16): string {
   const clamped = Math.max(0, Math.min(100, percent));
@@ -63,9 +52,7 @@ export function buildMarkdown(snapshot: OverlayProjectSnapshot, budgetPercent: n
 
   // Next action heuristic
   const activeSlice = slices.find((s) => s.status !== "closed");
-  const nextAction = activeSlice
-    ? NEXT_ACTION[activeSlice.status]
-    : NEXT_ACTION.completing;
+  const nextAction = activeSlice ? NEXT_ACTION[activeSlice.status] : NEXT_ACTION.completing;
 
   const lines = [
     `# ${project.name}`,

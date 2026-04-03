@@ -2,28 +2,9 @@ import type { SliceStatus } from "@hexagons/slice/domain/slice.schemas";
 import type { OverlayDataPort, OverlayProjectSnapshot } from "@kernel/ports/overlay-data.port";
 import type { Component, MarkdownTheme, TUI } from "@mariozechner/pi-tui";
 import { Markdown } from "@mariozechner/pi-tui";
+import { PHASE_DISPLAY_NAMES, PHASE_ORDER } from "./slice-display.constants";
 
-export const PHASE_ORDER: SliceStatus[] = [
-  "discussing",
-  "researching",
-  "planning",
-  "executing",
-  "verifying",
-  "reviewing",
-  "completing",
-  "closed",
-];
-
-export const PHASE_DISPLAY_NAMES: Record<SliceStatus, string> = {
-  discussing: "discuss",
-  researching: "research",
-  planning: "plan",
-  executing: "execute",
-  verifying: "verify",
-  reviewing: "review",
-  completing: "ship",
-  closed: "closed",
-};
+export { PHASE_DISPLAY_NAMES, PHASE_ORDER };
 
 export function renderPipeline(currentStatus: SliceStatus): string {
   const currentIndex = PHASE_ORDER.indexOf(currentStatus);
