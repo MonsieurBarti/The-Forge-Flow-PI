@@ -130,6 +130,13 @@ const BaseOverseerConfigSchema = z.object({
 });
 export type OverseerConfig = z.infer<typeof BaseOverseerConfigSchema>;
 
+const BaseHotkeysConfigSchema = z.object({
+  dashboard: z.string().default("ctrl+alt+d"),
+  workflow: z.string().default("ctrl+alt+w"),
+  executionMonitor: z.string().default("ctrl+alt+e"),
+});
+export type HotkeysConfig = z.infer<typeof BaseHotkeysConfigSchema>;
+
 // ---------------------------------------------------------------------------
 // Fully-hydrated defaults (required by Zod 4 — parent .default() is literal)
 // ---------------------------------------------------------------------------
@@ -179,6 +186,12 @@ export const OVERSEER_DEFAULTS: OverseerConfig = {
   retryLoop: { threshold: 3 },
 };
 
+export const HOTKEYS_DEFAULTS: HotkeysConfig = {
+  dashboard: "ctrl+alt+d",
+  workflow: "ctrl+alt+w",
+  executionMonitor: "ctrl+alt+e",
+};
+
 // ---------------------------------------------------------------------------
 // Exported schemas with .catch() for resilience
 // ---------------------------------------------------------------------------
@@ -189,6 +202,7 @@ export const AutoLearnConfigSchema = BaseAutoLearnConfigSchema.catch(AUTO_LEARN_
 export const BeadsConfigSchema = BaseBeadsConfigSchema.catch(BEADS_DEFAULTS);
 export const GuardrailsConfigSchema = BaseGuardrailsConfigSchema.catch(GUARDRAILS_DEFAULTS);
 export const OverseerConfigSchema = BaseOverseerConfigSchema.catch(OVERSEER_DEFAULTS);
+export const HotkeysConfigSchema = BaseHotkeysConfigSchema.catch(HOTKEYS_DEFAULTS);
 
 // ---------------------------------------------------------------------------
 // Top-level SettingsSchema
@@ -201,6 +215,7 @@ export const SETTINGS_DEFAULTS = {
   beads: BEADS_DEFAULTS,
   guardrails: GUARDRAILS_DEFAULTS,
   overseer: OVERSEER_DEFAULTS,
+  hotkeys: HOTKEYS_DEFAULTS,
 };
 
 export const SettingsSchema = z
@@ -211,6 +226,7 @@ export const SettingsSchema = z
     beads: BeadsConfigSchema.default(BEADS_DEFAULTS),
     guardrails: GuardrailsConfigSchema.default(GUARDRAILS_DEFAULTS),
     overseer: OverseerConfigSchema.default(OVERSEER_DEFAULTS),
+    hotkeys: HotkeysConfigSchema.default(HOTKEYS_DEFAULTS),
   })
   .default(SETTINGS_DEFAULTS);
 export type SettingsProps = z.infer<typeof SettingsSchema>;
@@ -227,6 +243,9 @@ export const ENV_VAR_MAP: Record<string, string[]> = {
   TFF_AUTONOMY_MAX_RETRIES: ["autonomy", "maxRetries"],
   TFF_BEADS_TIMEOUT: ["beads", "timeout"],
   TFF_OVERSEER_ENABLED: ["overseer", "enabled"],
+  TFF_HOTKEY_DASHBOARD: ["hotkeys", "dashboard"],
+  TFF_HOTKEY_WORKFLOW: ["hotkeys", "workflow"],
+  TFF_HOTKEY_EXECUTION_MONITOR: ["hotkeys", "executionMonitor"],
 };
 
 // ---------------------------------------------------------------------------
