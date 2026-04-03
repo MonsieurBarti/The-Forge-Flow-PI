@@ -6,9 +6,12 @@ import {
   type OverlayProjectSnapshot,
   type OverlaySliceSnapshot,
 } from "@kernel/ports/overlay-data.port";
-import type { ProjectRepositoryPort } from "@hexagons/project/domain/ports/project-repository.port";
+import type { Milestone } from "@hexagons/milestone/domain/milestone.aggregate";
 import type { MilestoneRepositoryPort } from "@hexagons/milestone/domain/ports/milestone-repository.port";
+import type { ProjectRepositoryPort } from "@hexagons/project/domain/ports/project-repository.port";
+import type { Slice } from "@hexagons/slice/domain/slice.aggregate";
 import type { SliceRepositoryPort } from "@hexagons/slice/domain/ports/slice-repository.port";
+import type { Task } from "@hexagons/task/domain/task.aggregate";
 import type { TaskRepositoryPort } from "@hexagons/task/domain/ports/task-repository.port";
 
 export class OverlayDataAdapter extends OverlayDataPort {
@@ -25,25 +28,24 @@ export class OverlayDataAdapter extends OverlayDataPort {
     const projectResult = await this.projectRepo.findSingleton();
     const project = projectResult.ok ? projectResult.data : null;
 
-    let milestone: unknown | null = null;
-    let slices: unknown[] = [];
+    let milestone: Milestone | null = null;
+    let slices: Slice[] = [];
     const taskCounts = new Map<string, { done: number; total: number }>();
 
     if (project) {
-      const msResult = await this.milestoneRepo.findByProjectId((project as any).id);
+      const msResult = await this.milestoneRepo.findByProjectId(project.id);
       if (msResult.ok) {
-        const active = msResult.data.find((m: any) => m.status !== "closed");
-        milestone = active ?? null;
+        milestone = msResult.data.find((m) => m.status !== "closed") ?? null;
 
-        if (active) {
-          const sliceResult = await this.sliceRepo.findByMilestoneId(active.id);
+        if (milestone) {
+          const sliceResult = await this.sliceRepo.findByMilestoneId(milestone.id);
           if (sliceResult.ok) {
             slices = sliceResult.data;
             for (const slice of sliceResult.data) {
-              const taskResult = await this.taskRepo.findBySliceId((slice as any).id);
+              const taskResult = await this.taskRepo.findBySliceId(slice.id);
               if (taskResult.ok) {
-                const done = taskResult.data.filter((t: any) => t.status === "closed").length;
-                taskCounts.set((slice as any).id, { done, total: taskResult.data.length });
+                const done = taskResult.data.filter((t: Task) => t.status === "closed").length;
+                taskCounts.set(slice.id, { done, total: taskResult.data.length });
               }
             }
           }
