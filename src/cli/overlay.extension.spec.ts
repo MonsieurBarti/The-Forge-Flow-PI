@@ -4,6 +4,7 @@ import type { LoggerPort } from "@kernel/ports/logger.port";
 import type { HotkeysConfig } from "@hexagons/settings/domain/project-settings.schemas";
 import type { EventBusPort } from "@kernel/ports/event-bus.port";
 import type { BudgetTrackingPort } from "@hexagons/settings/domain/ports/budget-tracking.port";
+import { EVENT_NAMES } from "@kernel/event-names";
 import { describe, expect, it, vi } from "vitest";
 import { registerOverlayExtension } from "./overlay.extension";
 
@@ -43,6 +44,19 @@ function mockOverlayDataPort(): OverlayDataPort {
     getProjectSnapshot: vi.fn(),
     getSliceSnapshot: vi.fn(),
   } as unknown as OverlayDataPort;
+}
+
+function mockEventBus(): EventBusPort & { handlers: Map<string, Function[]> } {
+  const handlers = new Map<string, Function[]>();
+  return {
+    publish: vi.fn(),
+    subscribe: vi.fn((eventName: string, handler: Function) => {
+      const list = handlers.get(eventName) ?? [];
+      list.push(handler);
+      handlers.set(eventName, list);
+    }),
+    handlers,
+  } as unknown as EventBusPort & { handlers: Map<string, Function[]> };
 }
 
 const DEFAULT_HOTKEYS: HotkeysConfig = {
@@ -165,5 +179,60 @@ describe("registerOverlayExtension", () => {
     expect(api.shortcuts.has("ctrl+d")).toBe(true);
     expect(api.shortcuts.has("ctrl+w")).toBe(true);
     expect(api.shortcuts.has("ctrl+e")).toBe(true);
+  });
+
+  it("registers 4 EventBus subscriptions with correct event names", () => {
+    const api = mockApi();
+    const eventBus = mockEventBus();
+
+    registerOverlayExtension(api, {
+      overlayDataPort: mockOverlayDataPort(),
+      budgetTrackingPort: { getUsagePercent: vi.fn() } as unknown as BudgetTrackingPort,
+      eventBus,
+      hotkeys: DEFAULT_HOTKEYS,
+      logger: mockLogger(),
+    });
+
+    expect(eventBus.subscribe).toHaveBeenCalledTimes(4);
+    expect(eventBus.handlers.has(EVENT_NAMES.SLICE_STATUS_CHANGED)).toBe(true);
+    expect(eventBus.handlers.has(EVENT_NAMES.TASK_COMPLETED)).toBe(true);
+    expect(eventBus.handlers.has(EVENT_NAMES.TASK_CREATED)).toBe(true);
+    expect(eventBus.handlers.has(EVENT_NAMES.MILESTONE_CLOSED)).toBe(true);
+  });
+
+  it("EventBus subscription is no-op when dashboard not yet opened", async () => {
+    const api = mockApi();
+    const eventBus = mockEventBus();
+
+    registerOverlayExtension(api, {
+      overlayDataPort: mockOverlayDataPort(),
+      budgetTrackingPort: { getUsagePercent: vi.fn() } as unknown as BudgetTrackingPort,
+      eventBus,
+      hotkeys: DEFAULT_HOTKEYS,
+      logger: mockLogger(),
+    });
+
+    // Trigger each subscription handler — dashboardComponent is undefined, should not throw
+    for (const handlers of eventBus.handlers.values()) {
+      for (const handler of handlers) {
+        await expect(handler({})).resolves.toBeUndefined();
+      }
+    }
+  });
+
+  it("workflow and execution monitor still register commands and shortcuts", () => {
+    const api = mockApi();
+    registerOverlayExtension(api, {
+      overlayDataPort: mockOverlayDataPort(),
+      budgetTrackingPort: { getUsagePercent: vi.fn() } as unknown as BudgetTrackingPort,
+      eventBus: { publish: vi.fn(), subscribe: vi.fn() } as unknown as EventBusPort,
+      hotkeys: DEFAULT_HOTKEYS,
+      logger: mockLogger(),
+    });
+
+    expect(api.commands.has("tff:workflow-view")).toBe(true);
+    expect(api.commands.has("tff:execution-monitor")).toBe(true);
+    expect(api.shortcuts.has(DEFAULT_HOTKEYS.workflow)).toBe(true);
+    expect(api.shortcuts.has(DEFAULT_HOTKEYS.executionMonitor)).toBe(true);
   });
 });
