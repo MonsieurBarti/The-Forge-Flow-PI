@@ -2,6 +2,7 @@ import type {
   AutoLearnConfig,
   AutonomyConfig,
   BeadsConfig,
+  HotkeysConfig,
   ModelRoutingConfig,
   SettingsProps,
 } from "./project-settings.schemas";
@@ -33,6 +34,10 @@ export class ProjectSettings {
 
   get beads(): BeadsConfig {
     return this.props.beads;
+  }
+
+  get hotkeys(): HotkeysConfig {
+    return this.props.hotkeys;
   }
 
   toJSON(): SettingsProps {
