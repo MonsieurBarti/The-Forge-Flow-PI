@@ -6,16 +6,18 @@ import { EVENT_NAMES } from "@kernel/event-names";
 import type { EventBusPort } from "@kernel/ports/event-bus.port";
 import type { LoggerPort } from "@kernel/ports/logger.port";
 import type { OverlayDataPort } from "@kernel/ports/overlay-data.port";
+import type { AgentEventPort } from "@kernel/ports/agent-event.port";
 import { getMarkdownTheme } from "@mariozechner/pi-coding-agent";
 import type { KeyId, OverlayHandle } from "@mariozechner/pi-tui";
-import { Box, Text } from "@mariozechner/pi-tui";
 import { DashboardComponent } from "./components/dashboard.component";
+import { ExecutionMonitorComponent } from "./components/execution-monitor.component";
 import { WorkflowComponent } from "./components/workflow.component";
 
 export interface OverlayExtensionDeps {
   overlayDataPort: OverlayDataPort;
   budgetTrackingPort: BudgetTrackingPort;
   eventBus: EventBusPort;
+  agentEventPort: AgentEventPort;
   hotkeys: HotkeysConfig;
   logger: LoggerPort;
 }
@@ -24,31 +26,6 @@ export function registerOverlayExtension(api: ExtensionAPI, deps: OverlayExtensi
   let dashboardHandle: OverlayHandle | undefined;
   let workflowHandle: OverlayHandle | undefined;
   let executionMonitorHandle: OverlayHandle | undefined;
-
-  const toggleOverlay = async (
-    ctx: ExtensionContext,
-    handle: OverlayHandle | undefined,
-    name: string,
-    setHandle: (h: OverlayHandle) => void,
-  ): Promise<void> => {
-    if (!ctx.hasUI) return;
-    if (handle) {
-      handle.setHidden(!handle.isHidden());
-    } else {
-      void ctx.ui.custom(
-        (_tui, _theme, _kb, _done) => {
-          const box = new Box(2, 1);
-          box.addChild(new Text(`${name} (placeholder — content in S04-S06)`));
-          return box;
-        },
-        {
-          overlay: true,
-          overlayOptions: { anchor: "center", width: "80%" },
-          onHandle: setHandle,
-        },
-      );
-    }
-  };
 
   const registerSafe = (
     keyId: string,
@@ -142,10 +119,34 @@ export function registerOverlayExtension(api: ExtensionAPI, deps: OverlayExtensi
   });
 
   // --- Execution Monitor ---
-  const toggleExecMonitor = (ctx: ExtensionContext): Promise<void> =>
-    toggleOverlay(ctx, executionMonitorHandle, "Execution Monitor", (h) => {
-      executionMonitorHandle = h;
-    });
+  let execMonitorComponent: ExecutionMonitorComponent | undefined;
+
+  const toggleExecMonitor = async (ctx: ExtensionContext): Promise<void> => {
+    if (!ctx.hasUI) return;
+    if (executionMonitorHandle) {
+      executionMonitorHandle.setHidden(!executionMonitorHandle.isHidden());
+    } else {
+      void ctx.ui.custom(
+        (tui, _theme, _kb, _done) => {
+          execMonitorComponent = new ExecutionMonitorComponent(
+            tui,
+            deps.agentEventPort,
+            getMarkdownTheme(),
+            2,
+            1,
+          );
+          return execMonitorComponent;
+        },
+        {
+          overlay: true,
+          overlayOptions: { anchor: "center", width: "80%" },
+          onHandle: (h) => {
+            executionMonitorHandle = h;
+          },
+        },
+      );
+    }
+  };
 
   registerSafe(deps.hotkeys.executionMonitor, "Toggle TFF Execution Monitor", toggleExecMonitor);
   api.registerCommand("tff:execution-monitor", {
