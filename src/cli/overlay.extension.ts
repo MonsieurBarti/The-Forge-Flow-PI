@@ -7,6 +7,7 @@ import type { HotkeysConfig } from "@hexagons/settings/domain/project-settings.s
 import type { EventBusPort } from "@kernel/ports/event-bus.port";
 import type { BudgetTrackingPort } from "@hexagons/settings/domain/ports/budget-tracking.port";
 import { DashboardComponent } from "./components/dashboard.component";
+import { WorkflowComponent } from "./components/workflow.component";
 import { getMarkdownTheme } from "@mariozechner/pi-coding-agent";
 import { EVENT_NAMES } from "@kernel/event-names";
 import type { EventName } from "@kernel/event-names";
@@ -107,10 +108,34 @@ export function registerOverlayExtension(
   });
 
   // --- Workflow ---
-  const toggleWorkflow = (ctx: ExtensionContext): Promise<void> =>
-    toggleOverlay(ctx, workflowHandle, "Workflow Visualizer", (h) => {
-      workflowHandle = h;
-    });
+  let workflowComponent: WorkflowComponent | undefined;
+
+  const toggleWorkflow = async (ctx: ExtensionContext): Promise<void> => {
+    if (!ctx.hasUI) return;
+    if (workflowHandle) {
+      workflowHandle.setHidden(!workflowHandle.isHidden());
+    } else {
+      void ctx.ui.custom(
+        (tui, _theme, _kb, _done) => {
+          workflowComponent = new WorkflowComponent(
+            tui,
+            deps.overlayDataPort,
+            getMarkdownTheme(),
+            2,
+            1,
+          );
+          return workflowComponent;
+        },
+        {
+          overlay: true,
+          overlayOptions: { anchor: "center", width: "80%" },
+          onHandle: (h) => {
+            workflowHandle = h;
+          },
+        },
+      );
+    }
+  };
 
   registerSafe(deps.hotkeys.workflow, "Toggle TFF Workflow Visualizer", toggleWorkflow);
   api.registerCommand("tff:workflow-view", {
@@ -146,6 +171,21 @@ export function registerOverlayExtension(
     deps.eventBus.subscribe(eventName, async () => {
       if (dashboardComponent) {
         await dashboardComponent.refresh();
+      }
+    });
+  }
+
+  // --- EventBus subscriptions: refresh workflow on relevant domain events ---
+  const WORKFLOW_EVENTS: EventName[] = [
+    EVENT_NAMES.SLICE_STATUS_CHANGED,
+    EVENT_NAMES.SLICE_CREATED,
+    EVENT_NAMES.MILESTONE_CLOSED,
+  ];
+
+  for (const eventName of WORKFLOW_EVENTS) {
+    deps.eventBus.subscribe(eventName, async () => {
+      if (workflowComponent) {
+        await workflowComponent.refresh();
       }
     });
   }
