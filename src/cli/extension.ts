@@ -50,6 +50,7 @@ import {
   registerWorkflowExtension,
 } from "@hexagons/workflow";
 import { NodeArtifactFileAdapter } from "@hexagons/workflow/infrastructure/node-artifact-file.adapter";
+import { AlwaysUnderBudgetAdapter } from "@hexagons/settings/infrastructure/always-under-budget.adapter";
 import { OverlayDataAdapter } from "./infrastructure/overlay-data.adapter";
 import { registerOverlayExtension } from "./overlay.extension";
 import type { ExtensionAPI } from "@infrastructure/pi";
@@ -347,8 +348,11 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const settingsResult = mergeSettings.execute({ team: null, local: null, env: {} });
   const hotkeys = settingsResult.ok ? settingsResult.data.hotkeys : HOTKEYS_DEFAULTS;
 
+  const budgetTrackingPort = new AlwaysUnderBudgetAdapter();
   registerOverlayExtension(api, {
     overlayDataPort: overlayDataAdapter,
+    budgetTrackingPort,
+    eventBus,
     hotkeys,
     logger,
   });

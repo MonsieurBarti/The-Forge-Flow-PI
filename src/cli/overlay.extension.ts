@@ -4,9 +4,17 @@ import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@i
 import type { OverlayDataPort } from "@kernel/ports/overlay-data.port";
 import type { LoggerPort } from "@kernel/ports/logger.port";
 import type { HotkeysConfig } from "@hexagons/settings/domain/project-settings.schemas";
+import type { EventBusPort } from "@kernel/ports/event-bus.port";
+import type { BudgetTrackingPort } from "@hexagons/settings/domain/ports/budget-tracking.port";
+import { DashboardComponent } from "./components/dashboard.component";
+import { getMarkdownTheme } from "@mariozechner/pi-coding-agent";
+import { EVENT_NAMES } from "@kernel/event-names";
+import type { EventName } from "@kernel/event-names";
 
 export interface OverlayExtensionDeps {
   overlayDataPort: OverlayDataPort;
+  budgetTrackingPort: BudgetTrackingPort;
+  eventBus: EventBusPort;
   hotkeys: HotkeysConfig;
   logger: LoggerPort;
 }
@@ -60,10 +68,35 @@ export function registerOverlayExtension(
   };
 
   // --- Dashboard ---
-  const toggleDashboard = (ctx: ExtensionContext): Promise<void> =>
-    toggleOverlay(ctx, dashboardHandle, "Status Dashboard", (h) => {
-      dashboardHandle = h;
-    });
+  let dashboardComponent: DashboardComponent | undefined;
+
+  const toggleDashboard = async (ctx: ExtensionContext): Promise<void> => {
+    if (!ctx.hasUI) return;
+    if (dashboardHandle) {
+      dashboardHandle.setHidden(!dashboardHandle.isHidden());
+    } else {
+      void ctx.ui.custom(
+        (tui, _theme, _kb, _done) => {
+          dashboardComponent = new DashboardComponent(
+            tui,
+            deps.overlayDataPort,
+            deps.budgetTrackingPort,
+            getMarkdownTheme(),
+            2,
+            1,
+          );
+          return dashboardComponent;
+        },
+        {
+          overlay: true,
+          overlayOptions: { anchor: "center", width: "80%" },
+          onHandle: (h) => {
+            dashboardHandle = h;
+          },
+        },
+      );
+    }
+  };
 
   registerSafe(deps.hotkeys.dashboard, "Toggle TFF Status Dashboard", toggleDashboard);
   api.registerCommand("tff:dashboard", {
@@ -100,4 +133,20 @@ export function registerOverlayExtension(
       await toggleExecMonitor(ctx);
     },
   });
+
+  // --- EventBus subscriptions: refresh dashboard on relevant domain events ---
+  const DASHBOARD_EVENTS: EventName[] = [
+    EVENT_NAMES.SLICE_STATUS_CHANGED,
+    EVENT_NAMES.TASK_COMPLETED,
+    EVENT_NAMES.TASK_CREATED,
+    EVENT_NAMES.MILESTONE_CLOSED,
+  ];
+
+  for (const eventName of DASHBOARD_EVENTS) {
+    deps.eventBus.subscribe(eventName, async () => {
+      if (dashboardComponent) {
+        await dashboardComponent.refresh();
+      }
+    });
+  }
 }
