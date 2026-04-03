@@ -10,8 +10,12 @@ import { crossCheckAgentResult } from "@kernel/agents/agent-status-cross-checker
 import { parseAgentStatusReport } from "@kernel/agents/agent-status-parser";
 import { AGENT_STATUS_PROMPT } from "@kernel/agents/agent-status-prompt";
 import { GUARDRAIL_PROMPT } from "@kernel/agents/guardrail-prompt";
-import type { Api, KnownProvider, Model } from "@mariozechner/pi-ai";
+import type { AgentEventPort } from "@kernel/ports";
+import type { Api, AssistantMessageEvent, KnownProvider, Model } from "@mariozechner/pi-ai";
 import { getModels, getProviders } from "@mariozechner/pi-ai";
+import type { ToolExecutionEntry, TurnBoundaryEntry } from "../domain/journal-entry.schemas";
+import type { JournalRepositoryPort } from "../domain/ports/journal-repository.port";
+import { TurnMetricsCollector } from "../domain/turn-metrics-collector";
 import {
   type AgentSession,
   type AuthStorage,
@@ -81,6 +85,10 @@ function resolveModel(provider: string, modelId: string): Model<Api> {
   return model;
 }
 
+function extractTextDelta(event: AssistantMessageEvent): string | null {
+  return event.type === "text_delta" ? event.delta : null;
+}
+
 /**
  * Dependencies that can be injected for testing (e.g., with faux provider).
  * In production, the adapter resolves models via getProviders()/getModels().
@@ -89,6 +97,8 @@ export interface PiAgentDispatchDeps {
   readonly resolveModel: (provider: string, modelId: string) => Model<Api>;
   readonly authStorage?: AuthStorage;
   readonly modelRegistry?: ModelRegistry;
+  readonly agentEventPort?: AgentEventPort;
+  readonly journalRepository?: JournalRepositoryPort;
 }
 
 export class PiAgentDispatchAdapter extends AgentDispatchPort {
@@ -101,11 +111,15 @@ export class PiAgentDispatchAdapter extends AgentDispatchPort {
       resolveModel: deps?.resolveModel ?? resolveModel,
       authStorage: deps?.authStorage,
       modelRegistry: deps?.modelRegistry,
+      agentEventPort: deps?.agentEventPort,
+      journalRepository: deps?.journalRepository,
     };
   }
 
   async dispatch(config: AgentDispatchConfig): Promise<Result<AgentResult, AgentDispatchError>> {
     let session: AgentSession | undefined;
+    let collector: TurnMetricsCollector | undefined;
+    let unsubEvents: (() => void) | undefined;
     try {
       const model = this.deps.resolveModel(config.model.provider, config.model.modelId);
 
@@ -121,6 +135,150 @@ export class PiAgentDispatchAdapter extends AgentDispatchPort {
       session = created;
       this.running.set(config.taskId, session);
 
+      const agentEventPort = this.deps.agentEventPort;
+      const journalRepo = this.deps.journalRepository;
+
+      if (agentEventPort) {
+        collector = new TurnMetricsCollector();
+        const unsubCollector = agentEventPort.subscribe(
+          config.taskId,
+          (e) => collector!.record(e),
+        );
+
+        let turnIndex = -1;
+        let toolCallsInTurn = 0;
+        const toolStartTimes = new Map<string, number>();
+
+        const unsubSession = session.subscribe((piEvent) => {
+          const now = Date.now();
+          switch (piEvent.type) {
+            case "turn_start":
+              turnIndex++;
+              toolCallsInTurn = 0;
+              agentEventPort.emit(config.taskId, {
+                type: "turn_start",
+                taskId: config.taskId,
+                turnIndex,
+                timestamp: now,
+              });
+              if (journalRepo) {
+                const entry: Omit<TurnBoundaryEntry, "seq"> = {
+                  type: "turn-boundary",
+                  sliceId: config.sliceId,
+                  timestamp: new Date(now),
+                  taskId: config.taskId,
+                  turnIndex,
+                  boundary: "start",
+                };
+                journalRepo.append(config.sliceId, entry).catch(() => {});
+              }
+              break;
+            case "turn_end":
+              agentEventPort.emit(config.taskId, {
+                type: "turn_end",
+                taskId: config.taskId,
+                turnIndex,
+                toolCallCount: toolCallsInTurn,
+                timestamp: now,
+              });
+              if (journalRepo) {
+                const entry: Omit<TurnBoundaryEntry, "seq"> = {
+                  type: "turn-boundary",
+                  sliceId: config.sliceId,
+                  timestamp: new Date(now),
+                  taskId: config.taskId,
+                  turnIndex,
+                  boundary: "end",
+                  toolCallCount: toolCallsInTurn,
+                };
+                journalRepo.append(config.sliceId, entry).catch(() => {});
+              }
+              toolCallsInTurn = 0;
+              break;
+            case "message_start":
+            case "message_end":
+              agentEventPort.emit(config.taskId, {
+                type: piEvent.type,
+                taskId: config.taskId,
+                turnIndex,
+                timestamp: now,
+              });
+              break;
+            case "message_update": {
+              const delta = extractTextDelta(piEvent.assistantMessageEvent);
+              if (delta) {
+                agentEventPort.emit(config.taskId, {
+                  type: "message_update",
+                  taskId: config.taskId,
+                  turnIndex,
+                  textDelta: delta,
+                  timestamp: now,
+                });
+              }
+              break;
+            }
+            case "tool_execution_start":
+              toolCallsInTurn++;
+              toolStartTimes.set(piEvent.toolCallId, now);
+              agentEventPort.emit(config.taskId, {
+                type: "tool_execution_start",
+                taskId: config.taskId,
+                turnIndex,
+                toolCallId: piEvent.toolCallId,
+                toolName: piEvent.toolName,
+                timestamp: now,
+              });
+              break;
+            case "tool_execution_update":
+              agentEventPort.emit(config.taskId, {
+                type: "tool_execution_update",
+                taskId: config.taskId,
+                turnIndex,
+                toolCallId: piEvent.toolCallId,
+                toolName: piEvent.toolName,
+                timestamp: now,
+              });
+              break;
+            case "tool_execution_end": {
+              const startTime = toolStartTimes.get(piEvent.toolCallId) ?? now;
+              const durationMs = now - startTime;
+              agentEventPort.emit(config.taskId, {
+                type: "tool_execution_end",
+                taskId: config.taskId,
+                turnIndex,
+                toolCallId: piEvent.toolCallId,
+                toolName: piEvent.toolName,
+                isError: piEvent.isError,
+                durationMs,
+                timestamp: now,
+              });
+              toolStartTimes.delete(piEvent.toolCallId);
+              if (journalRepo) {
+                const entry: Omit<ToolExecutionEntry, "seq"> = {
+                  type: "tool-execution",
+                  sliceId: config.sliceId,
+                  timestamp: new Date(now),
+                  taskId: config.taskId,
+                  turnIndex,
+                  toolCallId: piEvent.toolCallId,
+                  toolName: piEvent.toolName,
+                  durationMs,
+                  isError: piEvent.isError,
+                };
+                journalRepo.append(config.sliceId, entry).catch(() => {});
+              }
+              break;
+            }
+            // Skip: agent_start, agent_end, compaction_*, auto_retry_*, queue_update
+          }
+        });
+
+        unsubEvents = () => {
+          unsubSession();
+          unsubCollector();
+        };
+      }
+
       const startTime = Date.now();
       const fullSystemPrompt = config.systemPrompt
         ? `${config.systemPrompt}\n\n${AGENT_STATUS_PROMPT}\n\n${GUARDRAIL_PROMPT}`
@@ -128,6 +286,9 @@ export class PiAgentDispatchAdapter extends AgentDispatchPort {
       const prompt = `${fullSystemPrompt}\n\n---\n\n${config.taskPrompt}`;
 
       await session.prompt(prompt);
+
+      if (unsubEvents) unsubEvents();
+      if (agentEventPort) agentEventPort.clear(config.taskId);
 
       const durationMs = Date.now() - startTime;
       const stats = session.getSessionStats();
@@ -177,6 +338,8 @@ export class PiAgentDispatchAdapter extends AgentDispatchPort {
       );
       concerns.push(...crossCheck.discrepancies);
 
+      const turns = collector?.toMetrics() ?? [];
+
       return ok({
         taskId: config.taskId,
         agentType: config.agentType,
@@ -187,9 +350,11 @@ export class PiAgentDispatchAdapter extends AgentDispatchPort {
         selfReview,
         cost,
         durationMs,
-        turns: [],
+        turns,
       } satisfies AgentResult);
     } catch (e) {
+      if (unsubEvents) unsubEvents();
+      if (this.deps.agentEventPort) this.deps.agentEventPort.clear(config.taskId);
       this.running.delete(config.taskId);
       if (session) {
         session.dispose();
