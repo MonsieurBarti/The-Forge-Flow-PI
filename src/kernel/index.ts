@@ -131,6 +131,8 @@ export {
 } from "./ports";
 export type { Result } from "./result";
 export { err, isErr, isOk, match, ok } from "./result";
+export type { RenameDetectionResult } from "./schemas/rename-detection.schemas";
+export { RenameDetectionResultSchema } from "./schemas/rename-detection.schemas";
 export type { ComplexityTier, Id, ModelProfileName, Timestamp } from "./schemas";
 export { ComplexityTierSchema, IdSchema, ModelProfileNameSchema, TimestampSchema } from "./schemas";
 export { ValueObject } from "./value-object.base";

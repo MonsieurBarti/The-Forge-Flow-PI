@@ -63,4 +63,13 @@ export class CompleteMilestoneError extends BaseDomainError {
       { milestoneId, cause: msg },
     );
   }
+
+  static mergeBackFailed(milestoneId: string, cause: unknown): CompleteMilestoneError {
+    const msg = cause instanceof Error ? cause.message : String(cause);
+    return new CompleteMilestoneError(
+      "MILESTONE.MERGE_BACK_FAILED",
+      `State merge-back failed for milestone ${milestoneId}: ${msg}`,
+      { milestoneId, cause: msg },
+    );
+  }
 }

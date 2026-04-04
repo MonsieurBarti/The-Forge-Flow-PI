@@ -130,4 +130,14 @@ export class InMemoryGitAdapter extends GitPort {
   override currentBranch(): Promise<Result<string | null, GitError>> {
     return Promise.resolve(ok(this._currentBranch));
   }
+
+  private _branches = new Set<string>(["main"]);
+
+  seedBranch(name: string): void {
+    this._branches.add(name);
+  }
+
+  override branchExists(name: string): Promise<Result<boolean, GitError>> {
+    return Promise.resolve(ok(this._branches.has(name)));
+  }
 }
