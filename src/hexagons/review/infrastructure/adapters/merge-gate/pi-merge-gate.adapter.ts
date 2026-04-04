@@ -1,5 +1,5 @@
-import { type MergeGateContext, MergeGatePort } from "../domain/ports/merge-gate.port";
-import type { MergeGateDecision } from "../domain/schemas/ship.schemas";
+import { type MergeGateContext, MergeGatePort } from "../../../domain/ports/merge-gate.port";
+import type { MergeGateDecision } from "../../../domain/schemas/ship.schemas";
 
 // ---------------------------------------------------------------------------
 // Pure helpers (exported for testing and composition)

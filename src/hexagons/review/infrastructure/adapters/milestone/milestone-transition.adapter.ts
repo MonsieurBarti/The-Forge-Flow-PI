@@ -1,8 +1,8 @@
 import type { MilestoneRepositoryPort } from "@hexagons/milestone/domain/ports/milestone-repository.port";
 import { err, isErr, ok, type Result } from "@kernel";
 import type { DateProviderPort } from "@kernel/ports";
-import { MilestoneTransitionError } from "../domain/errors/milestone-transition.error";
-import { MilestoneTransitionPort } from "../domain/ports/milestone-transition.port";
+import { MilestoneTransitionError } from "../../../domain/errors/milestone-transition.error";
+import { MilestoneTransitionPort } from "../../../domain/ports/milestone-transition.port";
 
 export class MilestoneTransitionAdapter extends MilestoneTransitionPort {
   constructor(

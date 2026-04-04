@@ -1,6 +1,6 @@
 import { ok, type Result } from "@kernel";
-import type { ExecutorQueryError } from "../domain/errors/executor-query.error";
-import { ExecutorQueryPort } from "../domain/ports/executor-query.port";
+import type { ExecutorQueryError } from "../../../domain/errors/executor-query.error";
+import { ExecutorQueryPort } from "../../../domain/ports/executor-query.port";
 
 type QueryFn = (sliceId: string) => Promise<Result<ReadonlySet<string>, ExecutorQueryError>>;
 

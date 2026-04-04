@@ -1,6 +1,6 @@
 import { ok, type Result } from "@kernel";
-import type { ReviewUIError } from "../domain/errors/review-ui.error";
-import { ReviewUIPort } from "../domain/ports/review-ui.port";
+import type { ReviewUIError } from "../../../domain/errors/review-ui.error";
+import { ReviewUIPort } from "../../../domain/ports/review-ui.port";
 import type {
   ApprovalUIContext,
   ApprovalUIResponse,
@@ -8,7 +8,7 @@ import type {
   FindingsUIResponse,
   VerificationUIContext,
   VerificationUIResponse,
-} from "../domain/schemas/review-ui.schemas";
+} from "../../../domain/schemas/review-ui.schemas";
 
 interface PresentationRecord {
   method: "presentFindings" | "presentVerification" | "presentForApproval";

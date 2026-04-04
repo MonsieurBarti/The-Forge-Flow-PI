@@ -1,6 +1,6 @@
 import { err, isErr, isOk, ok, type Result } from "@kernel";
 import { describe, expect, it, vi } from "vitest";
-import { ExecutorQueryError } from "../domain/errors/executor-query.error";
+import { ExecutorQueryError } from "../../../domain/errors/executor-query.error";
 import { CachedExecutorQueryAdapter } from "./cached-executor-query.adapter";
 
 describe("CachedExecutorQueryAdapter", () => {

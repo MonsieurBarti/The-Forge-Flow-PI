@@ -1,9 +1,9 @@
 import { type Id, ok, type PersistenceError, type Result } from "@kernel";
 import type Database from "better-sqlite3";
 
-import { ShipRecordRepositoryPort } from "../domain/ports/ship-record-repository.port";
-import { MergeGateDecisionSchema, type ShipRecordProps } from "../domain/schemas/ship.schemas";
-import { ShipRecord } from "../domain/aggregates/ship-record.aggregate";
+import { ShipRecordRepositoryPort } from "../../../domain/ports/ship-record-repository.port";
+import { MergeGateDecisionSchema, type ShipRecordProps } from "../../../domain/schemas/ship.schemas";
+import { ShipRecord } from "../../../domain/aggregates/ship-record.aggregate";
 
 interface ShipRecordRow {
   id: string;

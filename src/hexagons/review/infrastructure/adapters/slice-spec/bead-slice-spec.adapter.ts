@@ -1,6 +1,6 @@
 import { err, ok, type Result } from "@kernel";
-import { SliceSpecError } from "../domain/errors/review-context.error";
-import { type SliceSpec, SliceSpecPort } from "../domain/ports/slice-spec.port";
+import { SliceSpecError } from "../../../domain/errors/review-context.error";
+import { type SliceSpec, SliceSpecPort } from "../../../domain/ports/slice-spec.port";
 
 export class BeadSliceSpecAdapter extends SliceSpecPort {
   constructor(

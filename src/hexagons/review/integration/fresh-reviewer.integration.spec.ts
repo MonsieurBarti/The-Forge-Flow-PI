@@ -8,7 +8,7 @@ import {
 import { ExecutorQueryError } from "../domain/errors/executor-query.error";
 import { FreshReviewerViolationError } from "../domain/errors/fresh-reviewer-violation.error";
 import { FreshReviewerService } from "../domain/services/fresh-reviewer.service";
-import { CachedExecutorQueryAdapter } from "../infrastructure/cached-executor-query.adapter";
+import { CachedExecutorQueryAdapter } from "../infrastructure/adapters/executor-query/cached-executor-query.adapter";
 
 describe("Fresh-Reviewer Integration", () => {
   const sliceId = crypto.randomUUID();

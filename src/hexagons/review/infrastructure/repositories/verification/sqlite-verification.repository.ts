@@ -1,6 +1,6 @@
 import type { Id, PersistenceError, Result } from "@kernel";
-import { VerificationRepositoryPort } from "../domain/ports/verification-repository.port";
-import type { Verification } from "../domain/aggregates/verification.aggregate";
+import { VerificationRepositoryPort } from "../../../domain/ports/verification-repository.port";
+import type { Verification } from "../../../domain/aggregates/verification.aggregate";
 
 export class SqliteVerificationRepository extends VerificationRepositoryPort {
   async save(_verification: Verification): Promise<Result<void, PersistenceError>> {

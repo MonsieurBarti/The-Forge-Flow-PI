@@ -3,7 +3,7 @@ import { Milestone } from "@hexagons/milestone/domain/milestone.aggregate";
 import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/in-memory-milestone.repository";
 import { DateProviderPort, isErr, isOk } from "@kernel";
 import { describe, expect, it } from "vitest";
-import { MilestoneTransitionError } from "../domain/errors/milestone-transition.error";
+import { MilestoneTransitionError } from "../../../domain/errors/milestone-transition.error";
 import { MilestoneTransitionAdapter } from "./milestone-transition.adapter";
 
 class StubDateProvider extends DateProviderPort {

@@ -1,6 +1,6 @@
 import { isOk } from "@kernel";
 import { describe, expect, it } from "vitest";
-import { FindingBuilder } from "../domain/builders/finding.builder";
+import { FindingBuilder } from "../../../domain/builders/finding.builder";
 import { StubFixerAdapter } from "./stub-fixer.adapter";
 
 describe("StubFixerAdapter", () => {

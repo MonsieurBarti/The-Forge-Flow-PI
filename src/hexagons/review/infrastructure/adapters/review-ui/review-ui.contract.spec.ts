@@ -1,6 +1,6 @@
 import { isOk } from "@kernel";
 import { describe, expect, it, vi } from "vitest";
-import type { ReviewUIPort } from "../domain/ports/review-ui.port";
+import type { ReviewUIPort } from "../../../domain/ports/review-ui.port";
 import { InMemoryReviewUIAdapter } from "./in-memory-review-ui.adapter";
 import { PlannotatorReviewUIAdapter } from "./plannotator-review-ui.adapter";
 import { TerminalReviewUIAdapter } from "./terminal-review-ui.adapter";

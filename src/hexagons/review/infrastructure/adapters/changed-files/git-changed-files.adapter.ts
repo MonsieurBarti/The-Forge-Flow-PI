@@ -1,7 +1,7 @@
 import { err, ok, type Result } from "@kernel";
 import type { GitPort } from "@kernel/ports";
-import { ChangedFilesError } from "../domain/errors/review-context.error";
-import { ChangedFilesPort } from "../domain/ports/changed-files.port";
+import { ChangedFilesError } from "../../../domain/errors/review-context.error";
+import { ChangedFilesPort } from "../../../domain/ports/changed-files.port";
 
 export class GitChangedFilesAdapter extends ChangedFilesPort {
   constructor(

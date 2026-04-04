@@ -5,9 +5,9 @@ import {
   AuditReportSchema,
   CompletionOutcomeSchema,
   type CompletionRecordProps,
-} from "../domain/schemas/completion.schemas";
-import { CompletionRecord } from "../domain/aggregates/completion-record.aggregate";
-import { CompletionRecordRepositoryPort } from "../domain/ports/completion-record-repository.port";
+} from "../../../domain/schemas/completion.schemas";
+import { CompletionRecord } from "../../../domain/aggregates/completion-record.aggregate";
+import { CompletionRecordRepositoryPort } from "../../../domain/ports/completion-record-repository.port";
 
 interface CompletionRecordRow {
   id: string;

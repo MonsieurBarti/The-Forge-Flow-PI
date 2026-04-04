@@ -3,11 +3,11 @@ import { join } from "node:path";
 import type { MilestoneRepositoryPort } from "@hexagons/milestone/domain/ports/milestone-repository.port";
 import type { SliceRepositoryPort } from "@hexagons/slice/domain/ports/slice-repository.port";
 import { err, ok, type Result } from "@kernel";
-import { MilestoneQueryError } from "../domain/errors/milestone-query.error";
+import { MilestoneQueryError } from "../../../domain/errors/milestone-query.error";
 import {
   MilestoneQueryPort,
   type MilestoneSliceStatus,
-} from "../domain/ports/milestone-query.port";
+} from "../../../domain/ports/milestone-query.port";
 
 export class MilestoneQueryAdapter extends MilestoneQueryPort {
   constructor(

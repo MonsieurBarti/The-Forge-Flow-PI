@@ -40,7 +40,7 @@ import type {
 } from "../domain/schemas/review-ui.schemas";
 import { FreshReviewerService } from "../domain/services/fresh-reviewer.service";
 import type { CriterionVerdictProps } from "../domain/schemas/verification.schemas";
-import { InMemoryVerificationRepository } from "../infrastructure/in-memory-verification.repository";
+import { InMemoryVerificationRepository } from "../infrastructure/repositories/verification/in-memory-verification.repository";
 import { VerifyAcceptanceCriteriaUseCase } from "./verify-acceptance-criteria.use-case";
 
 // ---------------------------------------------------------------------------

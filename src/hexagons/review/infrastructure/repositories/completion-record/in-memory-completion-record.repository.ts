@@ -1,7 +1,7 @@
 import { ok, type PersistenceError, type Result } from "@kernel";
-import type { CompletionRecordProps } from "../domain/schemas/completion.schemas";
-import { CompletionRecord } from "../domain/aggregates/completion-record.aggregate";
-import { CompletionRecordRepositoryPort } from "../domain/ports/completion-record-repository.port";
+import type { CompletionRecordProps } from "../../../domain/schemas/completion.schemas";
+import { CompletionRecord } from "../../../domain/aggregates/completion-record.aggregate";
+import { CompletionRecordRepositoryPort } from "../../../domain/ports/completion-record-repository.port";
 
 export class InMemoryCompletionRecordRepository extends CompletionRecordRepositoryPort {
   private store = new Map<string, CompletionRecordProps>();

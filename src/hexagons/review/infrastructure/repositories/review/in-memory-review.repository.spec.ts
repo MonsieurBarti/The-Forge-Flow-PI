@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { ReviewBuilder } from "../domain/builders/review.builder";
+import { ReviewBuilder } from "../../../domain/builders/review.builder";
 import { InMemoryReviewRepository } from "./in-memory-review.repository";
 
 describe("InMemoryReviewRepository", () => {

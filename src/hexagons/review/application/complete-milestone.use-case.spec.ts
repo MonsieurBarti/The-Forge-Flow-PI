@@ -30,7 +30,7 @@ import {
 } from "../domain/ports/milestone-query.port";
 import { MilestoneTransitionPort } from "../domain/ports/milestone-transition.port";
 import type { MergeGateDecision } from "../domain/schemas/ship.schemas";
-import { InMemoryCompletionRecordRepository } from "../infrastructure/in-memory-completion-record.repository";
+import { InMemoryCompletionRecordRepository } from "../infrastructure/repositories/completion-record/in-memory-completion-record.repository";
 import {
   CompleteMilestoneUseCase,
   DIFF_SIZE_LIMIT,

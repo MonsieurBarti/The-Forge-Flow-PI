@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { ShipRecord } from "../domain/aggregates/ship-record.aggregate";
+import { ShipRecord } from "../../../domain/aggregates/ship-record.aggregate";
 import { SqliteShipRecordRepository } from "./sqlite-ship-record.repository";
 
 const NOW = new Date("2026-04-02T12:00:00Z");

@@ -27,7 +27,7 @@ import type { MergeGateContext } from "../domain/ports/merge-gate.port";
 import { MergeGatePort } from "../domain/ports/merge-gate.port";
 import { type SliceSpec, SliceSpecPort } from "../domain/ports/slice-spec.port";
 import type { MergeGateDecision } from "../domain/schemas/ship.schemas";
-import { InMemoryShipRecordRepository } from "../infrastructure/in-memory-ship-record.repository";
+import { InMemoryShipRecordRepository } from "../infrastructure/repositories/ship-record/in-memory-ship-record.repository";
 import { ShipSliceUseCase } from "./ship-slice.use-case";
 
 // ---------------------------------------------------------------------------

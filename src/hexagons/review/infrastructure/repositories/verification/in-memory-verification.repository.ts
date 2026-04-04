@@ -1,7 +1,7 @@
 import { type Id, ok, type PersistenceError, type Result } from "@kernel";
-import { VerificationRepositoryPort } from "../domain/ports/verification-repository.port";
-import { Verification } from "../domain/aggregates/verification.aggregate";
-import type { VerificationProps } from "../domain/schemas/verification.schemas";
+import { VerificationRepositoryPort } from "../../../domain/ports/verification-repository.port";
+import { Verification } from "../../../domain/aggregates/verification.aggregate";
+import type { VerificationProps } from "../../../domain/schemas/verification.schemas";
 
 export class InMemoryVerificationRepository extends VerificationRepositoryPort {
   private store = new Map<string, VerificationProps>();

@@ -32,7 +32,7 @@ import { type SliceSpec, SliceSpecPort } from "../domain/ports/slice-spec.port";
 import type { FindingProps } from "../domain/schemas/review.schemas";
 import { CritiqueReflectionService } from "../domain/services/critique-reflection.service";
 import { FreshReviewerService } from "../domain/services/fresh-reviewer.service";
-import { InMemoryReviewRepository } from "../infrastructure/in-memory-review.repository";
+import { InMemoryReviewRepository } from "../infrastructure/repositories/review/in-memory-review.repository";
 import { ConductReviewUseCase } from "./conduct-review.use-case";
 import { ReviewPromptBuilder } from "./review-prompt-builder";
 

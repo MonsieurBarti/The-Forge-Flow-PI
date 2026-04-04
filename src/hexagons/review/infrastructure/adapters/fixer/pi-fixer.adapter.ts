@@ -8,10 +8,10 @@ import {
 } from "@kernel/agents";
 import type { LoggerPort } from "@kernel/ports";
 import type { ModelProfileName } from "@kernel/schemas";
-import { FixerOutputParser } from "../application/fixer-output-parser";
-import { FixerError } from "../domain/errors/fixer.error";
-import { FixerPort, type FixRequest, type FixResult } from "../domain/ports/fixer.port";
-import { SEVERITY_RANK } from "../domain/schemas/review.schemas";
+import { FixerOutputParser } from "../../../application/fixer-output-parser";
+import { FixerError } from "../../../domain/errors/fixer.error";
+import { FixerPort, type FixRequest, type FixResult } from "../../../domain/ports/fixer.port";
+import { SEVERITY_RANK } from "../../../domain/schemas/review.schemas";
 
 export class PiFixerAdapter extends FixerPort {
   private readonly parser = new FixerOutputParser();
