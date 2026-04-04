@@ -14,8 +14,7 @@ import type { GitHookPort } from "@kernel/ports/git-hook.port";
 import type { StateBranchOpsPort } from "@kernel/ports/state-branch-ops.port";
 import type { GitPort } from "@kernel/ports/git.port";
 import { ok, err, type Result } from "@kernel/result";
-import { BackupService } from "./backup-service";
-import { DoctorService } from "./doctor-service";
+import { HealthCheckService } from "./health-check.service";
 import { InMemoryGitAdapter } from "@kernel/infrastructure/in-memory-git.adapter";
 
 // ── Stubs ──────────────────────────────────────────────────────────────────
@@ -90,7 +89,7 @@ class StubStateBranchOpsPort implements StateBranchOpsPort {
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function makeTmpDir(): string {
-  return mkdtempSync(join(tmpdir(), "tff-doctor-test-"));
+  return mkdtempSync(join(tmpdir(), "tff-health-check-test-"));
 }
 
 function buildTffDir(projectRoot: string): string {
@@ -99,32 +98,19 @@ function buildTffDir(projectRoot: string): string {
   return tffDir;
 }
 
-function writeBranchMeta(tffDir: string): void {
-  writeFileSync(join(tffDir, "branch-meta.json"), JSON.stringify({ branch: "main" }));
-}
-
-function writeBackup(projectRoot: string, name: string): string {
-  const backupPath = join(projectRoot, name);
-  mkdirSync(backupPath, { recursive: true });
-  writeFileSync(join(backupPath, "branch-meta.json"), JSON.stringify({ branch: "main" }));
-  return backupPath;
-}
-
 function makeService(
   overrides: Partial<{
     gitHookPort: StubGitHookPort;
     stateBranchOps: StubStateBranchOpsPort;
     gitPort: InMemoryGitAdapter;
-    backupService: BackupService;
     projectRoot: string;
   }> = {},
   projectRoot: string,
 ) {
-  return new DoctorService({
+  return new HealthCheckService({
     gitHookPort: overrides.gitHookPort ?? new StubGitHookPort(),
     stateBranchOps: overrides.stateBranchOps ?? new StubStateBranchOpsPort(),
     gitPort: overrides.gitPort ?? new InMemoryGitAdapter(),
-    backupService: overrides.backupService ?? new BackupService(),
     hookScriptContent: "#!/bin/sh\necho hook",
     projectRoot: overrides.projectRoot ?? projectRoot,
   });
@@ -132,7 +118,7 @@ function makeService(
 
 // ── Tests ──────────────────────────────────────────────────────────────────
 
-describe("DoctorService", () => {
+describe("HealthCheckService", () => {
   const roots: string[] = [];
 
   afterEach(() => {
@@ -141,68 +127,40 @@ describe("DoctorService", () => {
     }
   });
 
-  describe("crash recovery", () => {
-    it("restores from backup when backup exists and branch-meta missing", async () => {
-      const root = makeTmpDir();
-      roots.push(root);
-      const tffDir = buildTffDir(root);
-      writeBackup(root, ".tff.backup.2024-01-01T00-00-00-000Z");
-
-      const service = makeService({}, root);
-      const report = await service.diagnoseAndFix(tffDir);
-
-      expect(report.fixed.some((m) => m.includes("Crash recovery"))).toBe(true);
-    });
-
-    it("skips recovery when branch-meta already exists", async () => {
-      const root = makeTmpDir();
-      roots.push(root);
-      const tffDir = buildTffDir(root);
-      writeBranchMeta(tffDir);
-      writeBackup(root, ".tff.backup.2024-01-01T00-00-00-000Z");
-
-      const service = makeService({}, root);
-      const report = await service.diagnoseAndFix(tffDir);
-
-      expect(report.fixed.some((m) => m.includes("Crash recovery"))).toBe(false);
-    });
-  });
-
   describe("hook check", () => {
     it("installs hook when missing", async () => {
       const root = makeTmpDir();
       roots.push(root);
-      const tffDir = buildTffDir(root);
-      writeBranchMeta(tffDir);
 
       const hookPort = new StubGitHookPort();
       hookPort.isInstalledResult = ok(false);
 
       const service = makeService({ gitHookPort: hookPort }, root);
-      const report = await service.diagnoseAndFix(tffDir);
+      const result = await service.ensurePostCheckoutHook();
 
       expect(hookPort.installCalls).toBe(1);
-      expect(report.fixed).toContain("Post-checkout hook installed");
+      expect(result.ok).toBe(true);
+      expect(result.ok && result.data).toBe("Post-checkout hook installed");
     });
 
-    it("does not install hook when already present", async () => {
+    it("skips installation when hook already installed", async () => {
       const root = makeTmpDir();
       roots.push(root);
-      const tffDir = buildTffDir(root);
-      writeBranchMeta(tffDir);
 
       const hookPort = new StubGitHookPort();
       hookPort.isInstalledResult = ok(true);
 
       const service = makeService({ gitHookPort: hookPort }, root);
-      await service.diagnoseAndFix(tffDir);
+      const result = await service.ensurePostCheckoutHook();
 
       expect(hookPort.installCalls).toBe(0);
+      expect(result.ok).toBe(true);
+      expect(result.ok && result.data).toBeNull();
     });
   });
 
   describe("orphaned state check", () => {
-    it("emits warning when state branch exists but branch-meta missing", async () => {
+    it("returns warning when state branch exists but branch-meta missing", async () => {
       const root = makeTmpDir();
       roots.push(root);
       const tffDir = buildTffDir(root);
@@ -215,12 +173,13 @@ describe("DoctorService", () => {
       gitPort.setCurrentBranch("feature/foo");
 
       const service = makeService({ stateBranchOps, gitPort }, root);
-      const report = await service.diagnoseAndFix(tffDir);
+      const result = await service.checkOrphanedState(tffDir);
 
-      expect(report.warnings.some((w) => w.includes("tff-state/feature/foo"))).toBe(true);
+      expect(result.ok).toBe(true);
+      expect(result.ok && result.data.some((w) => w.includes("tff-state/feature/foo"))).toBe(true);
     });
 
-    it("emits no warning when no state branch exists", async () => {
+    it("returns no warnings when no orphaned state exists", async () => {
       const root = makeTmpDir();
       roots.push(root);
       const tffDir = buildTffDir(root);
@@ -230,9 +189,10 @@ describe("DoctorService", () => {
       stateBranchOps.branchExistsResult = ok(false);
 
       const service = makeService({ stateBranchOps }, root);
-      const report = await service.diagnoseAndFix(tffDir);
+      const result = await service.checkOrphanedState(tffDir);
 
-      expect(report.warnings.some((w) => w.includes("restore needed"))).toBe(false);
+      expect(result.ok).toBe(true);
+      expect(result.ok && result.data).toHaveLength(0);
     });
   });
 
@@ -240,39 +200,36 @@ describe("DoctorService", () => {
     it("appends missing entries to .gitignore", async () => {
       const root = makeTmpDir();
       roots.push(root);
-      const tffDir = buildTffDir(root);
-      writeBranchMeta(tffDir);
       writeFileSync(join(root, ".gitignore"), "node_modules/\n");
 
       const service = makeService({}, root);
-      const report = await service.diagnoseAndFix(tffDir);
+      const result = await service.ensureGitignore();
 
-      expect(report.fixed.some((m) => m.includes(".gitignore"))).toBe(true);
+      expect(result.ok).toBe(true);
+      expect(result.ok && result.data).toContain(".gitignore");
       const content = readFileSync(join(root, ".gitignore"), "utf-8");
       expect(content).toContain(".tff/");
       expect(content).toContain(".tff.backup.*");
     });
 
-    it("does not modify .gitignore when both entries already present", async () => {
+    it("skips .gitignore when both entries already present", async () => {
       const root = makeTmpDir();
       roots.push(root);
-      const tffDir = buildTffDir(root);
-      writeBranchMeta(tffDir);
       writeFileSync(join(root, ".gitignore"), ".tff/\n.tff.backup.*\n");
 
       const service = makeService({}, root);
-      const report = await service.diagnoseAndFix(tffDir);
+      const result = await service.ensureGitignore();
 
-      expect(report.fixed.some((m) => m.includes(".gitignore"))).toBe(false);
+      expect(result.ok).toBe(true);
+      expect(result.ok && result.data).toBeNull();
     });
   });
 
   describe("stale lock check", () => {
-    it("removes lock with dead PID", async () => {
+    it("removes lock with dead PID", () => {
       const root = makeTmpDir();
       roots.push(root);
       const tffDir = buildTffDir(root);
-      writeBranchMeta(tffDir);
 
       const lockPath = join(tffDir, ".lock");
       writeFileSync(
@@ -281,16 +238,16 @@ describe("DoctorService", () => {
       );
 
       const service = makeService({}, root);
-      const report = await service.diagnoseAndFix(tffDir);
+      const result = service.cleanStaleLocks(tffDir);
 
-      expect(report.fixed.some((m) => m.includes("dead PID 999999999"))).toBe(true);
+      expect(result.ok).toBe(true);
+      expect(result.ok && result.data).toContain("dead PID 999999999");
     });
 
-    it("leaves fresh lock with live PID alone", async () => {
+    it("leaves fresh lock with live PID alone", () => {
       const root = makeTmpDir();
       roots.push(root);
       const tffDir = buildTffDir(root);
-      writeBranchMeta(tffDir);
 
       const lockPath = join(tffDir, ".lock");
       writeFileSync(
@@ -299,40 +256,64 @@ describe("DoctorService", () => {
       );
 
       const service = makeService({}, root);
-      const report = await service.diagnoseAndFix(tffDir);
+      const result = service.cleanStaleLocks(tffDir);
 
-      expect(report.fixed.some((m) => m.includes("Stale lock"))).toBe(false);
+      expect(result.ok).toBe(true);
+      expect(result.ok && result.data).toBeNull();
     });
 
-    it("removes malformed lock file", async () => {
+    it("removes malformed lock file", () => {
       const root = makeTmpDir();
       roots.push(root);
       const tffDir = buildTffDir(root);
-      writeBranchMeta(tffDir);
 
       const lockPath = join(tffDir, ".lock");
       writeFileSync(lockPath, "not-valid-json{{{{");
 
       const service = makeService({}, root);
-      const report = await service.diagnoseAndFix(tffDir);
+      const result = service.cleanStaleLocks(tffDir);
 
-      expect(report.fixed.some((m) => m.includes("malformed"))).toBe(true);
+      expect(result.ok).toBe(true);
+      expect(result.ok && result.data).toContain("malformed");
     });
   });
 
-  describe("non-throwing", () => {
-    it("completes all checks even when hook check returns error", async () => {
+  describe("runAll", () => {
+    it("aggregates results from all checks", async () => {
       const root = makeTmpDir();
       roots.push(root);
       const tffDir = buildTffDir(root);
-      writeBranchMeta(tffDir);
 
+      // Hook missing → will be fixed
       const hookPort = new StubGitHookPort();
-      hookPort.isInstalledResult = err(new HookError("HOOK_DIR_NOT_FOUND", "no hooks dir"));
+      hookPort.isInstalledResult = ok(false);
 
-      const service = makeService({ gitHookPort: hookPort }, root);
+      // Gitignore missing entries → will be fixed
+      writeFileSync(join(root, ".gitignore"), "node_modules/\n");
 
-      await expect(service.diagnoseAndFix(tffDir)).resolves.toBeDefined();
+      // Stale lock with dead PID → will be fixed
+      const lockPath = join(tffDir, ".lock");
+      writeFileSync(
+        lockPath,
+        JSON.stringify({ pid: 999999999, acquiredAt: new Date().toISOString() }),
+      );
+
+      // Orphaned state → warning
+      const stateBranchOps = new StubStateBranchOpsPort();
+      stateBranchOps.branchExistsResult = ok(true);
+      const gitPort = new InMemoryGitAdapter();
+      gitPort.setCurrentBranch("feature/bar");
+
+      const service = makeService({ gitHookPort: hookPort, stateBranchOps, gitPort }, root);
+      const result = await service.runAll(tffDir);
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      expect(result.data.fixed.some((m) => m.includes("Post-checkout hook"))).toBe(true);
+      expect(result.data.fixed.some((m) => m.includes(".gitignore"))).toBe(true);
+      expect(result.data.fixed.some((m) => m.includes("dead PID"))).toBe(true);
+      expect(result.data.warnings.some((w) => w.includes("tff-state/feature/bar"))).toBe(true);
     });
   });
 });

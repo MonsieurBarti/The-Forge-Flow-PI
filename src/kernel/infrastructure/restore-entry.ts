@@ -4,7 +4,7 @@
  * Called by .git/hooks/post-checkout via:
  *   node -e "require('./node_modules/.tff-restore.js')" 2>/dev/null || true
  *
- * This is an optimization — the BranchConsistencyGuard is the primary safety net.
+ * This is an optimization — the StateGuard is the primary safety net.
  * If this script fails (missing deps, wrong path, etc.), the guard catches the
  * mismatch on the next TFF command.
  *
@@ -12,5 +12,5 @@
  * node_modules/.tff-restore.js artifact.
  */
 export async function restoreOnCheckout(): Promise<void> {
-  // Placeholder — see BranchConsistencyGuard for the active restore path
+  // Placeholder — see StateGuard for the active restore path
 }
