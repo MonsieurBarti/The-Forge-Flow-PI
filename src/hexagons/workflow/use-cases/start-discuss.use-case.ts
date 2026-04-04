@@ -147,7 +147,7 @@ export class StartDiscussUseCase {
       codeBranch: sliceCodeBranch,
       stateBranch: `tff-state/${sliceCodeBranch}`,
       parentStateBranch,
-      lastSyncedAt: now.toISOString(),
+      lastSyncedAt: now,
       lastJournalOffset: 0,
       dirty: false,
       lastSyncedHash: null,

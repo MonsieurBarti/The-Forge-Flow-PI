@@ -2,11 +2,10 @@ import { MilestoneBuilder } from "@hexagons/milestone/domain/milestone.builder";
 import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/in-memory-milestone.repository";
 import { SliceBuilder } from "@hexagons/slice/domain/slice.builder";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
-import { InProcessEventBus, isErr, isOk, SilentLoggerAdapter } from "@kernel";
+import { InProcessEventBus, isErr, isOk, SilentLoggerAdapter, SyncError } from "@kernel";
 import { InMemoryWorktreeAdapter } from "@kernel/infrastructure/worktree/in-memory-worktree.adapter";
-import type { SyncError } from "@kernel/errors";
 import { ok, err, type Result } from "@kernel";
-import type { StateSyncPort } from "@kernel/ports/state-sync.port";
+import { StateSyncPort } from "@kernel/ports/state-sync.port";
 import type { SyncReport } from "@kernel/ports/state-sync.schemas";
 import { describe, expect, it } from "vitest";
 import { WorkflowSession } from "../domain/workflow-session.aggregate";
@@ -14,7 +13,7 @@ import { WorkflowSessionBuilder } from "../domain/workflow-session.builder";
 import { InMemoryWorkflowSessionRepository } from "../infrastructure/in-memory-workflow-session.repository";
 import { StartDiscussUseCase } from "./start-discuss.use-case";
 
-class StubStateSyncPort extends (class {} as abstract new () => StateSyncPort) {
+class StubStateSyncPort extends StateSyncPort {
   createCalls: Array<{ codeBranch: string; parent: string }> = [];
   deleteCalls: string[] = [];
   shouldFailCreate = false;
@@ -23,7 +22,7 @@ class StubStateSyncPort extends (class {} as abstract new () => StateSyncPort) {
     return ok(undefined);
   }
   async restoreFromStateBranch(): Promise<Result<SyncReport, SyncError>> {
-    return ok({ pulled: 0, conflicts: [], timestamp: new Date().toISOString() });
+    return ok({ pulled: 0, conflicts: [], timestamp: new Date() });
   }
   async mergeStateBranches(): Promise<Result<void, SyncError>> {
     return ok(undefined);
@@ -31,8 +30,7 @@ class StubStateSyncPort extends (class {} as abstract new () => StateSyncPort) {
   async createStateBranch(codeBranch: string, parent: string): Promise<Result<void, SyncError>> {
     this.createCalls.push({ codeBranch, parent });
     if (this.shouldFailCreate) {
-      const { SyncError: SE } = await import("@kernel/errors");
-      return err(new SE("BRANCH_NOT_FOUND", "parent branch not found"));
+      return err(new SyncError("BRANCH_NOT_FOUND", "parent branch not found"));
     }
     return ok(undefined);
   }
