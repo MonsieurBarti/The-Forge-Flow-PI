@@ -30,6 +30,7 @@ export const BranchMetaSchema = z.object({
   lastSyncedAt: TimestampSchema.nullable(),
   lastJournalOffset: z.number().int().nonnegative().default(0),
   dirty: z.boolean().default(false),
+  lastSyncedHash: z.string().nullable().default(null),
 });
 export type BranchMeta = z.infer<typeof BranchMetaSchema>;
 
