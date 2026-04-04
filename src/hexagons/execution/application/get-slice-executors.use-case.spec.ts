@@ -1,7 +1,7 @@
 import { isOk } from "@kernel";
 import { describe, expect, it } from "vitest";
 import { Checkpoint } from "../domain/checkpoint.aggregate";
-import { InMemoryCheckpointRepository } from "../infrastructure/in-memory-checkpoint.repository";
+import { InMemoryCheckpointRepository } from "../infrastructure/repositories/checkpoint/in-memory-checkpoint.repository";
 import { GetSliceExecutorsUseCase } from "./get-slice-executors.use-case";
 
 describe("GetSliceExecutorsUseCase", () => {

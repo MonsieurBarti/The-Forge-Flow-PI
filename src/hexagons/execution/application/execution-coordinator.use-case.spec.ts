@@ -11,9 +11,9 @@ import { Checkpoint } from "../domain/checkpoint.aggregate";
 import { ExecutionError } from "../domain/errors/execution.error";
 import { JournalReplayError } from "../domain/errors/journal-replay.error";
 import { ExecutionSession } from "../domain/execution-session.aggregate";
-import { InMemoryCheckpointRepository } from "../infrastructure/in-memory-checkpoint.repository";
-import { InMemoryExecutionSessionAdapter } from "../infrastructure/in-memory-execution-session.adapter";
-import { InMemoryPauseSignalAdapter } from "../infrastructure/in-memory-pause-signal.adapter";
+import { InMemoryCheckpointRepository } from "../infrastructure/repositories/checkpoint/in-memory-checkpoint.repository";
+import { InMemoryExecutionSessionAdapter } from "../infrastructure/adapters/execution-session/in-memory-execution-session.adapter";
+import { InMemoryPauseSignalAdapter } from "../infrastructure/adapters/pause-signal/in-memory-pause-signal.adapter";
 import type { ExecuteSliceInput, ExecuteSliceResult } from "./execute-slice.schemas";
 import type { StartExecutionInput } from "./execution-coordinator.schemas";
 import {

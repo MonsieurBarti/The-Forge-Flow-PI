@@ -14,17 +14,17 @@ import type { FixerPort } from "../domain/ports/fixer.port";
 import type { ReviewUIPort } from "../domain/ports/review-ui.port";
 import type { SliceSpec, SliceSpecPort } from "../domain/ports/slice-spec.port";
 import type { VerificationRepositoryPort } from "../domain/ports/verification-repository.port";
-import type { FindingProps } from "../domain/review.schemas";
-import type { VerificationUIContext } from "../domain/review-ui.schemas";
+import type { FindingProps } from "../domain/schemas/review.schemas";
+import type { VerificationUIContext } from "../domain/schemas/review-ui.schemas";
 import type { FreshReviewerService } from "../domain/services/fresh-reviewer.service";
-import { Verification } from "../domain/verification.aggregate";
+import { Verification } from "../domain/aggregates/verification.aggregate";
 import {
   type CriterionVerdictProps,
   CriterionVerdictSchema,
   type VerifyRequest,
   VerifyRequestSchema,
   type VerifyResult,
-} from "../domain/verification.schemas";
+} from "../domain/schemas/verification.schemas";
 
 function parseCriteria(acceptanceCriteria: string): string[] {
   return acceptanceCriteria

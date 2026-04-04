@@ -2,7 +2,7 @@ import { InProcessEventBus, isOk, SilentLoggerAdapter } from "@kernel";
 import { AgentResultBuilder } from "@kernel/agents";
 import { beforeEach, describe, expect, it } from "vitest";
 import { TaskExecutionCompletedEvent } from "../domain/events/task-execution-completed.event";
-import { InMemoryMetricsRepository } from "../infrastructure/in-memory-metrics.repository";
+import { InMemoryMetricsRepository } from "../infrastructure/repositories/metrics/in-memory-metrics.repository";
 import { RecordTaskMetricsUseCase } from "./record-task-metrics.use-case";
 
 describe("RecordTaskMetricsUseCase", () => {

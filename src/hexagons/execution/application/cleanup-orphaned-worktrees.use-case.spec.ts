@@ -3,7 +3,7 @@ import { err, isOk, ok, type Result } from "@kernel";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { SliceStatusProvider } from "../domain/ports/slice-status-provider.port";
 import type { WorktreeInfo } from "../domain/worktree.schemas";
-import { InMemoryWorktreeAdapter } from "../infrastructure/in-memory-worktree.adapter";
+import { InMemoryWorktreeAdapter } from "../infrastructure/adapters/worktree/in-memory-worktree.adapter";
 import { CleanupOrphanedWorktreesUseCase } from "./cleanup-orphaned-worktrees.use-case";
 
 class StubSliceStatusProvider implements SliceStatusProvider {

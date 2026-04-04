@@ -1,5 +1,5 @@
 import { BaseDomainError } from "@kernel";
-import type { ReviewRole } from "../review.schemas";
+import type { ReviewRole } from "../schemas/review.schemas";
 
 export class ConductReviewError extends BaseDomainError {
   readonly code: string;

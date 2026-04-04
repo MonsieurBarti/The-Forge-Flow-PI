@@ -1,5 +1,5 @@
 import type { Id, PersistenceError, Result } from "@kernel";
-import type { Verification } from "../verification.aggregate";
+import type { Verification } from "../aggregates/verification.aggregate";
 
 export abstract class VerificationRepositoryPort {
   abstract save(verification: Verification): Promise<Result<void, PersistenceError>>;

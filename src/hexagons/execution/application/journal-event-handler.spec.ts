@@ -4,7 +4,7 @@ import { TaskCompletedEvent } from "@hexagons/task/domain/events/task-completed.
 import { InProcessEventBus, isOk, SilentLoggerAdapter } from "@kernel";
 import { beforeEach, describe, expect, it } from "vitest";
 import { CheckpointSavedEvent } from "../domain/events/checkpoint-saved.event";
-import { InMemoryJournalRepository } from "../infrastructure/in-memory-journal.repository";
+import { InMemoryJournalRepository } from "../infrastructure/repositories/journal/in-memory-journal.repository";
 import { JournalEventHandler } from "./journal-event-handler";
 
 describe("JournalEventHandler", () => {

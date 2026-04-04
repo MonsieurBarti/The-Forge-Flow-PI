@@ -5,16 +5,16 @@ import type { DateProviderPort, EventBusPort, LoggerPort } from "@kernel/ports";
 import type { GitPort } from "@kernel/ports/git.port";
 import type { GitHubPort } from "@kernel/ports/github.port";
 import type { PullRequestInfo } from "@kernel/ports/github.schemas";
-import type { ConductReviewRequest, ConductReviewResult } from "../domain/conduct-review.schemas";
+import type { ConductReviewRequest, ConductReviewResult } from "../domain/schemas/conduct-review.schemas";
 import { ShipError } from "../domain/errors/ship.error";
 import { SliceShippedEvent } from "../domain/events/slice-shipped.event";
 import type { FixerPort } from "../domain/ports/fixer.port";
 import type { MergeGatePort } from "../domain/ports/merge-gate.port";
 import type { ShipRecordRepositoryPort } from "../domain/ports/ship-record-repository.port";
 import type { SliceSpec, SliceSpecPort } from "../domain/ports/slice-spec.port";
-import type { FindingProps } from "../domain/review.schemas";
-import { type ShipRequest, ShipRequestSchema, type ShipResult } from "../domain/ship.schemas";
-import { ShipRecord } from "../domain/ship-record.aggregate";
+import type { FindingProps } from "../domain/schemas/review.schemas";
+import { type ShipRequest, ShipRequestSchema, type ShipResult } from "../domain/schemas/ship.schemas";
+import { ShipRecord } from "../domain/aggregates/ship-record.aggregate";
 
 export function buildPRBody(spec: SliceSpec): string {
   const summaryParagraph = spec.specContent.split("\n\n")[0] ?? spec.specContent;

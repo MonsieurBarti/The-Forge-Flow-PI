@@ -1,5 +1,5 @@
 import type { PersistenceError, Result } from "@kernel";
-import type { CompletionRecord } from "../completion-record.aggregate";
+import type { CompletionRecord } from "../aggregates/completion-record.aggregate";
 
 export abstract class CompletionRecordRepositoryPort {
   abstract save(record: CompletionRecord): Promise<Result<void, PersistenceError>>;

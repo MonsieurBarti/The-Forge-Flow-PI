@@ -4,7 +4,7 @@ import { CheckpointBuilder } from "../domain/checkpoint.builder";
 import { JournalReplayError } from "../domain/errors/journal-replay.error";
 import { JournalEntryBuilder } from "../domain/journal-entry.builder";
 import { JournalEntrySchema } from "../domain/journal-entry.schemas";
-import { InMemoryJournalRepository } from "../infrastructure/in-memory-journal.repository";
+import { InMemoryJournalRepository } from "../infrastructure/repositories/journal/in-memory-journal.repository";
 import { ReplayJournalUseCase } from "./replay-journal.use-case";
 
 function setup() {

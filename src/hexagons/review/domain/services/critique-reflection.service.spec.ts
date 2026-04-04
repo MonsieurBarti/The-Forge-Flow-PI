@@ -1,8 +1,8 @@
 import { faker } from "@faker-js/faker";
 import { isErr, isOk } from "@kernel";
 import { describe, expect, it } from "vitest";
-import { CritiqueReflectionResultBuilder } from "../critique-reflection.builder";
-import { FindingBuilder } from "../finding.builder";
+import { CritiqueReflectionResultBuilder } from "../builders/critique-reflection.builder";
+import { FindingBuilder } from "../builders/finding.builder";
 import { CritiqueReflectionService } from "./critique-reflection.service";
 
 describe("CritiqueReflectionService", () => {

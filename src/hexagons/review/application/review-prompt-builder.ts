@@ -1,6 +1,6 @@
-import { CritiqueReflectionResultSchema } from "../domain/critique-reflection.schemas";
-import type { ReviewRole } from "../domain/review.schemas";
-import { strategyForRole } from "../domain/review-strategy";
+import { CritiqueReflectionResultSchema } from "../domain/schemas/critique-reflection.schemas";
+import type { ReviewRole } from "../domain/schemas/review.schemas";
+import { strategyForRole } from "../domain/strategies/review-strategy";
 
 export interface ReviewPromptConfig {
   readonly sliceId: string;

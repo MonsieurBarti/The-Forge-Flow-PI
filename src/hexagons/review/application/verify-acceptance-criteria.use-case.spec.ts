@@ -29,7 +29,7 @@ import { ExecutorQueryPort } from "../domain/ports/executor-query.port";
 import { FixerPort, type FixRequest, type FixResult } from "../domain/ports/fixer.port";
 import { ReviewUIPort } from "../domain/ports/review-ui.port";
 import { type SliceSpec, SliceSpecPort } from "../domain/ports/slice-spec.port";
-import type { FindingProps } from "../domain/review.schemas";
+import type { FindingProps } from "../domain/schemas/review.schemas";
 import type {
   ApprovalUIContext,
   ApprovalUIResponse,
@@ -37,10 +37,10 @@ import type {
   FindingsUIResponse,
   VerificationUIContext,
   VerificationUIResponse,
-} from "../domain/review-ui.schemas";
+} from "../domain/schemas/review-ui.schemas";
 import { FreshReviewerService } from "../domain/services/fresh-reviewer.service";
-import type { CriterionVerdictProps } from "../domain/verification.schemas";
-import { InMemoryVerificationRepository } from "../infrastructure/in-memory-verification.repository";
+import type { CriterionVerdictProps } from "../domain/schemas/verification.schemas";
+import { InMemoryVerificationRepository } from "../infrastructure/repositories/verification/in-memory-verification.repository";
 import { VerifyAcceptanceCriteriaUseCase } from "./verify-acceptance-criteria.use-case";
 
 // ---------------------------------------------------------------------------

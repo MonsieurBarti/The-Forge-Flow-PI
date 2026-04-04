@@ -8,8 +8,8 @@ import {
   type CompleteMilestoneRequest,
   CompleteMilestoneRequestSchema,
   type CompleteMilestoneResult,
-} from "../domain/completion.schemas";
-import { CompletionRecord } from "../domain/completion-record.aggregate";
+} from "../domain/schemas/completion.schemas";
+import { CompletionRecord } from "../domain/aggregates/completion-record.aggregate";
 import { CompleteMilestoneError } from "../domain/errors/complete-milestone.error";
 import { MilestoneCompletedEvent } from "../domain/events/milestone-completed.event";
 import type { AuditPort } from "../domain/ports/audit.port";
@@ -18,7 +18,7 @@ import type { FixerPort } from "../domain/ports/fixer.port";
 import type { MergeGatePort } from "../domain/ports/merge-gate.port";
 import type { MilestoneQueryPort } from "../domain/ports/milestone-query.port";
 import type { MilestoneTransitionPort } from "../domain/ports/milestone-transition.port";
-import type { FindingProps } from "../domain/review.schemas";
+import type { FindingProps } from "../domain/schemas/review.schemas";
 
 export const DIFF_SIZE_LIMIT = 100_000;
 

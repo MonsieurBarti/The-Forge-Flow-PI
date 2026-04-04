@@ -1,7 +1,7 @@
 import { isOk } from "@kernel";
 import { describe, expect, it } from "vitest";
 import { TaskMetricsBuilder } from "../domain/task-metrics.builder";
-import { InMemoryMetricsRepository } from "../infrastructure/in-memory-metrics.repository";
+import { InMemoryMetricsRepository } from "../infrastructure/repositories/metrics/in-memory-metrics.repository";
 import { AggregateMetricsUseCase } from "./aggregate-metrics.use-case";
 
 describe("AggregateMetricsUseCase", () => {

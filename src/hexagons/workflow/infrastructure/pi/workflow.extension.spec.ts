@@ -1,6 +1,6 @@
 import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/in-memory-milestone.repository";
 import { InMemoryProjectRepository } from "@hexagons/project/infrastructure/in-memory-project.repository";
-import { InMemoryReviewUIAdapter } from "@hexagons/review/infrastructure/in-memory-review-ui.adapter";
+import { InMemoryReviewUIAdapter } from "@hexagons/review/infrastructure/adapters/review-ui/in-memory-review-ui.adapter";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
 import { WorkflowSliceTransitionAdapter } from "@hexagons/slice/infrastructure/workflow-slice-transition.adapter";
 import { CreateTasksUseCase } from "@hexagons/task/application/create-tasks.use-case";

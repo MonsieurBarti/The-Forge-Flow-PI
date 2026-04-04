@@ -1,5 +1,5 @@
 import type { Result } from "@kernel";
-import type { AuditReportProps } from "../completion.schemas";
+import type { AuditReportProps } from "../schemas/completion.schemas";
 import type { AuditError } from "../errors/audit.error";
 
 export abstract class AuditPort {

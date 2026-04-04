@@ -1,4 +1,4 @@
-import type { AgentEvent } from "@kernel/agents/agent-event.schema";
+import type { AgentEvent } from "@kernel/agents/schemas/agent-event.schema";
 import type { AgentEventPort, Unsubscribe } from "@kernel/ports/agent-event.port";
 import type { Component, MarkdownTheme, TUI } from "@mariozechner/pi-tui";
 import { Markdown } from "@mariozechner/pi-tui";
