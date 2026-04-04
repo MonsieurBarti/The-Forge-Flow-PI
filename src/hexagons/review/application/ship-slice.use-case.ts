@@ -1,4 +1,5 @@
 import type { WorktreePort } from "@kernel/ports/worktree.port";
+import type { StateSyncPort } from "@kernel/ports/state-sync.port";
 import type { SliceTransitionPort } from "@hexagons/workflow/domain/ports/slice-transition.port";
 import { err, ok, type Result } from "@kernel";
 import type { DateProviderPort, EventBusPort, LoggerPort } from "@kernel/ports";
@@ -63,6 +64,8 @@ export class ShipSliceUseCase {
     private readonly dateProvider: DateProviderPort,
     private readonly generateId: () => string,
     private readonly logger: LoggerPort,
+    private readonly stateSyncPort?: StateSyncPort,
+    private readonly resolvedRoot?: string,
   ) {}
 
   async execute(request: ShipRequest): Promise<Result<ShipResult, ShipError>> {
@@ -154,7 +157,23 @@ export class ShipSliceUseCase {
       }
     }
 
-    // Step 5: Cleanup (best-effort for worktree, hard fail for transition)
+    // Step 5: State merge-back (hard fail)
+    if (this.stateSyncPort && this.resolvedRoot) {
+      const sliceCodeBranch = parsed.headBranch;
+      const milestoneCodeBranch = parsed.baseBranch;
+      const worktreeTffDir = this.worktreePort.resolveTffDir(parsed.sliceId);
+
+      const syncResult = await this.stateSyncPort.syncToStateBranch(sliceCodeBranch, worktreeTffDir);
+      if (!syncResult.ok) return err(ShipError.mergeBackFailed(parsed.sliceId, syncResult.error));
+
+      const mergeResult = await this.stateSyncPort.mergeStateBranches(sliceCodeBranch, milestoneCodeBranch, parsed.sliceId);
+      if (!mergeResult.ok) return err(ShipError.mergeBackFailed(parsed.sliceId, mergeResult.error));
+
+      const deleteStateResult = await this.stateSyncPort.deleteStateBranch(sliceCodeBranch);
+      if (!deleteStateResult.ok) return err(ShipError.mergeBackFailed(parsed.sliceId, deleteStateResult.error));
+    }
+
+    // Step 6: Cleanup (best-effort for worktree, hard fail for transition)
     const worktreeResult = await this.worktreePort.delete(parsed.sliceId);
     if (!worktreeResult.ok) {
       this.logger.warn("Worktree cleanup failed", {
@@ -163,12 +182,20 @@ export class ShipSliceUseCase {
       });
     }
 
+    // Step 7: Restore top-level .tff/ from milestone state branch (hard fail)
+    if (this.stateSyncPort && this.resolvedRoot) {
+      const { join } = await import("node:path");
+      const rootTffDir = join(this.resolvedRoot, ".tff");
+      const restoreResult = await this.stateSyncPort.restoreFromStateBranch(parsed.baseBranch, rootTffDir);
+      if (!restoreResult.ok) return err(ShipError.mergeBackFailed(parsed.sliceId, restoreResult.error));
+    }
+
     const transitionResult = await this.sliceTransitionPort.transition(parsed.sliceId, "closed");
     if (!transitionResult.ok) {
       return err(ShipError.cleanupFailed(parsed.sliceId, transitionResult.error));
     }
 
-    // Step 6: Record merge and save
+    // Step 8: Record merge and save
     record.recordMerge(cycle, this.dateProvider.now());
     await this.shipRecordRepository.save(record);
 
