@@ -1,6 +1,6 @@
-import type { Result } from "@kernel";
-import type { WorktreeError } from "../errors/worktree.error";
-import type { WorktreeHealth, WorktreeInfo } from "../worktree.schemas";
+import type { Result } from "@kernel/result";
+import type { WorktreeError } from "@kernel/errors/worktree.error";
+import type { WorktreeHealth, WorktreeInfo } from "./worktree.schemas";
 
 export abstract class WorktreePort {
   abstract create(

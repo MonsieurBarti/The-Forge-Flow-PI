@@ -1,10 +1,10 @@
 import { access } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { err, isOk, ok, type Result } from "@kernel";
+import { err, isOk, ok, type Result } from "@kernel/result";
 import type { GitPort } from "@kernel/ports/git.port";
-import { WorktreeError } from "../../../domain/errors/worktree.error";
-import { WorktreePort } from "../../../domain/ports/worktree.port";
-import type { WorktreeHealth, WorktreeInfo } from "../../../domain/worktree.schemas";
+import { WorktreeError } from "@kernel/errors/worktree.error";
+import { WorktreePort } from "@kernel/ports/worktree.port";
+import type { WorktreeHealth, WorktreeInfo } from "@kernel/ports/worktree.schemas";
 
 export class GitWorktreeAdapter extends WorktreePort {
   private readonly resolvedRoot: string;

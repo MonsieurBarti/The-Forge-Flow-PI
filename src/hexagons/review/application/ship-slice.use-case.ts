@@ -1,4 +1,4 @@
-import type { WorktreePort } from "@hexagons/execution/domain/ports/worktree.port";
+import type { WorktreePort } from "@kernel/ports/worktree.port";
 import type { SliceTransitionPort } from "@hexagons/workflow/domain/ports/slice-transition.port";
 import { err, ok, type Result } from "@kernel";
 import type { DateProviderPort, EventBusPort, LoggerPort } from "@kernel/ports";

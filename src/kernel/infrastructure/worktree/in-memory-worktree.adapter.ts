@@ -1,7 +1,7 @@
-import { err, ok, type Result } from "@kernel";
-import { WorktreeError } from "../../../domain/errors/worktree.error";
-import { WorktreePort } from "../../../domain/ports/worktree.port";
-import type { WorktreeHealth, WorktreeInfo } from "../../../domain/worktree.schemas";
+import { err, ok, type Result } from "@kernel/result";
+import { WorktreeError } from "@kernel/errors/worktree.error";
+import { WorktreePort } from "@kernel/ports/worktree.port";
+import type { WorktreeHealth, WorktreeInfo } from "@kernel/ports/worktree.schemas";
 
 export class InMemoryWorktreeAdapter extends WorktreePort {
   private store = new Map<string, WorktreeInfo>();

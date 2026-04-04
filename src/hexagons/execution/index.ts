@@ -58,7 +58,7 @@ export { JournalWriteError } from "./domain/errors/journal-write.error";
 // Domain -- Overseer Errors
 export { OverseerError } from "./domain/errors/overseer.error";
 export { RollbackError } from "./domain/errors/rollback.error";
-export { WorktreeError } from "./domain/errors/worktree.error";
+export { WorktreeError } from "@kernel/errors/worktree.error";
 // Domain -- Events
 export { AllTasksCompletedEvent } from "./domain/events/all-tasks-completed.event";
 export { CheckpointSavedEvent } from "./domain/events/checkpoint-saved.event";
@@ -154,7 +154,7 @@ export { PauseSignalPort } from "./domain/ports/pause-signal.port";
 export { PhaseTransitionPort } from "./domain/ports/phase-transition.port";
 export { RetryPolicy } from "./domain/ports/retry-policy.port";
 export type { SliceStatusProvider } from "./domain/ports/slice-status-provider.port";
-export { WorktreePort } from "./domain/ports/worktree.port";
+export { WorktreePort } from "@kernel/ports/worktree.port";
 // Domain -- Builders
 export { TaskMetricsBuilder } from "./domain/task-metrics.builder";
 export type {
@@ -170,19 +170,19 @@ export {
   TaskMetricsSchema,
 } from "./domain/task-metrics.schemas";
 // Domain -- Worktree Schemas
-export type { CleanupReport, WorktreeHealth, WorktreeInfo } from "./domain/worktree.schemas";
+export type { CleanupReport, WorktreeHealth, WorktreeInfo } from "@kernel/ports/worktree.schemas";
 export {
   CleanupReportSchema,
   WorktreeHealthSchema,
   WorktreeInfoSchema,
-} from "./domain/worktree.schemas";
+} from "@kernel/ports/worktree.schemas";
 // Infrastructure -- Guardrail Adapters
 export { ComposableGuardrailAdapter } from "./infrastructure/adapters/guardrails/composable-guardrail.adapter";
 // Infrastructure -- Overseer Adapters
 export { ComposableOverseerAdapter } from "./infrastructure/adapters/overseer/composable-overseer.adapter";
 export { DefaultRetryPolicy } from "./infrastructure/policies/default-retry-policy";
 // Infrastructure -- Adapters (exported for downstream test wiring)
-export { GitWorktreeAdapter } from "./infrastructure/adapters/worktree/git-worktree.adapter";
+export { GitWorktreeAdapter } from "@kernel/infrastructure/worktree/git-worktree.adapter";
 export { InMemoryAgentDispatchAdapter } from "./infrastructure/adapters/agent-dispatch/in-memory-agent-dispatch.adapter";
 export { InMemoryCheckpointRepository } from "./infrastructure/repositories/checkpoint/in-memory-checkpoint.repository";
 // Infrastructure -- ExecutionSession Adapters
@@ -192,7 +192,7 @@ export { InMemoryJournalRepository } from "./infrastructure/repositories/journal
 export { InMemoryMetricsRepository } from "./infrastructure/repositories/metrics/in-memory-metrics.repository";
 export { InMemoryOverseerAdapter } from "./infrastructure/adapters/overseer/in-memory-overseer.adapter";
 export { InMemoryPauseSignalAdapter } from "./infrastructure/adapters/pause-signal/in-memory-pause-signal.adapter";
-export { InMemoryWorktreeAdapter } from "./infrastructure/adapters/worktree/in-memory-worktree.adapter";
+export { InMemoryWorktreeAdapter } from "@kernel/infrastructure/worktree/in-memory-worktree.adapter";
 export { JsonlMetricsRepository } from "./infrastructure/repositories/metrics/jsonl-metrics.repository";
 export { MarkdownExecutionSessionAdapter } from "./infrastructure/adapters/execution-session/markdown-execution-session.adapter";
 export { PiAgentDispatchAdapter } from "./infrastructure/adapters/agent-dispatch/pi-agent-dispatch.adapter";

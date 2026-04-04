@@ -1,6 +1,6 @@
-import { isOk } from "@kernel";
+import { isOk } from "@kernel/result";
 import { beforeEach, describe, expect, it } from "vitest";
-import type { WorktreePort } from "../../../domain/ports/worktree.port";
+import type { WorktreePort } from "@kernel/ports/worktree.port";
 
 export function runWorktreeContractTests(
   name: string,

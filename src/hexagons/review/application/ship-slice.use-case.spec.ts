@@ -1,5 +1,5 @@
-import { WorktreeError } from "@hexagons/execution/domain/errors/worktree.error";
-import type { WorktreePort } from "@hexagons/execution/domain/ports/worktree.port";
+import { WorktreeError } from "@kernel/errors/worktree.error";
+import type { WorktreePort } from "@kernel/ports/worktree.port";
 import { SliceTransitionError } from "@hexagons/workflow/domain/errors/slice-transition.error";
 import type { SliceTransitionPort } from "@hexagons/workflow/domain/ports/slice-transition.port";
 import {

@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ExecuteSliceUseCase } from "@hexagons/execution/application/execute-slice.use-case";
 import { ReplayJournalUseCase } from "@hexagons/execution/application/replay-journal.use-case";
-import { GitWorktreeAdapter } from "@hexagons/execution/infrastructure/adapters/worktree/git-worktree.adapter";
+import { GitWorktreeAdapter } from "@kernel/infrastructure/worktree/git-worktree.adapter";
 import { InMemoryCheckpointRepository } from "@hexagons/execution/infrastructure/repositories/checkpoint/in-memory-checkpoint.repository";
 import { InMemoryJournalRepository } from "@hexagons/execution/infrastructure/repositories/journal/in-memory-journal.repository";
 import { MarkdownExecutionSessionAdapter } from "@hexagons/execution/infrastructure/adapters/execution-session/markdown-execution-session.adapter";

@@ -71,20 +71,24 @@ export {
   InvalidTransitionError,
   PersistenceError,
   SyncError,
+  WorktreeError,
 } from "./errors";
 export type { EventName } from "./event-names";
 export { EVENT_NAMES, EventNameSchema } from "./event-names";
 export {
   ConsoleLoggerAdapter,
   GitCliAdapter,
+  GitWorktreeAdapter,
   InMemoryAgentEventHub,
   InMemoryGitAdapter,
+  InMemoryWorktreeAdapter,
   InProcessEventBus,
   SilentLoggerAdapter,
   SystemDateProvider,
 } from "./infrastructure";
 export type {
   AgentEventListener,
+  CleanupReport,
   GitFileStatus,
   GitLogEntry,
   GitStatus,
@@ -96,6 +100,8 @@ export type {
   PullRequestInfo,
   SyncReport,
   Unsubscribe,
+  WorktreeHealth,
+  WorktreeInfo,
 } from "./ports";
 export {
   AgentEventPort,
@@ -118,6 +124,10 @@ export {
   StateSyncPort,
   SYNC_ERROR_CODES,
   SyncReportSchema,
+  WorktreePort,
+  CleanupReportSchema,
+  WorktreeHealthSchema,
+  WorktreeInfoSchema,
 } from "./ports";
 export type { Result } from "./result";
 export { err, isErr, isOk, match, ok } from "./result";
