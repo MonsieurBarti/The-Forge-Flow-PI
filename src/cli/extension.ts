@@ -311,62 +311,14 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   );
   void verifyUseCase; // Available for verify command wiring
 
-  // --- Ship pipeline wiring ---
+  // --- State sync wiring (moved before ship/complete for dependency injection) ---
   const ghCliAdapter = new GhCliAdapter(options.projectRoot);
   const mergeGateAdapter = new PiMergeGateAdapter();
   const shipRecordDb = new Database(join(rootTffDir, "ship-records.db"));
   const shipRecordRepository = new SqliteShipRecordRepository(shipRecordDb);
-
-  const shipSliceUseCase = new ShipSliceUseCase(
-    beadSliceSpecAdapter,
-    ghCliAdapter,
-    mergeGateAdapter,
-    shipRecordRepository,
-    conductReviewUseCase,
-    piFixerAdapter,
-    gitPort,
-    worktreeAdapter,
-    sliceTransitionPort,
-    eventBus,
-    dateProvider,
-    () => crypto.randomUUID(),
-    logger,
-  );
-  void shipSliceUseCase; // Available for ship command wiring
-
-  // --- Complete milestone pipeline wiring ---
-  const milestoneQueryAdapter = new MilestoneQueryAdapter(
-    sliceRepo,
-    milestoneRepo,
-    options.projectRoot,
-  );
-  const milestoneTransitionAdapter = new MilestoneTransitionAdapter(milestoneRepo, dateProvider);
-  const piAuditAdapter = new PiAuditAdapter(
-    new PiAgentDispatchAdapter(),
-    templateLoader,
-    modelResolver,
-    logger,
-  );
   const completionRecordDb = new Database(join(rootTffDir, "completion-records.db"));
   const completionRecordRepository = new SqliteCompletionRecordRepository(completionRecordDb);
 
-  const completeMilestoneUseCase = new CompleteMilestoneUseCase(
-    milestoneQueryAdapter,
-    piAuditAdapter,
-    ghCliAdapter,
-    mergeGateAdapter,
-    completionRecordRepository,
-    piFixerAdapter,
-    gitPort,
-    milestoneTransitionAdapter,
-    eventBus,
-    dateProvider,
-    () => crypto.randomUUID(),
-    logger,
-  );
-  void completeMilestoneUseCase;
-
-  // --- State sync wiring ---
   const stateBranchOps = new GitStateBranchOpsAdapter(options.projectRoot);
   const stateExporter = new StateExporter({
     projectRepo,
@@ -399,6 +351,57 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     logger,
   );
   stateBranchCreationHandler.register(eventBus);
+
+  // --- Ship pipeline wiring ---
+  const shipSliceUseCase = new ShipSliceUseCase(
+    beadSliceSpecAdapter,
+    ghCliAdapter,
+    mergeGateAdapter,
+    shipRecordRepository,
+    conductReviewUseCase,
+    piFixerAdapter,
+    gitPort,
+    worktreeAdapter,
+    sliceTransitionPort,
+    eventBus,
+    dateProvider,
+    () => crypto.randomUUID(),
+    logger,
+    gitStateSyncAdapter,
+    options.projectRoot,
+  );
+  void shipSliceUseCase;
+
+  // --- Complete milestone pipeline wiring ---
+  const milestoneQueryAdapter = new MilestoneQueryAdapter(
+    sliceRepo,
+    milestoneRepo,
+    options.projectRoot,
+  );
+  const milestoneTransitionAdapter = new MilestoneTransitionAdapter(milestoneRepo, dateProvider);
+  const piAuditAdapter = new PiAuditAdapter(
+    new PiAgentDispatchAdapter(),
+    templateLoader,
+    modelResolver,
+    logger,
+  );
+
+  const completeMilestoneUseCase = new CompleteMilestoneUseCase(
+    milestoneQueryAdapter,
+    piAuditAdapter,
+    ghCliAdapter,
+    mergeGateAdapter,
+    completionRecordRepository,
+    piFixerAdapter,
+    gitPort,
+    milestoneTransitionAdapter,
+    eventBus,
+    dateProvider,
+    () => crypto.randomUUID(),
+    logger,
+    gitStateSyncAdapter,
+  );
+  void completeMilestoneUseCase;
 
   // --- Restore + guard wiring ---
   const backupService = new BackupService();
