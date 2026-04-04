@@ -94,6 +94,7 @@ export { createAgentTemplate } from "./services/agent-template";
 // Services
 export { AgentValidationService } from "./services/agent-validation.service";
 export { GUARDRAIL_PROMPT } from "./prompts/guardrail-prompt";
+export { COMPRESSOR_PROMPT } from "./prompts/compressor-prompt";
 // Turn metrics
 export type { ToolCallMetrics, TurnMetrics } from "./schemas/turn-metrics.schema";
 export { ToolCallMetricsSchema, TurnMetricsSchema } from "./schemas/turn-metrics.schema";
