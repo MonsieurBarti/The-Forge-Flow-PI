@@ -1,15 +1,15 @@
 # State — Team Collaboration, Polish & Platform Commands
 
 ## Progress
-- Slices: 1/10 completed
-- Tasks: 0/6 completed
+- Slices: 2/10 completed
+- Tasks: 15/21 completed
 
 ## Slices
 | Slice | Status | Tasks | Progress |
 |---|---|---|---|
 | Infrastructure Reorg + State Branch Ops Spike | closed | 0/6 | 0% |
-| State Branch CRUD + JSON Export/Import | executing | 0/0 | 0% |
-| Restore + Post-Checkout Hook + Fallback | discussing | 0/0 | 0% |
+| State Branch CRUD + JSON Export/Import | closed | 15/15 | 100% |
+| Restore + Post-Checkout Hook + Fallback | planning | 0/0 | 0% |
 | Worktree Isolation + Rename + Merge-Back | discussing | 0/0 | 0% |
 | State Reconstruction + /tff:sync | discussing | 0/0 | 0% |
 | Execution Pipeline Improvements (G-pre, A, B) | discussing | 0/0 | 0% |
