@@ -2,6 +2,7 @@
 Thumbs.db
 *.swp
 .tff/
+.tff.backup.*
 build/
 dist/
 coverage/

@@ -27,3 +27,5 @@ export { SyncReportSchema } from "./state-sync.schemas";
 export { OverlayDataPort } from "./overlay-data.port";
 export type { OverlayProjectSnapshot, OverlaySliceSnapshot } from "./overlay-data.port";
 export { StateBranchOpsPort } from "./state-branch-ops.port";
+export { GitHookPort, HookError } from "./git-hook.port";
+export type { HookErrorCode } from "./git-hook.port";

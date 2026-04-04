@@ -271,4 +271,11 @@ export class GitCliAdapter extends GitPort {
     if (!result.ok) return result;
     return ok(undefined);
   }
+
+  async currentBranch(): Promise<Result<string | null, GitError>> {
+    const result = await this.runGit(["rev-parse", "--abbrev-ref", "HEAD"]);
+    if (!result.ok) return result;
+    const branch = result.data.trim();
+    return ok(branch === "HEAD" ? null : branch);
+  }
 }

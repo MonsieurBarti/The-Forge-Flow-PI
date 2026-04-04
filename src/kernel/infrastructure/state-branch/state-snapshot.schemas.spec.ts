@@ -80,6 +80,19 @@ describe("BranchMetaSchema", () => {
     expect(result.lastJournalOffset).toBe(0);
     expect(result.dirty).toBe(false);
   });
+
+  it("defaults lastSyncedHash to null when field is omitted", () => {
+    const raw = {
+      version: 1,
+      stateId: crypto.randomUUID(),
+      codeBranch: "slice/M07-S03",
+      stateBranch: "tff-state/slice/M07-S03",
+      parentStateBranch: "tff-state/milestone/M07",
+      lastSyncedAt: null,
+    };
+    const result = BranchMetaSchema.parse(raw);
+    expect(result.lastSyncedHash).toBeNull();
+  });
 });
 
 describe("migrateSnapshot", () => {

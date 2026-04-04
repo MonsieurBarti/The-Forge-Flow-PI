@@ -120,4 +120,14 @@ export class InMemoryGitAdapter extends GitPort {
   override pushFrom(_cwd: string, _branch: string): Promise<Result<void, GitError>> {
     return Promise.resolve(ok(undefined));
   }
+
+  private _currentBranch: string | null = "main";
+
+  setCurrentBranch(branch: string | null): void {
+    this._currentBranch = branch;
+  }
+
+  override currentBranch(): Promise<Result<string | null, GitError>> {
+    return Promise.resolve(ok(this._currentBranch));
+  }
 }

@@ -1,7 +1,7 @@
 import { SyncError } from "@kernel/errors";
 import { err, ok, type Result } from "@kernel/result";
 import type { SyncReport } from "@kernel/ports/state-sync.schemas";
-import { StateSyncPort } from "@kernel/ports/state-sync.port";
+import { StateSyncPort, type SyncOptions } from "@kernel/ports/state-sync.port";
 import type { StateBranchOpsPort } from "@kernel/ports/state-branch-ops.port";
 import type { StateExporter } from "@kernel/services/state-exporter";
 import type { StateImporter } from "@kernel/services/state-importer";
@@ -82,11 +82,17 @@ export class GitStateSyncAdapter extends StateSyncPort {
   async syncToStateBranch(
     codeBranch: string,
     tffDir: string,
+    options?: SyncOptions,
   ): Promise<Result<void, SyncError>> {
     const lockPath = join(tffDir, ".lock");
-    const lockResult = this.deps.advisoryLock.acquire(lockPath);
-    if (!lockResult.ok) return lockResult;
-    const release: LockRelease = lockResult.data;
+    let release: LockRelease | undefined;
+    if (options?.lockToken) {
+      // Caller holds the lock — don't acquire or release
+    } else {
+      const lockResult = this.deps.advisoryLock.acquire(lockPath);
+      if (!lockResult.ok) return lockResult;
+      release = lockResult.data;
+    }
 
     try {
       const stateBranch = resolveStateBranch(codeBranch);
@@ -146,18 +152,24 @@ export class GitStateSyncAdapter extends StateSyncPort {
 
       return ok(undefined);
     } finally {
-      release();
+      release?.();
     }
   }
 
   async restoreFromStateBranch(
     codeBranch: string,
     tffDir: string,
+    options?: SyncOptions,
   ): Promise<Result<SyncReport, SyncError>> {
     const lockPath = join(tffDir, ".lock");
-    const lockResult = this.deps.advisoryLock.acquire(lockPath);
-    if (!lockResult.ok) return lockResult;
-    const release: LockRelease = lockResult.data;
+    let release: LockRelease | undefined;
+    if (options?.lockToken) {
+      // Caller holds the lock — don't acquire or release
+    } else {
+      const lockResult = this.deps.advisoryLock.acquire(lockPath);
+      if (!lockResult.ok) return lockResult;
+      release = lockResult.data;
+    }
 
     try {
       const stateBranch = resolveStateBranch(codeBranch);
@@ -209,7 +221,7 @@ export class GitStateSyncAdapter extends StateSyncPort {
         timestamp: new Date(),
       });
     } finally {
-      release();
+      release?.();
     }
   }
 

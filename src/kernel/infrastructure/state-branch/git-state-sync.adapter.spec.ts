@@ -187,4 +187,72 @@ describe("GitStateSyncAdapter", () => {
     const result = await adapter.mergeStateBranches("slice/M07-S01", "milestone/M07", "s1");
     expect(result.ok).toBe(true);
   });
+
+  describe("lockToken pass-through", () => {
+    it("syncToStateBranch with lockToken skips internal lock acquisition", async () => {
+      await adapter.createStateBranch("milestone/M07", "tff-state/main");
+
+      // Acquire the lock externally
+      const { AdvisoryLock } = await import("./advisory-lock");
+      const externalLock = new AdvisoryLock();
+      const lockPath = join(tffDir, ".lock");
+      const lockResult = externalLock.acquire(lockPath);
+      expect(lockResult.ok).toBe(true);
+      const externalRelease = lockResult.data!;
+
+      // Adapter should succeed using caller's lock (not try to re-acquire)
+      const result = await adapter.syncToStateBranch("milestone/M07", tffDir, { lockToken: externalRelease });
+      expect(result.ok).toBe(true);
+
+      // Release the external lock — adapter must NOT have released it already
+      externalRelease();
+
+      // Now a fresh call without lockToken should work (lock is free)
+      const result2 = await adapter.syncToStateBranch("milestone/M07", tffDir);
+      expect(result2.ok).toBe(true);
+    });
+
+    it("restoreFromStateBranch with lockToken skips internal lock acquisition", async () => {
+      await adapter.createStateBranch("milestone/M07", "tff-state/main");
+      await adapter.syncToStateBranch("milestone/M07", tffDir);
+
+      // Acquire the lock externally
+      const { AdvisoryLock } = await import("./advisory-lock");
+      const externalLock = new AdvisoryLock();
+      const lockPath = join(tffDir, ".lock");
+      const lockResult = externalLock.acquire(lockPath);
+      expect(lockResult.ok).toBe(true);
+      const externalRelease = lockResult.data!;
+
+      // Adapter should succeed using caller's lock
+      const result = await adapter.restoreFromStateBranch("milestone/M07", tffDir, { lockToken: externalRelease });
+      expect(result.ok).toBe(true);
+
+      // Release the external lock — adapter must NOT have released it already
+      externalRelease();
+
+      // Now a fresh call without lockToken should work (lock is free)
+      const result2 = await adapter.restoreFromStateBranch("milestone/M07", tffDir);
+      expect(result2.ok).toBe(true);
+    });
+
+    it("syncToStateBranch without lockToken acquires lock internally (existing behavior)", async () => {
+      await adapter.createStateBranch("milestone/M07", "tff-state/main");
+      const result = await adapter.syncToStateBranch("milestone/M07", tffDir);
+      expect(result.ok).toBe(true);
+      // Second call should also succeed (lock was released)
+      const result2 = await adapter.syncToStateBranch("milestone/M07", tffDir);
+      expect(result2.ok).toBe(true);
+    });
+
+    it("restoreFromStateBranch without lockToken acquires lock internally (existing behavior)", async () => {
+      await adapter.createStateBranch("milestone/M07", "tff-state/main");
+      await adapter.syncToStateBranch("milestone/M07", tffDir);
+      const result = await adapter.restoreFromStateBranch("milestone/M07", tffDir);
+      expect(result.ok).toBe(true);
+      // Second call should also succeed (lock was released)
+      const result2 = await adapter.restoreFromStateBranch("milestone/M07", tffDir);
+      expect(result2.ok).toBe(true);
+    });
+  });
 });

@@ -2,11 +2,20 @@ import type { SyncError } from "@kernel/errors";
 import type { Result } from "@kernel/result";
 import type { SyncReport } from "./state-sync.schemas";
 
+export interface SyncOptions {
+  lockToken?: () => void;
+}
+
 export abstract class StateSyncPort {
-  abstract syncToStateBranch(codeBranch: string, tffDir: string): Promise<Result<void, SyncError>>;
+  abstract syncToStateBranch(
+    codeBranch: string,
+    tffDir: string,
+    options?: SyncOptions,
+  ): Promise<Result<void, SyncError>>;
   abstract restoreFromStateBranch(
     codeBranch: string,
     tffDir: string,
+    options?: SyncOptions,
   ): Promise<Result<SyncReport, SyncError>>;
   abstract mergeStateBranches(
     child: string,
