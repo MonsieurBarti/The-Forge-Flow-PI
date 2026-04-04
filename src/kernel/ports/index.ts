@@ -32,3 +32,5 @@ export type { HookErrorCode } from "./git-hook.port";
 export { WorktreePort } from "./worktree.port";
 export type { CleanupReport, WorktreeHealth, WorktreeInfo } from "./worktree.schemas";
 export { CleanupReportSchema, WorktreeHealthSchema, WorktreeInfoSchema } from "./worktree.schemas";
+export { StateRecoveryPort } from "./state-recovery.port";
+export type { RecoveryStrategy } from "./recovery-strategy";
