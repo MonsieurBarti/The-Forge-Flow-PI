@@ -190,28 +190,28 @@ export {
   VerifyRequestSchema,
   VerifyResultSchema,
 } from "./domain/schemas/verification.schemas";
-export { BeadSliceSpecAdapter } from "./infrastructure/bead-slice-spec.adapter";
+export { BeadSliceSpecAdapter } from "./infrastructure/adapters/slice-spec/bead-slice-spec.adapter";
 // Infrastructure -- Adapters
-export { CachedExecutorQueryAdapter } from "./infrastructure/cached-executor-query.adapter";
-export { GitChangedFilesAdapter } from "./infrastructure/git-changed-files.adapter";
+export { CachedExecutorQueryAdapter } from "./infrastructure/adapters/executor-query/cached-executor-query.adapter";
+export { GitChangedFilesAdapter } from "./infrastructure/adapters/changed-files/git-changed-files.adapter";
 // Infrastructure — CompleteMilestone
-export { InMemoryCompletionRecordRepository } from "./infrastructure/in-memory-completion-record.repository";
-export { InMemoryReviewRepository } from "./infrastructure/in-memory-review.repository";
+export { InMemoryCompletionRecordRepository } from "./infrastructure/repositories/completion-record/in-memory-completion-record.repository";
+export { InMemoryReviewRepository } from "./infrastructure/repositories/review/in-memory-review.repository";
 // Infrastructure — ReviewUI Adapters
-export { InMemoryReviewUIAdapter } from "./infrastructure/in-memory-review-ui.adapter";
+export { InMemoryReviewUIAdapter } from "./infrastructure/adapters/review-ui/in-memory-review-ui.adapter";
 // Infrastructure — Ship
-export { InMemoryShipRecordRepository } from "./infrastructure/in-memory-ship-record.repository";
+export { InMemoryShipRecordRepository } from "./infrastructure/repositories/ship-record/in-memory-ship-record.repository";
 // Infrastructure — Verification
-export { InMemoryVerificationRepository } from "./infrastructure/in-memory-verification.repository";
-export { MilestoneQueryAdapter } from "./infrastructure/milestone-query.adapter";
-export { MilestoneTransitionAdapter } from "./infrastructure/milestone-transition.adapter";
-export { PiAuditAdapter } from "./infrastructure/pi-audit.adapter";
-export { PiMergeGateAdapter } from "./infrastructure/pi-merge-gate.adapter";
-export { PlannotatorReviewUIAdapter } from "./infrastructure/plannotator-review-ui.adapter";
-export { SqliteCompletionRecordRepository } from "./infrastructure/sqlite-completion-record.repository";
-export { SqliteReviewRepository } from "./infrastructure/sqlite-review.repository";
-export { SqliteShipRecordRepository } from "./infrastructure/sqlite-ship-record.repository";
-export { SqliteVerificationRepository } from "./infrastructure/sqlite-verification.repository";
+export { InMemoryVerificationRepository } from "./infrastructure/repositories/verification/in-memory-verification.repository";
+export { MilestoneQueryAdapter } from "./infrastructure/adapters/milestone/milestone-query.adapter";
+export { MilestoneTransitionAdapter } from "./infrastructure/adapters/milestone/milestone-transition.adapter";
+export { PiAuditAdapter } from "./infrastructure/adapters/audit/pi-audit.adapter";
+export { PiMergeGateAdapter } from "./infrastructure/adapters/merge-gate/pi-merge-gate.adapter";
+export { PlannotatorReviewUIAdapter } from "./infrastructure/adapters/review-ui/plannotator-review-ui.adapter";
+export { SqliteCompletionRecordRepository } from "./infrastructure/repositories/completion-record/sqlite-completion-record.repository";
+export { SqliteReviewRepository } from "./infrastructure/repositories/review/sqlite-review.repository";
+export { SqliteShipRecordRepository } from "./infrastructure/repositories/ship-record/sqlite-ship-record.repository";
+export { SqliteVerificationRepository } from "./infrastructure/repositories/verification/sqlite-verification.repository";
 // Infrastructure — New Adapters
-export { StubFixerAdapter } from "./infrastructure/stub-fixer.adapter";
-export { TerminalReviewUIAdapter } from "./infrastructure/terminal-review-ui.adapter";
+export { StubFixerAdapter } from "./infrastructure/adapters/fixer/stub-fixer.adapter";
+export { TerminalReviewUIAdapter } from "./infrastructure/adapters/review-ui/terminal-review-ui.adapter";
