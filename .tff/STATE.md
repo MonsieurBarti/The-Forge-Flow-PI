@@ -9,7 +9,7 @@
 |---|---|---|---|
 | Infrastructure Reorg + State Branch Ops Spike | closed | 0/6 | 0% |
 | State Branch CRUD + JSON Export/Import | closed | 15/15 | 100% |
-| Restore + Post-Checkout Hook + Fallback | planning | 0/0 | 0% |
+| Restore + Post-Checkout Hook + Fallback | executing | 0/0 | 0% |
 | Worktree Isolation + Rename + Merge-Back | discussing | 0/0 | 0% |
 | State Reconstruction + /tff:sync | discussing | 0/0 | 0% |
 | Execution Pipeline Improvements (G-pre, A, B) | discussing | 0/0 | 0% |
