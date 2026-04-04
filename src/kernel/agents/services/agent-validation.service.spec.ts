@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { AgentCard } from "./agent-card.schema";
-import { AgentValidationError } from "./agent-errors";
+import type { AgentCard } from "../schemas/agent-card.schema";
+import { AgentValidationError } from "../errors/agent-errors";
 import { AgentValidationService } from "./agent-validation.service";
 
 function makeCard(overrides: Partial<AgentCard> = {}): AgentCard {

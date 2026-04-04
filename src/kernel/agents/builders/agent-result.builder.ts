@@ -1,9 +1,9 @@
 import { faker } from "@faker-js/faker";
-import type { AgentType } from "./agent-card.schema";
-import type { AgentCost, AgentResult } from "./agent-result.schema";
-import { AgentResultSchema } from "./agent-result.schema";
-import type { AgentConcern, AgentStatus, SelfReviewChecklist } from "./agent-status.schema";
-import type { TurnMetrics } from "./turn-metrics.schema";
+import type { AgentType } from "../schemas/agent-card.schema";
+import type { AgentCost, AgentResult } from "../schemas/agent-result.schema";
+import { AgentResultSchema } from "../schemas/agent-result.schema";
+import type { AgentConcern, AgentStatus, SelfReviewChecklist } from "../schemas/agent-status.schema";
+import type { TurnMetrics } from "../schemas/turn-metrics.schema";
 
 const DEFAULT_SELF_REVIEW: SelfReviewChecklist = {
   dimensions: [

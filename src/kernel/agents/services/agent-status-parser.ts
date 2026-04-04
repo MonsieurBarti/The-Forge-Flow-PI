@@ -1,6 +1,6 @@
 import { err, ok, type Result } from "@kernel";
-import { type AgentStatusReport, AgentStatusReportSchema } from "./agent-status.schema";
-import { AgentStatusParseError } from "./agent-status-parse.error";
+import { type AgentStatusReport, AgentStatusReportSchema } from "../schemas/agent-status.schema";
+import { AgentStatusParseError } from "../errors/agent-status-parse.error";
 
 const OPEN_MARKER = "<!-- TFF_STATUS_REPORT -->";
 const CLOSE_MARKER = "<!-- /TFF_STATUS_REPORT -->";

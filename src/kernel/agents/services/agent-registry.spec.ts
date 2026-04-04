@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { AgentCard, AgentType } from "./agent-card.schema";
-import { AgentTypeSchema } from "./agent-card.schema";
+import type { AgentCard, AgentType } from "../schemas/agent-card.schema";
+import { AgentTypeSchema } from "../schemas/agent-card.schema";
 import {
   AgentRegistry,
   findAgentsByCapability,

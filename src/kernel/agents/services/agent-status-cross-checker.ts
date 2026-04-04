@@ -1,6 +1,6 @@
-import type { AgentType } from "./agent-card.schema";
-import type { AgentCost } from "./agent-result.schema";
-import type { AgentConcern, AgentStatusReport } from "./agent-status.schema";
+import type { AgentType } from "../schemas/agent-card.schema";
+import type { AgentCost } from "../schemas/agent-result.schema";
+import type { AgentConcern, AgentStatusReport } from "../schemas/agent-status.schema";
 
 export interface AgentResultTransport {
   filesChanged: string[];

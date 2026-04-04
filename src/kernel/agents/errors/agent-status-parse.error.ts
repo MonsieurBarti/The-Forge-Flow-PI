@@ -1,4 +1,4 @@
-import { BaseDomainError } from "../errors/base-domain.error";
+import { BaseDomainError } from "../../errors/base-domain.error";
 
 export class AgentStatusParseError extends BaseDomainError {
   readonly code = "AGENT_STATUS.PARSE_FAILED";

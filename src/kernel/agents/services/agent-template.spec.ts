@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AgentCardSchema } from "./agent-card.schema";
+import { AgentCardSchema } from "../schemas/agent-card.schema";
 import { createAgentTemplate } from "./agent-template";
 import { AgentValidationService } from "./agent-validation.service";
 

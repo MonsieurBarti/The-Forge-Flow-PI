@@ -2,8 +2,8 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { err, ok, type Result } from "@kernel/result";
 import { parse as parseYaml } from "yaml";
-import { type AgentCard, AgentCardSchema, type AgentType } from "./agent-card.schema";
-import { AgentLoadError } from "./agent-errors";
+import { type AgentCard, AgentCardSchema, type AgentType } from "../schemas/agent-card.schema";
+import { AgentLoadError } from "../errors/agent-errors";
 import { AgentValidationService } from "./agent-validation.service";
 
 interface Frontmatter {

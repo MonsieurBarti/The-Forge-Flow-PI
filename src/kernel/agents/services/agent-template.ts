@@ -1,5 +1,5 @@
 import { stringify } from "yaml";
-import type { AgentCapability, AgentSkill, AgentType } from "./agent-card.schema";
+import type { AgentCapability, AgentSkill, AgentType } from "../schemas/agent-card.schema";
 
 export interface CreateAgentOptions {
   displayName: string;

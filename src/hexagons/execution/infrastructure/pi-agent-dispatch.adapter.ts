@@ -5,11 +5,11 @@ import type {
   AgentConcern,
   AgentStatus,
   SelfReviewChecklist,
-} from "@kernel/agents/agent-status.schema";
-import { crossCheckAgentResult } from "@kernel/agents/agent-status-cross-checker";
-import { parseAgentStatusReport } from "@kernel/agents/agent-status-parser";
-import { AGENT_STATUS_PROMPT } from "@kernel/agents/agent-status-prompt";
-import { GUARDRAIL_PROMPT } from "@kernel/agents/guardrail-prompt";
+} from "@kernel/agents/schemas/agent-status.schema";
+import { crossCheckAgentResult } from "@kernel/agents/services/agent-status-cross-checker";
+import { parseAgentStatusReport } from "@kernel/agents/services/agent-status-parser";
+import { AGENT_STATUS_PROMPT } from "@kernel/agents/services/agent-status-prompt";
+import { GUARDRAIL_PROMPT } from "@kernel/agents/prompts/guardrail-prompt";
 import type { AgentEventPort } from "@kernel/ports";
 import type { Api, AssistantMessageEvent, KnownProvider, Model } from "@mariozechner/pi-ai";
 import { getModels, getProviders } from "@mariozechner/pi-ai";

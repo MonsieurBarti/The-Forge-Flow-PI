@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
-import type { AgentType } from "./agent-card.schema";
-import type { AgentDispatchConfig, ResolvedModel } from "./agent-dispatch.schema";
-import { AgentDispatchConfigSchema } from "./agent-dispatch.schema";
+import type { AgentType } from "../schemas/agent-card.schema";
+import type { AgentDispatchConfig, ResolvedModel } from "../schemas/agent-dispatch.schema";
+import { AgentDispatchConfigSchema } from "../schemas/agent-dispatch.schema";
 
 export class AgentDispatchConfigBuilder {
   private _taskId: string = faker.string.uuid();

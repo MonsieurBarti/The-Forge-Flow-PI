@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AgentStatusParseError } from "./agent-status-parse.error";
+import { AgentStatusParseError } from "../errors/agent-status-parse.error";
 import { parseAgentStatusReport } from "./agent-status-parser";
 
 const VALID_REPORT = JSON.stringify({

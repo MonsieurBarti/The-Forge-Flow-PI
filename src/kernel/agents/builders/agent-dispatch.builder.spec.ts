@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { AgentDispatchConfigBuilder } from "./agent-dispatch.builder";
-import { AgentDispatchConfigSchema } from "./agent-dispatch.schema";
+import { AgentDispatchConfigSchema } from "../schemas/agent-dispatch.schema";
 
 describe("AgentDispatchConfigBuilder", () => {
   it("builds valid config with defaults", () => {

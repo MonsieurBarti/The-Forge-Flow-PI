@@ -1,10 +1,10 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { AgentTypeSchema } from "./agent-card.schema";
-import { AgentResourceLoader } from "./agent-resource-loader";
-import { AgentValidationService } from "./agent-validation.service";
+import { AgentTypeSchema } from "../schemas/agent-card.schema";
+import { AgentResourceLoader } from "../services/agent-resource-loader";
+import { AgentValidationService } from "../services/agent-validation.service";
 
-const RESOURCES_DIR = join(import.meta.dirname, "../../resources");
+const RESOURCES_DIR = join(import.meta.dirname, "../../../resources");
 
 describe("Agent boundary enforcement", () => {
   const loader = new AgentResourceLoader();

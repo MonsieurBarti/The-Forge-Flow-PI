@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { AgentResultBuilder } from "./agent-result.builder";
-import { AgentResultSchema } from "./agent-result.schema";
+import { AgentResultSchema } from "../schemas/agent-result.schema";
 
 describe("AgentResultBuilder", () => {
   it("builds valid result with defaults", () => {

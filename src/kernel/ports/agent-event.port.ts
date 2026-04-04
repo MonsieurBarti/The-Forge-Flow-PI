@@ -1,4 +1,4 @@
-import type { AgentEvent } from "@kernel/agents/agent-event.schema";
+import type { AgentEvent } from "@kernel/agents/schemas/agent-event.schema";
 
 export type AgentEventListener = (event: AgentEvent) => void;
 export type Unsubscribe = () => void;

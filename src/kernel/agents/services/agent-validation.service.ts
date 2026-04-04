@@ -1,6 +1,6 @@
 import { err, ok, type Result } from "@kernel/result";
-import type { AgentCard } from "./agent-card.schema";
-import { AgentValidationError } from "./agent-errors";
+import type { AgentCard } from "../schemas/agent-card.schema";
+import { AgentValidationError } from "../errors/agent-errors";
 
 const MAX_IDENTITY_LINES = 30;
 

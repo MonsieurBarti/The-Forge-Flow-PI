@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { AgentStatusReport } from "./agent-status.schema";
+import type { AgentStatusReport } from "../schemas/agent-status.schema";
 import { crossCheckAgentResult } from "./agent-status-cross-checker";
 
 const ALL_PASSED_DIMS = [
