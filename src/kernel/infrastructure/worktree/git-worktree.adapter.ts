@@ -1,7 +1,8 @@
-import { access } from "node:fs/promises";
+import { access, cp, mkdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { err, isOk, ok, type Result } from "@kernel/result";
 import type { GitPort } from "@kernel/ports/git.port";
+import type { BranchMeta } from "@kernel/infrastructure/state-branch/state-snapshot.schemas";
 import { WorktreeError } from "@kernel/errors/worktree.error";
 import { WorktreePort } from "@kernel/ports/worktree.port";
 import type { WorktreeHealth, WorktreeInfo } from "@kernel/ports/worktree.schemas";
@@ -135,5 +136,54 @@ export class GitWorktreeAdapter extends WorktreePort {
     }
 
     return ok({ sliceId, exists: dirExists, branchValid, clean, reachable });
+  }
+
+  private static readonly EXCLUDE_NAMES = new Set([
+    "worktrees",
+    ".lock",
+    "beads-snapshot.jsonl",
+    "branch-meta.json",
+  ]);
+
+  private static shouldCopy(name: string): boolean {
+    if (GitWorktreeAdapter.EXCLUDE_NAMES.has(name)) return false;
+    if (name.startsWith(".tff.backup.")) return false;
+    return true;
+  }
+
+  async initializeWorkspace(
+    sliceId: string,
+    sourceTffDir: string,
+    branchMeta: BranchMeta,
+  ): Promise<Result<void, WorktreeError>> {
+    const targetTffDir = this.resolveTffDir(sliceId);
+    try {
+      await mkdir(targetTffDir, { recursive: true });
+      await cp(sourceTffDir, targetTffDir, {
+        recursive: true,
+        filter: (src) => {
+          const name = src.split("/").pop() ?? "";
+          return GitWorktreeAdapter.shouldCopy(name);
+        },
+      });
+      await writeFile(
+        join(targetTffDir, "branch-meta.json"),
+        JSON.stringify(branchMeta, null, 2),
+        "utf-8",
+      );
+      return ok(undefined);
+    } catch (cause) {
+      // Cleanup on failure
+      try {
+        await rm(targetTffDir, { recursive: true, force: true });
+      } catch {
+        // best-effort cleanup
+      }
+      return err(WorktreeError.operationFailed("initializeWorkspace", cause));
+    }
+  }
+
+  resolveTffDir(sliceId: string): string {
+    return join(this.resolvedRoot, ".tff", "worktrees", sliceId, ".tff");
   }
 }

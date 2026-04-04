@@ -1,4 +1,5 @@
 import type { Result } from "@kernel/result";
+import type { BranchMeta } from "@kernel/infrastructure/state-branch/state-snapshot.schemas";
 import type { WorktreeError } from "@kernel/errors/worktree.error";
 import type { WorktreeHealth, WorktreeInfo } from "./worktree.schemas";
 
@@ -11,4 +12,10 @@ export abstract class WorktreePort {
   abstract list(): Promise<Result<WorktreeInfo[], WorktreeError>>;
   abstract exists(sliceId: string): Promise<boolean>;
   abstract validate(sliceId: string): Promise<Result<WorktreeHealth, WorktreeError>>;
+  abstract initializeWorkspace(
+    sliceId: string,
+    sourceTffDir: string,
+    branchMeta: BranchMeta,
+  ): Promise<Result<void, WorktreeError>>;
+  abstract resolveTffDir(sliceId: string): string;
 }

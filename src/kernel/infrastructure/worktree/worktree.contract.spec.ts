@@ -1,5 +1,9 @@
+import { mkdirSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { isOk } from "@kernel/result";
-import { beforeEach, describe, expect, it } from "vitest";
+import type { BranchMeta } from "@kernel/infrastructure/state-branch/state-snapshot.schemas";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type { WorktreePort } from "@kernel/ports/worktree.port";
 
 export function runWorktreeContractTests(
@@ -84,6 +88,35 @@ export function runWorktreeContractTests(
       if (!isOk(result)) {
         expect(result.error.code).toBe("WORKTREE.NOT_FOUND");
       }
+    });
+
+    it("resolveTffDir returns worktree .tff path", () => {
+      const path = adapter.resolveTffDir("M04-S04");
+      expect(path).toContain("M04-S04");
+      expect(path).toContain(".tff");
+    });
+
+    it("initializeWorkspace stores branch meta", async () => {
+      await adapter.create("M04-S04", "milestone/M04");
+      // Create a real source dir with a settings.yaml for the copy
+      const sourceDir = mkdtempSync(join(tmpdir(), "tff-init-ws-"));
+      writeFileSync(join(sourceDir, "settings.yaml"), "model-profiles:\n  quality:\n    model: opus\n");
+      mkdirSync(join(sourceDir, "milestones"), { recursive: true });
+
+      const meta: BranchMeta = {
+        version: 1,
+        stateId: "test-id",
+        codeBranch: "slice/M04-S04",
+        stateBranch: "tff-state/slice/M04-S04",
+        parentStateBranch: "tff-state/milestone/M04",
+        lastSyncedAt: null,
+        lastJournalOffset: 0,
+        dirty: false,
+        lastSyncedHash: null,
+      };
+      const result = await adapter.initializeWorkspace("M04-S04", sourceDir, meta);
+      expect(isOk(result)).toBe(true);
+      rmSync(sourceDir, { recursive: true, force: true });
     });
   });
 }
