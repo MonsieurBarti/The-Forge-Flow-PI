@@ -118,4 +118,34 @@ export class SqliteCompletionRecordRepository extends CompletionRecordRepository
 
     return ok(CompletionRecord.reconstitute(props));
   }
+
+  async findAll(): Promise<Result<CompletionRecord[], PersistenceError>> {
+    const rows = this.db
+      .prepare<[], CompletionRecordRow>("SELECT * FROM completion_records")
+      .all();
+    return ok(
+      rows.map((row) => {
+        const auditReports = z.array(AuditReportSchema).parse(JSON.parse(row.audit_reports));
+        const props: CompletionRecordProps = {
+          id: row.id,
+          milestoneId: row.milestone_id,
+          milestoneLabel: row.milestone_label,
+          prNumber: row.pr_number,
+          prUrl: row.pr_url,
+          headBranch: row.head_branch,
+          baseBranch: row.base_branch,
+          auditReports,
+          outcome: row.outcome !== null ? CompletionOutcomeSchema.parse(row.outcome) : null,
+          fixCyclesUsed: row.fix_cycles_used,
+          createdAt: new Date(row.created_at),
+          completedAt: row.completed_at !== null ? new Date(row.completed_at) : null,
+        };
+        return CompletionRecord.reconstitute(props);
+      }),
+    );
+  }
+
+  reset(): void {
+    this.db.exec("DELETE FROM completion_records");
+  }
 }

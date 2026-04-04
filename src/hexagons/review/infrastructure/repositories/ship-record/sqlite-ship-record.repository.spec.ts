@@ -64,4 +64,33 @@ describe("SqliteShipRecordRepository", () => {
     if (!result.ok) return;
     expect(result.data).toHaveLength(0);
   });
+
+  it("findAll returns empty array when no records", async () => {
+    const result = await repo.findAll();
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data).toEqual([]);
+  });
+
+  it("findAll returns all records across slices", async () => {
+    const r1 = makeRecord({ id: crypto.randomUUID(), sliceId: crypto.randomUUID() });
+    const r2 = makeRecord({ id: crypto.randomUUID(), sliceId: crypto.randomUUID() });
+    await repo.save(r1);
+    await repo.save(r2);
+
+    const result = await repo.findAll();
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data).toHaveLength(2);
+  });
+
+  it("reset clears all records", async () => {
+    await repo.save(makeRecord({ id: crypto.randomUUID(), sliceId: crypto.randomUUID() }));
+    repo.reset();
+
+    const result = await repo.findAll();
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data).toEqual([]);
+  });
 });

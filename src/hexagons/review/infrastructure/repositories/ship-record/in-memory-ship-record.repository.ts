@@ -21,6 +21,10 @@ export class InMemoryShipRecordRepository extends ShipRecordRepositoryPort {
     return ok(records);
   }
 
+  async findAll(): Promise<Result<ShipRecord[], PersistenceError>> {
+    return ok(Array.from(this.store.values()).map((props) => ShipRecord.reconstitute(props)));
+  }
+
   seed(record: ShipRecord): void {
     this.store.set(record.id, record.toJSON());
   }

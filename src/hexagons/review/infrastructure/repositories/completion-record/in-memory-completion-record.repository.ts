@@ -22,6 +22,12 @@ export class InMemoryCompletionRecordRepository extends CompletionRecordReposito
     return ok(null);
   }
 
+  async findAll(): Promise<Result<CompletionRecord[], PersistenceError>> {
+    return ok(
+      Array.from(this.store.values()).map((props) => CompletionRecord.reconstitute(props)),
+    );
+  }
+
   seed(record: CompletionRecord): void {
     this.store.set(record.id, record.toJSON());
   }

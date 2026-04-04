@@ -8,6 +8,8 @@ export interface Snapshot {
   milestones: SnapshotEntity[];
   slices: SnapshotEntity[];
   tasks: SnapshotEntity[];
+  shipRecords?: SnapshotEntity[];
+  completionRecords?: SnapshotEntity[];
 }
 
 export function mergeSnapshots(
@@ -35,6 +37,18 @@ export function mergeSnapshots(
       parent.tasks ?? [],
       child.tasks ?? [],
       (entity) => entity.sliceId === sliceId,
+    ),
+    // shipRecords: child wins for records matching owned slice
+    shipRecords: mergeById(
+      parent.shipRecords ?? [],
+      child.shipRecords ?? [],
+      (entity) => entity.sliceId === sliceId,
+    ),
+    // completionRecords: parent always wins
+    completionRecords: mergeById(
+      parent.completionRecords ?? [],
+      child.completionRecords ?? [],
+      () => false,
     ),
   };
 }

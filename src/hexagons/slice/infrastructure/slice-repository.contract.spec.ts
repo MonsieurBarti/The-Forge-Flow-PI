@@ -1,8 +1,10 @@
 import { isErr, isOk } from "@kernel";
+import Database from "better-sqlite3";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { SliceRepositoryPort } from "../domain/ports/slice-repository.port";
 import { SliceBuilder } from "../domain/slice.builder";
 import { InMemorySliceRepository } from "./in-memory-slice.repository";
+import { SqliteSliceRepository } from "./sqlite-slice.repository";
 
 function runContractTests(name: string, factory: () => SliceRepositoryPort & { reset(): void }) {
   describe(`${name} contract`, () => {
@@ -104,3 +106,8 @@ function runContractTests(name: string, factory: () => SliceRepositoryPort & { r
 }
 
 runContractTests("InMemorySliceRepository", () => new InMemorySliceRepository());
+
+runContractTests("SqliteSliceRepository", () => {
+  const db = new Database(":memory:");
+  return new SqliteSliceRepository(db);
+});

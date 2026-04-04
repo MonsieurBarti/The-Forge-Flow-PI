@@ -144,4 +144,70 @@ describe("mergeSnapshots", () => {
     expect(result.slices).toEqual([]);
     expect(result.tasks).toEqual([]);
   });
+
+  it("shipRecords — child wins for owned slice", () => {
+    const parent: Snapshot = {
+      milestones: [],
+      slices: [],
+      tasks: [],
+      shipRecords: [{ id: "SR-1", sliceId: "M07-S01", outcome: "old" }],
+    };
+    const child: Snapshot = {
+      milestones: [],
+      slices: [],
+      tasks: [],
+      shipRecords: [{ id: "SR-1", sliceId: "M07-S01", outcome: "merged" }],
+    };
+    const result = mergeSnapshots(parent, child, "M07-S01");
+
+    expect(result.shipRecords).toHaveLength(1);
+    expect(result.shipRecords![0].outcome).toBe("merged");
+  });
+
+  it("shipRecords — parent wins for non-owned slice", () => {
+    const parent: Snapshot = {
+      milestones: [],
+      slices: [],
+      tasks: [],
+      shipRecords: [{ id: "SR-2", sliceId: "S-OTHER", outcome: "parent" }],
+    };
+    const child: Snapshot = {
+      milestones: [],
+      slices: [],
+      tasks: [],
+      shipRecords: [{ id: "SR-2", sliceId: "S-OTHER", outcome: "child" }],
+    };
+    const result = mergeSnapshots(parent, child, "M07-S01");
+
+    expect(result.shipRecords).toHaveLength(1);
+    expect(result.shipRecords![0].outcome).toBe("parent");
+  });
+
+  it("completionRecords — parent always wins", () => {
+    const parent: Snapshot = {
+      milestones: [],
+      slices: [],
+      tasks: [],
+      completionRecords: [{ id: "CR-1", outcome: "parent" }],
+    };
+    const child: Snapshot = {
+      milestones: [],
+      slices: [],
+      tasks: [],
+      completionRecords: [{ id: "CR-1", outcome: "child" }],
+    };
+    const result = mergeSnapshots(parent, child, "M07-S01");
+
+    expect(result.completionRecords).toHaveLength(1);
+    expect(result.completionRecords![0].outcome).toBe("parent");
+  });
+
+  it("backward compat — missing shipRecords/completionRecords", () => {
+    const parent: Snapshot = { milestones: [], slices: [], tasks: [] };
+    const child: Snapshot = { milestones: [], slices: [], tasks: [] };
+    const result = mergeSnapshots(parent, child, "M07-S01");
+
+    expect(result.shipRecords).toEqual([]);
+    expect(result.completionRecords).toEqual([]);
+  });
 });
