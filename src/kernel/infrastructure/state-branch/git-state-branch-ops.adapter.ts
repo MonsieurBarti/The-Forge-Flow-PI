@@ -1,7 +1,7 @@
 import type { ExecFileException } from "node:child_process";
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { GitError } from "@kernel/errors/git.error";
@@ -23,12 +23,12 @@ export class GitStateBranchOpsAdapter extends StateBranchOpsPort {
 
   private runGit(
     args: string[],
-    opts?: { cwd?: string; encoding?: "buffer" | "utf-8"; maxBuffer?: number },
-  ): Promise<Result<string, GitError>>;
-  private runGit(
-    args: string[],
     opts: { cwd?: string; encoding: "buffer"; maxBuffer?: number },
   ): Promise<Result<Buffer, GitError>>;
+  private runGit(
+    args: string[],
+    opts?: { cwd?: string; encoding?: "buffer" | "utf-8"; maxBuffer?: number },
+  ): Promise<Result<string, GitError>>;
   private runGit(
     args: string[],
     opts?: { cwd?: string; encoding?: "buffer" | "utf-8"; maxBuffer?: number },
@@ -153,6 +153,9 @@ export class GitStateBranchOpsAdapter extends StateBranchOpsPort {
 
     try {
       for (const [filePath, content] of files) {
+        if (filePath.includes("..")) {
+          return err(new GitError("INVALID_PATH", `Path traversal detected in path: ${filePath}`));
+        }
         const fullPath = path.join(tmpPath, filePath);
         await mkdir(path.dirname(fullPath), { recursive: true });
         await writeFile(fullPath, content);
@@ -181,6 +184,9 @@ export class GitStateBranchOpsAdapter extends StateBranchOpsPort {
     stateBranch: string,
     filePath: string,
   ): Promise<Result<Buffer | null, GitError>> {
+    if (filePath.includes("..")) {
+      return err(new GitError("INVALID_PATH", `Path traversal detected in path: ${filePath}`));
+    }
     const result = await this.runGit(["show", `${stateBranch}:${filePath}`], {
       encoding: "buffer",
       maxBuffer: 10 * 1024 * 1024,
@@ -189,8 +195,7 @@ export class GitStateBranchOpsAdapter extends StateBranchOpsPort {
       const msg = result.error.message;
       if (
         msg.includes("does not exist in") ||
-        msg.includes("Path") ||
-        msg.includes("path") ||
+        msg.includes("path '") ||
         result.error.code === "GIT.REF_NOT_FOUND"
       ) {
         return ok(null);
