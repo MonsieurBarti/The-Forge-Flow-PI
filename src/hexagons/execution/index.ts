@@ -177,24 +177,24 @@ export {
   WorktreeInfoSchema,
 } from "./domain/worktree.schemas";
 // Infrastructure -- Guardrail Adapters
-export { ComposableGuardrailAdapter } from "./infrastructure/composable-guardrail.adapter";
+export { ComposableGuardrailAdapter } from "./infrastructure/adapters/guardrails/composable-guardrail.adapter";
 // Infrastructure -- Overseer Adapters
-export { ComposableOverseerAdapter } from "./infrastructure/composable-overseer.adapter";
-export { DefaultRetryPolicy } from "./infrastructure/default-retry-policy";
+export { ComposableOverseerAdapter } from "./infrastructure/adapters/overseer/composable-overseer.adapter";
+export { DefaultRetryPolicy } from "./infrastructure/policies/default-retry-policy";
 // Infrastructure -- Adapters (exported for downstream test wiring)
-export { GitWorktreeAdapter } from "./infrastructure/git-worktree.adapter";
-export { InMemoryAgentDispatchAdapter } from "./infrastructure/in-memory-agent-dispatch.adapter";
-export { InMemoryCheckpointRepository } from "./infrastructure/in-memory-checkpoint.repository";
+export { GitWorktreeAdapter } from "./infrastructure/adapters/worktree/git-worktree.adapter";
+export { InMemoryAgentDispatchAdapter } from "./infrastructure/adapters/agent-dispatch/in-memory-agent-dispatch.adapter";
+export { InMemoryCheckpointRepository } from "./infrastructure/repositories/checkpoint/in-memory-checkpoint.repository";
 // Infrastructure -- ExecutionSession Adapters
-export { InMemoryExecutionSessionAdapter } from "./infrastructure/in-memory-execution-session.adapter";
-export { InMemoryGuardrailAdapter } from "./infrastructure/in-memory-guardrail.adapter";
-export { InMemoryJournalRepository } from "./infrastructure/in-memory-journal.repository";
-export { InMemoryMetricsRepository } from "./infrastructure/in-memory-metrics.repository";
-export { InMemoryOverseerAdapter } from "./infrastructure/in-memory-overseer.adapter";
-export { InMemoryPauseSignalAdapter } from "./infrastructure/in-memory-pause-signal.adapter";
-export { InMemoryWorktreeAdapter } from "./infrastructure/in-memory-worktree.adapter";
-export { JsonlMetricsRepository } from "./infrastructure/jsonl-metrics.repository";
-export { MarkdownExecutionSessionAdapter } from "./infrastructure/markdown-execution-session.adapter";
-export { PiAgentDispatchAdapter } from "./infrastructure/pi-agent-dispatch.adapter";
-export { ProcessSignalPauseAdapter } from "./infrastructure/process-signal-pause.adapter";
-export { TimeoutStrategy } from "./infrastructure/timeout-strategy";
+export { InMemoryExecutionSessionAdapter } from "./infrastructure/adapters/execution-session/in-memory-execution-session.adapter";
+export { InMemoryGuardrailAdapter } from "./infrastructure/adapters/guardrails/in-memory-guardrail.adapter";
+export { InMemoryJournalRepository } from "./infrastructure/repositories/journal/in-memory-journal.repository";
+export { InMemoryMetricsRepository } from "./infrastructure/repositories/metrics/in-memory-metrics.repository";
+export { InMemoryOverseerAdapter } from "./infrastructure/adapters/overseer/in-memory-overseer.adapter";
+export { InMemoryPauseSignalAdapter } from "./infrastructure/adapters/pause-signal/in-memory-pause-signal.adapter";
+export { InMemoryWorktreeAdapter } from "./infrastructure/adapters/worktree/in-memory-worktree.adapter";
+export { JsonlMetricsRepository } from "./infrastructure/repositories/metrics/jsonl-metrics.repository";
+export { MarkdownExecutionSessionAdapter } from "./infrastructure/adapters/execution-session/markdown-execution-session.adapter";
+export { PiAgentDispatchAdapter } from "./infrastructure/adapters/agent-dispatch/pi-agent-dispatch.adapter";
+export { ProcessSignalPauseAdapter } from "./infrastructure/adapters/pause-signal/process-signal-pause.adapter";
+export { TimeoutStrategy } from "./infrastructure/policies/timeout-strategy";
