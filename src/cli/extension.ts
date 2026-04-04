@@ -71,10 +71,15 @@ import {
   SystemDateProvider,
 } from "@kernel";
 import { GhCliAdapter } from "@kernel/infrastructure/gh-cli.adapter";
+import { GitHookAdapter } from "@kernel/infrastructure/git-hook/git-hook.adapter";
 import { GitStateBranchOpsAdapter } from "@kernel/infrastructure/state-branch/git-state-branch-ops.adapter";
 import { GitStateSyncAdapter } from "@kernel/infrastructure/state-branch/git-state-sync.adapter";
 import { AdvisoryLock } from "@kernel/infrastructure/state-branch/advisory-lock";
 import { StateBranchCreationHandler } from "@kernel/infrastructure/state-branch/state-branch-creation.handler";
+import { BackupService } from "@kernel/services/backup-service";
+import { BranchConsistencyGuard } from "@kernel/services/branch-consistency-guard";
+import { DoctorService } from "@kernel/services/doctor-service";
+import { RestoreStateUseCase } from "@kernel/services/restore-state.use-case";
 import { StateExporter } from "@kernel/services/state-exporter";
 import { StateImporter } from "@kernel/services/state-importer";
 import Database from "better-sqlite3";
@@ -137,6 +142,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     mergeSettings: new MergeSettingsUseCase(),
     eventBus,
     dateProvider,
+    gitHookPort: new GitHookAdapter(join(options.projectRoot, ".git")),
   });
 
   const sliceTransitionPort = new WorkflowSliceTransitionAdapter(sliceRepo, dateProvider);
@@ -379,6 +385,30 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     logger,
   );
   stateBranchCreationHandler.register(eventBus);
+
+  // --- Restore + guard wiring ---
+  const gitHookAdapter = new GitHookAdapter(join(options.projectRoot, ".git"));
+  const backupService = new BackupService();
+  const restoreUseCase = new RestoreStateUseCase({
+    stateSync: gitStateSyncAdapter,
+    gitPort,
+    advisoryLock: new AdvisoryLock(),
+    stateExporter,
+    backupService,
+    tffDir,
+  });
+  const hookScript =
+    'if [ "$3" = "1" ]; then\n  node -e "require(\'./node_modules/.tff-restore.js\')" 2>/dev/null || true\nfi';
+  const doctorService = new DoctorService({
+    gitHookPort: gitHookAdapter,
+    stateBranchOps,
+    gitPort,
+    backupService,
+    hookScriptContent: hookScript,
+    projectRoot: options.projectRoot,
+  });
+  const guard = new BranchConsistencyGuard(doctorService, gitPort, restoreUseCase, stateBranchOps);
+  void guard; // Available for command-time invocation
 
   // --- Overlay extension wiring ---
   const overlayDataAdapter = new OverlayDataAdapter(

@@ -2,6 +2,7 @@ import type { MergeSettingsUseCase } from "@hexagons/settings";
 import type { ExtensionAPI } from "@infrastructure/pi";
 import { createZodTool } from "@infrastructure/pi";
 import type { DateProviderPort, EventBusPort } from "@kernel";
+import type { GitHookPort } from "@kernel/ports/git-hook.port";
 import type { ProjectFileSystemPort } from "../../domain/ports/project-filesystem.port";
 import type { ProjectRepositoryPort } from "../../domain/ports/project-repository.port";
 import { InitProjectParamsSchema, InitProjectUseCase } from "../../use-cases/init-project.use-case";
@@ -13,6 +14,7 @@ export interface ProjectExtensionDeps {
   mergeSettings: MergeSettingsUseCase;
   eventBus: EventBusPort;
   dateProvider: DateProviderPort;
+  gitHookPort?: GitHookPort;
 }
 
 export function registerProjectExtension(api: ExtensionAPI, deps: ProjectExtensionDeps): void {
@@ -39,6 +41,7 @@ export function registerProjectExtension(api: ExtensionAPI, deps: ProjectExtensi
           deps.mergeSettings,
           deps.eventBus,
           deps.dateProvider,
+          deps.gitHookPort,
         );
         const result = await useCase.execute(params);
         if (!result.ok) {

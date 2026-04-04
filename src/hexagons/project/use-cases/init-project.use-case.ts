@@ -8,6 +8,7 @@ import {
   type PersistenceError,
   type Result,
 } from "@kernel";
+import type { GitHookPort } from "@kernel/ports/git-hook.port";
 import { stringify } from "yaml";
 import { z } from "zod";
 import { ProjectAlreadyExistsError } from "../domain/errors/project-already-exists.error";
@@ -32,6 +33,7 @@ export class InitProjectUseCase {
     private readonly mergeSettings: MergeSettingsUseCase,
     private readonly eventBus: EventBusPort,
     private readonly dateProvider: DateProviderPort,
+    private readonly gitHookPort?: GitHookPort,
   ) {}
 
   async execute(params: InitProjectParams): Promise<Result<ProjectDTO, InitProjectError>> {
@@ -86,6 +88,16 @@ export class InitProjectUseCase {
     // 6. Publish domain events
     for (const event of project.pullEvents()) {
       await this.eventBus.publish(event);
+    }
+
+    // 7. Install post-checkout hook (optional — skipped if no port provided)
+    if (this.gitHookPort) {
+      const hookScript = [
+        'if [ "$3" = "1" ]; then',
+        '  node -e "require(\'./node_modules/.tff-restore.js\')" 2>/dev/null || true',
+        'fi',
+      ].join('\n');
+      await this.gitHookPort.installPostCheckoutHook(hookScript);
     }
 
     return ok(project.toJSON());
