@@ -46,15 +46,24 @@ class StubDoctorService {
 
 class StubGitPort extends GitPort {
   private _currentBranch: string | null = "main";
+  private _existingBranches = new Set<string>(["main"]);
   callOrder: string[] = [];
 
   setCurrentBranch(branch: string | null): void {
     this._currentBranch = branch;
   }
 
+  seedBranch(name: string): void {
+    this._existingBranches.add(name);
+  }
+
   override currentBranch(): Promise<Result<string | null, GitError>> {
     this.callOrder.push("currentBranch");
     return Promise.resolve(ok(this._currentBranch));
+  }
+
+  override branchExists(name: string): Promise<Result<boolean, GitError>> {
+    return Promise.resolve(ok(this._existingBranches.has(name)));
   }
 
   override listBranches(_pattern: string): Promise<Result<string[], GitError>> {
@@ -131,14 +140,28 @@ class StubRestoreStateUseCase {
 }
 
 class StubStateBranchOpsPort implements StateBranchOpsPort {
-  private _branchExistsResult: Result<boolean, GitError> = ok(false);
+  private _branchExistsMap = new Map<string, boolean>();
+  private _readResults = new Map<string, string | null>();
+  renameCalls: Array<{ from: string; to: string }> = [];
 
   setBranchExists(value: boolean): void {
-    this._branchExistsResult = ok(value);
+    // Default for all branches
+    this._branchExistsMap.set("__default__", value);
   }
 
-  branchExists(_branchName: string): Promise<Result<boolean, GitError>> {
-    return Promise.resolve(this._branchExistsResult);
+  setStateBranchExists(branchName: string, value: boolean): void {
+    this._branchExistsMap.set(branchName, value);
+  }
+
+  setReadResult(key: string, value: string | null): void {
+    this._readResults.set(key, value);
+  }
+
+  branchExists(branchName: string): Promise<Result<boolean, GitError>> {
+    const specific = this._branchExistsMap.get(branchName);
+    if (specific !== undefined) return Promise.resolve(ok(specific));
+    const defaultVal = this._branchExistsMap.get("__default__") ?? false;
+    return Promise.resolve(ok(defaultVal));
   }
 
   createOrphan(_branchName: string): Promise<Result<void, GitError>> {
@@ -150,14 +173,17 @@ class StubStateBranchOpsPort implements StateBranchOpsPort {
   deleteBranch(_branchName: string): Promise<Result<void, GitError>> {
     return Promise.resolve(ok(undefined));
   }
-  renameBranch(_oldName: string, _newName: string): Promise<Result<void, GitError>> {
+  renameBranch(oldName: string, newName: string): Promise<Result<void, GitError>> {
+    this.renameCalls.push({ from: oldName, to: newName });
     return Promise.resolve(ok(undefined));
   }
   syncToStateBranch(_stateBranch: string, _files: Map<string, string>): Promise<Result<string, GitError>> {
     return Promise.resolve(ok("abc123"));
   }
-  readFromStateBranch(_stateBranch: string, _path: string): Promise<Result<string | null, GitError>> {
-    return Promise.resolve(ok(null));
+  readFromStateBranch(stateBranch: string, path: string): Promise<Result<string | null, GitError>> {
+    const key = `${stateBranch}:${path}`;
+    const result = this._readResults.get(key) ?? null;
+    return Promise.resolve(ok(result));
   }
   readAllFromStateBranch(_stateBranch: string): Promise<Result<Map<string, string>, GitError>> {
     return Promise.resolve(ok(new Map()));
@@ -224,10 +250,84 @@ describe("BranchConsistencyGuard", () => {
     expect(restoreUseCase.calls).toHaveLength(0);
   });
 
-  // 2. Branch mismatch → triggers RestoreStateUseCase.execute() with current branch
-  it("triggers restore when current branch differs from branch-meta codeBranch", async () => {
+  // 2. Old branch exists + state for current exists → switch (restore)
+  it("triggers restore when old branch exists and state for current exists (switch)", async () => {
     writeBranchMeta(tffDir, { codeBranch: "old-branch" });
     gitPort.setCurrentBranch("new-branch");
+    gitPort.seedBranch("old-branch");
+    stateBranchOps.setStateBranchExists("tff-state/new-branch", true);
+
+    const result = await guard.ensure(tffDir);
+
+    expect(result.ok).toBe(true);
+    expect(restoreUseCase.calls).toHaveLength(1);
+    expect(restoreUseCase.calls[0]).toBe("new-branch");
+  });
+
+  // 2b. Old branch exists + no state for current → untracked (ok, no restore)
+  it("returns ok without restore when old branch exists but no state for current (untracked)", async () => {
+    writeBranchMeta(tffDir, { codeBranch: "old-branch" });
+    gitPort.setCurrentBranch("new-branch");
+    gitPort.seedBranch("old-branch");
+    stateBranchOps.setStateBranchExists("tff-state/new-branch", false);
+
+    const result = await guard.ensure(tffDir);
+
+    expect(result.ok).toBe(true);
+    expect(restoreUseCase.calls).toHaveLength(0);
+  });
+
+  // 2c. Old branch gone + no state for current → rename
+  it("renames state branch when old branch gone and no state for current", async () => {
+    writeBranchMeta(tffDir, { codeBranch: "old-branch" });
+    gitPort.setCurrentBranch("new-branch");
+    // old-branch does NOT exist (not seeded)
+    stateBranchOps.setStateBranchExists("tff-state/new-branch", false);
+
+    const result = await guard.ensure(tffDir);
+
+    expect(result.ok).toBe(true);
+    expect(restoreUseCase.calls).toHaveLength(0);
+    expect(stateBranchOps.renameCalls).toHaveLength(1);
+    expect(stateBranchOps.renameCalls[0]).toEqual({
+      from: "tff-state/some-branch",
+      to: "tff-state/new-branch",
+    });
+  });
+
+  // 2d. Old branch gone + state for current + stateId match → rename
+  it("renames when old branch gone and stateId matches (ambiguous → rename)", async () => {
+    writeBranchMeta(tffDir, { codeBranch: "old-branch" });
+    gitPort.setCurrentBranch("new-branch");
+    stateBranchOps.setStateBranchExists("tff-state/new-branch", true);
+    // Set remote branch-meta with matching stateId
+    stateBranchOps.setReadResult(
+      "tff-state/new-branch:branch-meta.json",
+      JSON.stringify({ ...VALID_BRANCH_META, codeBranch: "new-branch", stateBranch: "tff-state/new-branch" }),
+    );
+
+    const result = await guard.ensure(tffDir);
+
+    expect(result.ok).toBe(true);
+    expect(restoreUseCase.calls).toHaveLength(0);
+    expect(stateBranchOps.renameCalls).toHaveLength(1);
+  });
+
+  // 2e. Old branch gone + state for current + stateId mismatch → switch (restore)
+  it("triggers restore when old branch gone and stateId mismatches (ambiguous → switch)", async () => {
+    writeBranchMeta(tffDir, { codeBranch: "old-branch" });
+    gitPort.setCurrentBranch("new-branch");
+    stateBranchOps.setStateBranchExists("tff-state/new-branch", true);
+    // Set remote branch-meta with DIFFERENT stateId
+    stateBranchOps.setReadResult(
+      "tff-state/new-branch:branch-meta.json",
+      JSON.stringify({
+        ...VALID_BRANCH_META,
+        stateId: "99999999-9999-4999-b999-999999999999",
+        codeBranch: "new-branch",
+        stateBranch: "tff-state/new-branch",
+      }),
+    );
 
     const result = await guard.ensure(tffDir);
 
@@ -273,6 +373,8 @@ describe("BranchConsistencyGuard", () => {
   it("returns err with RESTORE_FAILED when restore returns an unhandled SyncError", async () => {
     writeBranchMeta(tffDir, { codeBranch: "old-branch" });
     gitPort.setCurrentBranch("new-branch");
+    gitPort.seedBranch("old-branch");
+    stateBranchOps.setStateBranchExists("tff-state/new-branch", true);
     restoreUseCase.result = err(new SyncError("RESTORE_FAILED", "something went wrong"));
 
     const result = await guard.ensure(tffDir);
@@ -286,6 +388,8 @@ describe("BranchConsistencyGuard", () => {
   it("returns ok when restore fails with LOCK_CONTENTION (non-fatal)", async () => {
     writeBranchMeta(tffDir, { codeBranch: "old-branch" });
     gitPort.setCurrentBranch("new-branch");
+    gitPort.seedBranch("old-branch");
+    stateBranchOps.setStateBranchExists("tff-state/new-branch", true);
     restoreUseCase.result = err(new SyncError("LOCK_CONTENTION", "lock held"));
 
     const result = await guard.ensure(tffDir);
@@ -297,6 +401,8 @@ describe("BranchConsistencyGuard", () => {
   it("returns ok when restore fails with BRANCH_NOT_FOUND (non-fatal)", async () => {
     writeBranchMeta(tffDir, { codeBranch: "old-branch" });
     gitPort.setCurrentBranch("new-branch");
+    gitPort.seedBranch("old-branch");
+    stateBranchOps.setStateBranchExists("tff-state/new-branch", true);
     restoreUseCase.result = err(new SyncError("BRANCH_NOT_FOUND", "branch not found"));
 
     const result = await guard.ensure(tffDir);

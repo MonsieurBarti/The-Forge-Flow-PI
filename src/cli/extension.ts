@@ -123,10 +123,22 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     initializeAgentRegistry(agentRegistryResult.data);
   }
 
+  // --- Core infrastructure ---
+  const gitPort = new GitCliAdapter(options.projectRoot);
+
+  // --- tffDir resolution ---
+  const rootTffDir = join(options.projectRoot, ".tff");
+  mkdirSync(rootTffDir, { recursive: true });
+  const worktreeAdapter = new GitWorktreeAdapter(gitPort, options.projectRoot);
+  const resolveActiveTffDir = async (sliceId?: string): Promise<string> => {
+    if (sliceId && (await worktreeAdapter.exists(sliceId))) {
+      return worktreeAdapter.resolveTffDir(sliceId);
+    }
+    return rootTffDir;
+  };
+
   // --- Shared SQLite database for core entities ---
-  const tffDir = join(options.projectRoot, ".tff");
-  mkdirSync(tffDir, { recursive: true });
-  const stateDb = new Database(join(tffDir, "state.db"));
+  const stateDb = new Database(join(rootTffDir, "state.db"));
 
   // --- Repositories (SQLite-backed) ---
   const projectRepo = new SqliteProjectRepository(stateDb);
@@ -173,6 +185,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     autonomyModeProvider,
     reviewUI,
     maxRetries: 2,
+    resolveActiveTffDir,
   });
 
   // --- Execution extension ---
@@ -205,7 +218,6 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   });
 
   // --- Review pipeline wiring ---
-  const gitPort = new GitCliAdapter(options.projectRoot);
   const reviewRepository = new InMemoryReviewRepository();
   const executorQueryAdapter = new CachedExecutorQueryAdapter(async (_sliceId) => {
     // Stub: returns empty set. Real implementation will query execution session.
@@ -300,10 +312,9 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   void verifyUseCase; // Available for verify command wiring
 
   // --- Ship pipeline wiring ---
-  const worktreeAdapter = new GitWorktreeAdapter(gitPort, options.projectRoot);
   const ghCliAdapter = new GhCliAdapter(options.projectRoot);
   const mergeGateAdapter = new PiMergeGateAdapter();
-  const shipRecordDb = new Database(join(tffDir, "ship-records.db"));
+  const shipRecordDb = new Database(join(rootTffDir, "ship-records.db"));
   const shipRecordRepository = new SqliteShipRecordRepository(shipRecordDb);
 
   const shipSliceUseCase = new ShipSliceUseCase(
@@ -336,7 +347,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     modelResolver,
     logger,
   );
-  const completionRecordDb = new Database(join(tffDir, "completion-records.db"));
+  const completionRecordDb = new Database(join(rootTffDir, "completion-records.db"));
   const completionRecordRepository = new SqliteCompletionRecordRepository(completionRecordDb);
 
   const completeMilestoneUseCase = new CompleteMilestoneUseCase(
@@ -378,7 +389,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     stateExporter,
     stateImporter,
     advisoryLock: new AdvisoryLock(),
-    tffDir,
+    tffDir: rootTffDir,
     projectRoot: options.projectRoot,
   });
   const stateBranchCreationHandler = new StateBranchCreationHandler(
@@ -397,7 +408,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     advisoryLock: new AdvisoryLock(),
     stateExporter,
     backupService,
-    tffDir,
+    tffDir: rootTffDir,
   });
   const hookScript =
     'if [ "$3" = "1" ]; then\n  node -e "require(\'./node_modules/.tff-restore.js\')" 2>/dev/null || true\nfi';
