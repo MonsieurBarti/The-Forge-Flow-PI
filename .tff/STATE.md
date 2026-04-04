@@ -7,7 +7,7 @@
 ## Slices
 | Slice | Status | Tasks | Progress |
 |---|---|---|---|
-| Infrastructure Reorg + State Branch Ops Spike | verifying | 6/6 | 100% |
+| Infrastructure Reorg + State Branch Ops Spike | reviewing | 6/6 | 100% |
 | State Branch CRUD + JSON Export/Import | discussing | 0/0 | 0% |
 | Restore + Post-Checkout Hook + Fallback | discussing | 0/0 | 0% |
 | Worktree Isolation + Rename + Merge-Back | discussing | 0/0 | 0% |
