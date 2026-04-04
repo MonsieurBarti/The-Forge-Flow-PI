@@ -13,10 +13,8 @@ vi.mock("node:fs/promises", async (importOriginal) => {
   const original = await importOriginal<typeof import("node:fs/promises")>();
   return {
     ...original,
-    mkdtemp: vi.fn(),
     writeFile: vi.fn(),
     mkdir: vi.fn(),
-    rm: vi.fn(),
   };
 });
 
@@ -29,18 +27,16 @@ vi.mock("node:crypto", async (importOriginal) => {
 });
 
 import { execFile } from "node:child_process";
-import { mkdtemp, writeFile, mkdir, rm } from "node:fs/promises";
+import { writeFile, mkdir } from "node:fs/promises";
 import { GitStateBranchOpsAdapter } from "./git-state-branch-ops.adapter";
 
 const mockExecFile = execFile as unknown as ReturnType<typeof vi.fn>;
-const mockMkdtemp = mkdtemp as unknown as ReturnType<typeof vi.fn>;
 const mockWriteFile = writeFile as unknown as ReturnType<typeof vi.fn>;
 const mockMkdir = mkdir as unknown as ReturnType<typeof vi.fn>;
-const mockRm = rm as unknown as ReturnType<typeof vi.fn>;
 
-function mockSuccess(stdout: string | Buffer = ""): void {
+function mockSuccess(stdout = ""): void {
   mockExecFile.mockImplementationOnce(
-    (_cmd: string, _args: string[], _opts: unknown, cb: (err: null, stdout: string | Buffer, stderr: string) => void) => {
+    (_cmd: string, _args: string[], _opts: unknown, cb: (err: null, stdout: string, stderr: string) => void) => {
       cb(null, stdout, "");
     },
   );
@@ -59,15 +55,12 @@ function mockFailure(stderr: string, code = 1): void {
 describe("GitStateBranchOpsAdapter", () => {
   let adapter: GitStateBranchOpsAdapter;
   const cwd = "/repo";
-  const tmpPath = "/tmp/tff-state-wt-12345678";
 
   beforeEach(() => {
     vi.clearAllMocks();
     adapter = new GitStateBranchOpsAdapter(cwd);
-    mockMkdtemp.mockResolvedValue(tmpPath);
     mockWriteFile.mockResolvedValue(undefined);
     mockMkdir.mockResolvedValue(undefined);
-    mockRm.mockResolvedValue(undefined);
   });
 
   describe("branchExists", () => {
@@ -153,36 +146,26 @@ describe("GitStateBranchOpsAdapter", () => {
 
   describe("createOrphan", () => {
     it("creates temp worktree, checks out orphan, empties index, commits, removes worktree", async () => {
-      // worktree add --detach
-      mockSuccess();
-      // checkout --orphan
-      mockSuccess();
-      // rm -rf --cached
-      mockSuccess();
-      // commit --allow-empty
-      mockSuccess();
-      // worktree remove
-      mockSuccess();
+      mockSuccess(); // worktree add --detach
+      mockSuccess(); // checkout --orphan
+      mockSuccess(); // rm -rf --cached
+      mockSuccess(); // commit --allow-empty
+      mockSuccess(); // worktree remove
 
       const result = await adapter.createOrphan("tff-state/new-branch");
       expect(result.ok).toBe(true);
 
       const calls = mockExecFile.mock.calls;
-      // First call: worktree add --detach
       expect(calls[0][1]).toContain("worktree");
       expect(calls[0][1]).toContain("add");
       expect(calls[0][1]).toContain("--detach");
-      // Second call: checkout --orphan
       expect(calls[1][1]).toContain("checkout");
       expect(calls[1][1]).toContain("--orphan");
       expect(calls[1][1]).toContain("tff-state/new-branch");
-      // Third call: rm -rf --cached
       expect(calls[2][1]).toContain("rm");
       expect(calls[2][1]).toContain("--cached");
-      // Fourth call: commit --allow-empty
       expect(calls[3][1]).toContain("commit");
       expect(calls[3][1]).toContain("--allow-empty");
-      // Fifth call: worktree remove
       expect(calls[4][1]).toContain("worktree");
       expect(calls[4][1]).toContain("remove");
     });
@@ -207,13 +190,12 @@ describe("GitStateBranchOpsAdapter", () => {
 
   describe("syncToStateBranch", () => {
     it("creates temp worktree, writes files, commits, and returns SHA", async () => {
-      const files = new Map<string, Buffer>([
-        ["state.json", Buffer.from('{"key":"value"}')],
-        ["sub/dir/file.txt", Buffer.from("content")],
+      const files = new Map<string, string>([
+        ["state.json", '{"key":"value"}'],
+        ["sub/dir/file.txt", "content"],
       ]);
 
       mockSuccess(); // worktree add
-      // writeFile calls handled by mock
       mockSuccess(); // git add -A
       mockSuccess("[state-branch abc1234] sync: state update\n1 file changed"); // commit
       mockSuccess(); // worktree remove
@@ -240,7 +222,7 @@ describe("GitStateBranchOpsAdapter", () => {
     });
 
     it("cleans up worktree even if commit fails", async () => {
-      const files = new Map<string, Buffer>([["a.json", Buffer.from("{}")]]);
+      const files = new Map<string, string>([["a.json", "{}"]]);
 
       mockSuccess(); // worktree add
       mockSuccess(); // git add -A
@@ -259,22 +241,18 @@ describe("GitStateBranchOpsAdapter", () => {
   });
 
   describe("readFromStateBranch", () => {
-    it("calls git show branch:path with buffer encoding", async () => {
-      const content = Buffer.from('{"key":"value"}');
-      mockSuccess(content);
+    it("calls git show branch:path", async () => {
+      mockSuccess('{"key":"value"}');
 
       const result = await adapter.readFromStateBranch("tff-state/main", "state.json");
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.data).toBeInstanceOf(Buffer);
-        expect(result.data?.toString()).toBe('{"key":"value"}');
+        expect(result.data).toBe('{"key":"value"}');
       }
 
       const call = mockExecFile.mock.calls[0];
       expect(call[1]).toContain("show");
       expect(call[1]).toContain("tff-state/main:state.json");
-      // Should use buffer encoding
-      expect((call[2] as { encoding?: string }).encoding).toBe("buffer");
     });
 
     it("returns ok(null) when path does not exist", async () => {
@@ -293,12 +271,9 @@ describe("GitStateBranchOpsAdapter", () => {
 
   describe("readAllFromStateBranch", () => {
     it("calls git ls-tree then reads each file", async () => {
-      // ls-tree
-      mockSuccess("file.json\nsub/other.json\n");
-      // read file.json
-      mockSuccess(Buffer.from('{"a":1}'));
-      // read sub/other.json
-      mockSuccess(Buffer.from('{"b":2}'));
+      mockSuccess("file.json\nsub/other.json\n"); // ls-tree
+      mockSuccess('{"a":1}'); // read file.json
+      mockSuccess('{"b":2}'); // read sub/other.json
 
       const result = await adapter.readAllFromStateBranch("tff-state/main");
       expect(result.ok).toBe(true);

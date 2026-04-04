@@ -23,40 +23,18 @@ export class GitStateBranchOpsAdapter extends StateBranchOpsPort {
 
   private runGit(
     args: string[],
-    opts: { cwd?: string; encoding: "buffer"; maxBuffer?: number },
-  ): Promise<Result<Buffer, GitError>>;
-  private runGit(
-    args: string[],
-    opts?: { cwd?: string; encoding?: "buffer" | "utf-8"; maxBuffer?: number },
-  ): Promise<Result<string, GitError>>;
-  private runGit(
-    args: string[],
-    opts?: { cwd?: string; encoding?: "buffer" | "utf-8"; maxBuffer?: number },
-  ): Promise<Result<string | Buffer, GitError>> {
-    const encoding = opts?.encoding ?? "utf-8";
+    opts?: { cwd?: string },
+  ): Promise<Result<string, GitError>> {
     const cwd = opts?.cwd ?? this.cwd;
-    const maxBuffer = opts?.maxBuffer;
 
     return new Promise((resolve) => {
-      const execOpts: Record<string, unknown> = {
-        cwd,
-        env: this.cleanGitEnv(),
-        ...(encoding === "buffer" ? { encoding: "buffer" } : { encoding: "utf-8" }),
-        ...(maxBuffer !== undefined ? { maxBuffer } : {}),
-      };
-
       execFile(
         "git",
         ["--no-pager", "-c", "color.ui=never", ...args],
-        execOpts,
-        (
-          error: ExecFileException | null,
-          stdout: string | Buffer,
-          stderr: string | Buffer,
-        ) => {
+        { cwd, env: this.cleanGitEnv(), encoding: "utf-8" },
+        (error: ExecFileException | null, stdout: string, stderr: string) => {
           if (error) {
-            const stderrStr = Buffer.isBuffer(stderr) ? stderr.toString("utf-8") : stderr;
-            resolve(err(this.mapError(error, stderrStr)));
+            resolve(err(this.mapError(error, stderr)));
             return;
           }
           resolve(ok(stdout));
@@ -144,7 +122,7 @@ export class GitStateBranchOpsAdapter extends StateBranchOpsPort {
 
   async syncToStateBranch(
     stateBranch: string,
-    files: Map<string, Buffer>,
+    files: Map<string, string>,
   ): Promise<Result<string, GitError>> {
     const tmpPath = this.makeTmpPath();
 
@@ -169,11 +147,10 @@ export class GitStateBranchOpsAdapter extends StateBranchOpsPort {
       });
       if (!commitResult.ok) return commitResult;
 
-      const stdout = Buffer.isBuffer(commitResult.data)
-        ? commitResult.data.toString("utf-8")
-        : commitResult.data;
-      const match = stdout.match(/\[[\w/.-]+\s+(?:\(root-commit\)\s+)?([a-f0-9]+)\]/);
-      const sha = match ? match[1] : stdout.trim();
+      const match = commitResult.data.match(
+        /\[[\w/.-]+\s+(?:\(root-commit\)\s+)?([a-f0-9]+)\]/,
+      );
+      const sha = match ? match[1] : commitResult.data.trim();
       return ok(sha);
     } finally {
       await this.runGit(["worktree", "remove", "--force", tmpPath]);
@@ -183,14 +160,11 @@ export class GitStateBranchOpsAdapter extends StateBranchOpsPort {
   async readFromStateBranch(
     stateBranch: string,
     filePath: string,
-  ): Promise<Result<Buffer | null, GitError>> {
+  ): Promise<Result<string | null, GitError>> {
     if (filePath.includes("..")) {
       return err(new GitError("INVALID_PATH", `Path traversal detected in path: ${filePath}`));
     }
-    const result = await this.runGit(["show", `${stateBranch}:${filePath}`], {
-      encoding: "buffer",
-      maxBuffer: 10 * 1024 * 1024,
-    });
+    const result = await this.runGit(["show", `${stateBranch}:${filePath}`]);
     if (!result.ok) {
       const msg = result.error.message;
       if (
@@ -202,19 +176,16 @@ export class GitStateBranchOpsAdapter extends StateBranchOpsPort {
       }
       return result;
     }
-    return ok(result.data as Buffer);
+    return ok(result.data);
   }
 
   async readAllFromStateBranch(
     stateBranch: string,
-  ): Promise<Result<Map<string, Buffer>, GitError>> {
+  ): Promise<Result<Map<string, string>, GitError>> {
     const lsResult = await this.runGit(["ls-tree", "-r", "--name-only", stateBranch]);
     if (!lsResult.ok) return lsResult;
 
-    const stdout = Buffer.isBuffer(lsResult.data)
-      ? lsResult.data.toString("utf-8")
-      : lsResult.data;
-    const paths = stdout
+    const paths = lsResult.data
       .split("\n")
       .map((l) => l.trim())
       .filter(Boolean);
@@ -225,7 +196,7 @@ export class GitStateBranchOpsAdapter extends StateBranchOpsPort {
       }
     }
 
-    const result = new Map<string, Buffer>();
+    const result = new Map<string, string>();
     for (const p of paths) {
       const readResult = await this.readFromStateBranch(stateBranch, p);
       if (!readResult.ok) return readResult;

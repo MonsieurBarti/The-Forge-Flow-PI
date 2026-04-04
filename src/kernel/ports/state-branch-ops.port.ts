@@ -7,7 +7,7 @@ export abstract class StateBranchOpsPort {
   abstract deleteBranch(branchName: string): Promise<Result<void, GitError>>;
   abstract branchExists(branchName: string): Promise<Result<boolean, GitError>>;
   abstract renameBranch(oldName: string, newName: string): Promise<Result<void, GitError>>;
-  abstract syncToStateBranch(stateBranch: string, files: Map<string, Buffer>): Promise<Result<string, GitError>>;
-  abstract readFromStateBranch(stateBranch: string, path: string): Promise<Result<Buffer | null, GitError>>;
-  abstract readAllFromStateBranch(stateBranch: string): Promise<Result<Map<string, Buffer>, GitError>>;
+  abstract syncToStateBranch(stateBranch: string, files: Map<string, string>): Promise<Result<string, GitError>>;
+  abstract readFromStateBranch(stateBranch: string, path: string): Promise<Result<string | null, GitError>>;
+  abstract readAllFromStateBranch(stateBranch: string): Promise<Result<Map<string, string>, GitError>>;
 }
