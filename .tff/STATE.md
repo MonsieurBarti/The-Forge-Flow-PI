@@ -11,7 +11,7 @@
 | State Branch CRUD + JSON Export/Import | closed | 15/15 | 100% |
 | Restore + Post-Checkout Hook + Fallback | closed | 0/0 | 0% |
 | Worktree Isolation + Rename + Merge-Back | closed | 0/10 | 0% |
-| State Reconstruction + /tff:sync | verifying | 0/0 | 0% |
+| State Reconstruction + /tff:sync | reviewing | 0/0 | 0% |
 | Execution Pipeline Improvements (G-pre, A, B) | discussing | 0/0 | 0% |
 | Compressor Notation | discussing | 0/0 | 0% |
 | Platform Commands Batch 1 (Daily Use) | discussing | 0/0 | 0% |
