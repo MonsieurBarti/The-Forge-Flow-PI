@@ -13,12 +13,14 @@ export interface PlanCommandDeps {
   sessionRepo: WorkflowSessionRepositoryPort;
   artifactFile: ArtifactFilePort;
   suggestNextStep: SuggestNextStepUseCase;
+  withGuard?: () => Promise<void>;
 }
 
 export function registerPlanCommand(api: ExtensionAPI, deps: PlanCommandDeps): void {
   api.registerCommand("tff:plan", {
     description: "Start the planning phase — decompose spec into tasks with wave detection",
     handler: async (args: string) => {
+      await deps.withGuard?.();
       // 1. Resolve target slice from args (label or ID)
       const identifier = args.trim();
       if (!identifier) {

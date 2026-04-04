@@ -157,17 +157,6 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   // --- Shared infrastructure ---
   const gitHookAdapter = new GitHookAdapter(join(options.projectRoot, ".git"));
 
-  // --- Hexagon extensions ---
-  registerProjectExtension(api, {
-    projectRoot: options.projectRoot,
-    projectRepo,
-    projectFs: new NodeProjectFileSystemAdapter(),
-    mergeSettings: new MergeSettingsUseCase(),
-    eventBus,
-    dateProvider,
-    gitHookPort: gitHookAdapter,
-  });
-
   const sliceTransitionPort = new WorkflowSliceTransitionAdapter(sliceRepo, dateProvider);
   const artifactFile = new NodeArtifactFileAdapter(options.projectRoot);
   const workflowSessionRepo = new InMemoryWorkflowSessionRepository();
@@ -177,24 +166,6 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const reviewUI = plannotatorPath
     ? new PlannotatorReviewUIAdapter(plannotatorPath)
     : new TerminalReviewUIAdapter();
-
-  registerWorkflowExtension(api, {
-    projectRepo,
-    milestoneRepo,
-    sliceRepo,
-    taskRepo,
-    createTasksPort: new CreateTasksUseCase(taskRepo, new DetectWavesUseCase(), dateProvider),
-    sliceTransitionPort,
-    eventBus,
-    dateProvider,
-    contextStaging: new NoOpContextStaging(),
-    artifactFile,
-    workflowSessionRepo,
-    autonomyModeProvider,
-    reviewUI,
-    maxRetries: 2,
-    resolveActiveTffDir,
-  });
 
   // --- Execution extension ---
   // Pause and resume tools are immediately usable via session persistence.
@@ -438,9 +409,48 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     ['fresh-clone', new FreshCloneStrategy(backupService, stateBranchOps, restoreUseCase, healthCheckService, options.projectRoot)],
   ]);
   const stateRecoveryAdapter = new StateRecoveryAdapter(strategies, gitPort, stateBranchOps, options.projectRoot);
-  const stateGuard = new StateGuard(stateRecoveryAdapter, healthCheckService);
+  const stateGuard = new StateGuard(stateRecoveryAdapter, healthCheckService, logger);
 
   const forceSyncUseCase = new ForceSyncUseCase(gitStateSyncAdapter, restoreUseCase, gitPort);
+
+  // --- withGuard helper ---
+  const withGuard = async (): Promise<void> => {
+    const result = await stateGuard.ensure(rootTffDir);
+    if (!result.ok) {
+      api.sendUserMessage(`State guard failed: ${result.error.message}`);
+    }
+  };
+
+  // --- Hexagon extensions (registered after withGuard is available) ---
+  registerProjectExtension(api, {
+    projectRoot: options.projectRoot,
+    projectRepo,
+    projectFs: new NodeProjectFileSystemAdapter(),
+    mergeSettings: new MergeSettingsUseCase(),
+    eventBus,
+    dateProvider,
+    gitHookPort: gitHookAdapter,
+    withGuard,
+  });
+
+  registerWorkflowExtension(api, {
+    projectRepo,
+    milestoneRepo,
+    sliceRepo,
+    taskRepo,
+    createTasksPort: new CreateTasksUseCase(taskRepo, new DetectWavesUseCase(), dateProvider),
+    sliceTransitionPort,
+    eventBus,
+    dateProvider,
+    contextStaging: new NoOpContextStaging(),
+    artifactFile,
+    workflowSessionRepo,
+    autonomyModeProvider,
+    reviewUI,
+    maxRetries: 2,
+    resolveActiveTffDir,
+    withGuard,
+  });
 
   // --- /tff:sync command ---
   api.registerCommand("tff:sync", {

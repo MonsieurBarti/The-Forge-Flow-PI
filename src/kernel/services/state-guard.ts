@@ -3,11 +3,13 @@ import type { HealthCheckService } from './health-check.service';
 import type { Result } from '@kernel/result';
 import { ok, err } from '@kernel/result';
 import type { SyncError } from '@kernel/errors/sync.error';
+import type { LoggerPort } from '@kernel/ports/logger.port';
 
 export class StateGuard {
   constructor(
     private readonly recoveryPort: StateRecoveryPort,
     private readonly healthCheck: HealthCheckService,
+    private readonly logger: LoggerPort,
   ) {}
 
   async ensure(tffDir: string): Promise<Result<void, SyncError>> {
@@ -31,7 +33,7 @@ export class StateGuard {
 
     // 5. Log action
     const report = recoverResult.data;
-    console.log(
+    this.logger.info(
       `[tff] State recovered: ${report.type} → ${report.action} (source: ${report.source})`,
     );
 

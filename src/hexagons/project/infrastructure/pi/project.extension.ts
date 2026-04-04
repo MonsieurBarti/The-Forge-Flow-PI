@@ -15,12 +15,14 @@ export interface ProjectExtensionDeps {
   eventBus: EventBusPort;
   dateProvider: DateProviderPort;
   gitHookPort?: GitHookPort;
+  withGuard?: () => Promise<void>;
 }
 
 export function registerProjectExtension(api: ExtensionAPI, deps: ProjectExtensionDeps): void {
   api.registerCommand("tff:new", {
     description: "Initialize a new TFF project in the current directory",
-    handler: async (_args, ctx) => {
+    handler: async (_args, _ctx) => {
+      await deps.withGuard?.();
       api.sendUserMessage(
         "I'll initialize a TFF project. Please provide a project name and vision, then I'll call the tff_init_project tool.",
       );

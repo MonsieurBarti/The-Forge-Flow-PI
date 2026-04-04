@@ -46,6 +46,7 @@ export interface WorkflowExtensionDeps {
   reviewUI: ReviewUIPort;
   maxRetries: number;
   resolveActiveTffDir?: (sliceId?: string) => Promise<string>;
+  withGuard?: () => Promise<void>;
 }
 
 function formatStatusReport(report: StatusReport): string {
@@ -100,7 +101,8 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
 
   api.registerCommand("tff:status", {
     description: "Show current TFF project status",
-    handler: async (_args, ctx) => {
+    handler: async (_args, _ctx) => {
+      await deps.withGuard?.();
       api.sendUserMessage("Fetching project status...");
     },
   });
@@ -180,6 +182,7 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
     sliceRepo: deps.sliceRepo,
     milestoneRepo: deps.milestoneRepo,
     suggestNextStep,
+    withGuard: deps.withGuard,
   });
 
   // --- Research use case + tool ---
@@ -197,6 +200,7 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
     sessionRepo: deps.workflowSessionRepo,
     artifactFile: deps.artifactFile,
     suggestNextStep,
+    withGuard: deps.withGuard,
   });
 
   // --- Plan use case + tool ---
@@ -215,5 +219,6 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
     sessionRepo: deps.workflowSessionRepo,
     artifactFile: deps.artifactFile,
     suggestNextStep,
+    withGuard: deps.withGuard,
   });
 }

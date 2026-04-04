@@ -151,7 +151,17 @@ export class StateRecoveryAdapter extends StateRecoveryPort {
       });
     }
 
-    return strategy.execute(scenario, tffDir);
+    const result = await strategy.execute(scenario, tffDir);
+
+    // Chain: if crash recovery degrades to fresh-clone signal, invoke fresh-clone strategy
+    if (result.ok && result.data.action === 'created-fresh' && scenario.type !== 'fresh-clone') {
+      const freshClone = this.strategies.get('fresh-clone');
+      if (freshClone) {
+        return freshClone.execute(scenario, tffDir);
+      }
+    }
+
+    return result;
   }
 
   // ---------------------------------------------------------------------------

@@ -4,6 +4,7 @@ import type { RecoveryScenario, RecoveryReport } from '@kernel/schemas/recovery.
 import type { HealthCheckReport } from './health-check.service';
 import { SyncError } from '@kernel/errors/sync.error';
 import { StateRecoveryPort } from '@kernel/ports/state-recovery.port';
+import { LoggerPort } from '@kernel/ports/logger.port';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { StateGuard } from './state-guard';
 
@@ -66,6 +67,16 @@ class StubHealthCheckService {
 }
 
 // ---------------------------------------------------------------------------
+// StubLoggerPort
+// ---------------------------------------------------------------------------
+class StubLoggerPort extends LoggerPort {
+  error(_message: string, _context?: Record<string, unknown>): void {}
+  warn(_message: string, _context?: Record<string, unknown>): void {}
+  info(_message: string, _context?: Record<string, unknown>): void {}
+  debug(_message: string, _context?: Record<string, unknown>): void {}
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 const TFF_DIR = '/fake/.tff';
@@ -73,12 +84,14 @@ const TFF_DIR = '/fake/.tff';
 describe('StateGuard', () => {
   let recoveryPort: StubStateRecoveryPort;
   let healthCheck: StubHealthCheckService;
+  let logger: StubLoggerPort;
   let guard: StateGuard;
 
   beforeEach(() => {
     recoveryPort = new StubStateRecoveryPort();
     healthCheck = new StubHealthCheckService();
-    guard = new StateGuard(recoveryPort, healthCheck as never);
+    logger = new StubLoggerPort();
+    guard = new StateGuard(recoveryPort, healthCheck as never, logger);
   });
 
   it('healthy scenario — calls healthCheck.runAll + recoveryPort.detect, returns ok, recovery NOT called', async () => {

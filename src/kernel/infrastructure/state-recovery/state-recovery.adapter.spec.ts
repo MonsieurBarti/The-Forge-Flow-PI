@@ -463,6 +463,42 @@ describe("StateRecoveryAdapter", () => {
     expect(crashStrategy.executeCalls[0].tffDir).toBe(tffDir);
   });
 
+  // Test 13a: recover() with crash returning 'created-fresh' → chains to fresh-clone strategy
+  it("recover() chains to fresh-clone strategy when crash strategy returns 'created-fresh'", async () => {
+    crashStrategy.result = ok({
+      type: "crash",
+      action: "created-fresh",
+      source: "none",
+      filesRestored: 0,
+      warnings: ["backup restore failed, signalling fresh-clone"],
+    });
+    freshCloneStrategy.result = ok({
+      type: "fresh-clone",
+      action: "restored",
+      source: "state-branch",
+      filesRestored: 5,
+      warnings: [],
+    });
+
+    const scenario: RecoveryScenario = {
+      type: "crash",
+      currentBranch: "main",
+      branchMeta: null,
+      backupPaths: ["/tmp/backup"],
+      stateBranchExists: true,
+      parentStateBranch: null,
+    };
+
+    const result = await adapter.recover(scenario, tffDir);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("unreachable");
+    expect(result.data.action).toBe("restored");
+    expect(result.data.source).toBe("state-branch");
+    expect(crashStrategy.executeCalls).toHaveLength(1);
+    expect(freshCloneStrategy.executeCalls).toHaveLength(1);
+  });
+
   // Test 13: recover() with untracked → returns skipped report
   it("recover() returns skipped report for 'untracked' scenario", async () => {
     const scenario: RecoveryScenario = {
