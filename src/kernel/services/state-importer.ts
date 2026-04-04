@@ -39,6 +39,14 @@ export class StateImporter {
 
       const { projectRepo, milestoneRepo, sliceRepo, taskRepo, shipRecordRepo, completionRecordRepo } = this.deps;
 
+      // Clear repos before import to avoid stale entity accumulation
+      projectRepo.reset();
+      milestoneRepo.reset();
+      sliceRepo.reset();
+      taskRepo.reset();
+      shipRecordRepo.reset();
+      completionRecordRepo.reset();
+
       // Import in dependency order: project → milestones → slices → tasks → records
       if (snapshot.project) {
         const project = Project.reconstitute(snapshot.project);

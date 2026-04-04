@@ -6,4 +6,5 @@ export abstract class MilestoneRepositoryPort {
   abstract findById(id: Id): Promise<Result<Milestone | null, PersistenceError>>;
   abstract findByLabel(label: string): Promise<Result<Milestone | null, PersistenceError>>;
   abstract findByProjectId(projectId: Id): Promise<Result<Milestone[], PersistenceError>>;
+  abstract reset(): void;
 }

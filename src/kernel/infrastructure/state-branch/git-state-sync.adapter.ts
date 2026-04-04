@@ -15,7 +15,7 @@ import {
 } from "./state-snapshot.schemas";
 import { mergeSnapshots, type Snapshot } from "./json-snapshot-merger";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { join, dirname, relative } from "node:path";
+import { join, dirname, relative, resolve, sep } from "node:path";
 
 export interface GitStateSyncAdapterDeps {
   stateBranchOps: StateBranchOpsPort;
@@ -180,11 +180,14 @@ export class GitStateSyncAdapter extends StateSyncPort {
       }
 
       // Write artifacts to local paths
+      const resolvedTffDir = resolve(tffDir);
       for (const [filePath, content] of fileMap) {
         if (filePath === "state-snapshot.json" || filePath === "branch-meta.json") continue;
 
-        // Write to tffDir
-        const localPath = join(tffDir, filePath);
+        // Path traversal guard
+        const localPath = resolve(tffDir, filePath);
+        if (!localPath.startsWith(resolvedTffDir + sep)) continue;
+
         mkdirSync(dirname(localPath), { recursive: true });
         writeFileSync(localPath, content);
       }
@@ -215,59 +218,77 @@ export class GitStateSyncAdapter extends StateSyncPort {
     parent: string,
     sliceId: string,
   ): Promise<Result<void, SyncError>> {
-    const { stateBranchOps } = this.deps;
-    const childBranch = resolveStateBranch(child);
-    const parentBranch = resolveStateBranch(parent);
+    const lockRelease = this.deps.advisoryLock.acquire(join(this.deps.tffDir, ".lock"));
+    if (!lockRelease.ok) return err(lockRelease.error);
+    try {
+      const { stateBranchOps } = this.deps;
+      const childBranch = resolveStateBranch(child);
+      const parentBranch = resolveStateBranch(parent);
 
-    // Read both snapshots
-    const childRead = await stateBranchOps.readAllFromStateBranch(childBranch);
-    if (!childRead.ok) return err(new SyncError("BRANCH_NOT_FOUND", childRead.error.message));
+      // Read both snapshots
+      const childRead = await stateBranchOps.readAllFromStateBranch(childBranch);
+      if (!childRead.ok) return err(new SyncError("BRANCH_NOT_FOUND", childRead.error.message));
 
-    const parentRead = await stateBranchOps.readAllFromStateBranch(parentBranch);
-    if (!parentRead.ok) return err(new SyncError("BRANCH_NOT_FOUND", parentRead.error.message));
+      const parentRead = await stateBranchOps.readAllFromStateBranch(parentBranch);
+      if (!parentRead.ok) return err(new SyncError("BRANCH_NOT_FOUND", parentRead.error.message));
 
-    const childFiles = childRead.data;
-    const parentFiles = parentRead.data;
+      const childFiles = childRead.data;
+      const parentFiles = parentRead.data;
 
-    // Parse snapshots
-    const childSnapshotStr = childFiles.get("state-snapshot.json");
-    const parentSnapshotStr = parentFiles.get("state-snapshot.json");
+      // Parse and validate snapshots (Fix H-02)
+      const childSnapshotStr = childFiles.get("state-snapshot.json");
+      const parentSnapshotStr = parentFiles.get("state-snapshot.json");
 
-    if (!childSnapshotStr || !parentSnapshotStr) {
-      return err(new SyncError("IMPORT_FAILED", "Missing state-snapshot.json in one or both branches"));
-    }
-
-    const childSnapshot = JSON.parse(childSnapshotStr) as Snapshot;
-    const parentSnapshot = JSON.parse(parentSnapshotStr) as Snapshot;
-
-    // Merge snapshots using ownership rules
-    const merged = mergeSnapshots(parentSnapshot, childSnapshot, sliceId);
-
-    // Build merged file map
-    const mergedFiles = new Map<string, string>(parentFiles);
-
-    // Overwrite with merged snapshot
-    mergedFiles.set("state-snapshot.json", JSON.stringify(merged, null, 2));
-
-    // Merge metrics (append child entries)
-    const parentMetrics = parentFiles.get("metrics.jsonl") ?? "";
-    const childMetrics = childFiles.get("metrics.jsonl") ?? "";
-    if (childMetrics) {
-      mergedFiles.set("metrics.jsonl", parentMetrics + (parentMetrics.endsWith("\n") ? "" : "\n") + childMetrics);
-    }
-
-    // Copy child's slice-specific artifacts into parent
-    for (const [filePath, content] of childFiles) {
-      if (filePath.startsWith("milestones/") && filePath !== "state-snapshot.json") {
-        mergedFiles.set(filePath, content);
+      if (!childSnapshotStr || !parentSnapshotStr) {
+        return err(new SyncError("IMPORT_FAILED", "Missing state-snapshot.json in one or both branches"));
       }
+
+      const rawParent = JSON.parse(parentSnapshotStr);
+      const migratedParent = migrateSnapshot(rawParent);
+      const parentSnapshot: Snapshot = StateSnapshotSchema.parse(migratedParent);
+
+      const rawChild = JSON.parse(childSnapshotStr);
+      const migratedChild = migrateSnapshot(rawChild);
+      const childSnapshot: Snapshot = StateSnapshotSchema.parse(migratedChild);
+
+      // Merge snapshots using ownership rules
+      const merged = mergeSnapshots(parentSnapshot, childSnapshot, sliceId);
+
+      // Build full snapshot with required envelope fields (Fix B1)
+      const fullSnapshot = {
+        version: SCHEMA_VERSION,
+        exportedAt: new Date().toISOString(),
+        ...merged,
+      };
+
+      // Build merged file map
+      const mergedFiles = new Map<string, string>(parentFiles);
+
+      // Overwrite with merged snapshot
+      mergedFiles.set("state-snapshot.json", JSON.stringify(fullSnapshot, null, 2));
+
+      // Merge metrics (append child entries) — Fix W6: guard against empty parentMetrics
+      const parentMetrics = parentFiles.get("metrics.jsonl") ?? "";
+      const childMetrics = childFiles.get("metrics.jsonl") ?? "";
+      if (childMetrics) {
+        mergedFiles.set("metrics.jsonl", parentMetrics + (parentMetrics && !parentMetrics.endsWith("\n") ? "\n" : "") + childMetrics);
+      }
+
+      // Copy child's slice-specific artifacts into parent
+      for (const [filePath, content] of childFiles) {
+        if (filePath.startsWith("milestones/") && filePath !== "state-snapshot.json") {
+          mergedFiles.set(filePath, content);
+        }
+      }
+
+      // Write merged result to parent
+      const syncResult = await stateBranchOps.syncToStateBranch(parentBranch, mergedFiles);
+      if (!syncResult.ok) return err(new SyncError("EXPORT_FAILED", syncResult.error.message));
+
+      return ok(undefined);
+    } finally {
+      lockRelease.data();
     }
-
-    // Write merged result to parent
-    const syncResult = await stateBranchOps.syncToStateBranch(parentBranch, mergedFiles);
-    if (!syncResult.ok) return err(new SyncError("EXPORT_FAILED", syncResult.error.message));
-
-    return ok(undefined);
   }
 
   private collectArtifacts(tffDir: string, files: Map<string, string>): void {

@@ -6,4 +6,5 @@ export abstract class SliceRepositoryPort {
   abstract findById(id: Id): Promise<Result<Slice | null, PersistenceError>>;
   abstract findByLabel(label: string): Promise<Result<Slice | null, PersistenceError>>;
   abstract findByMilestoneId(milestoneId: Id): Promise<Result<Slice[], PersistenceError>>;
+  abstract reset(): void;
 }
