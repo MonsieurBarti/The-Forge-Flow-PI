@@ -21,7 +21,7 @@ export { GitHubPort } from "./github.port";
 export type { PrFilter, PullRequestConfig, PullRequestInfo } from "./github.schemas";
 export { PrFilterSchema, PullRequestConfigSchema, PullRequestInfoSchema } from "./github.schemas";
 export { LoggerPort } from "./logger.port";
-export { StateSyncPort } from "./state-sync.port";
+export { StateSyncPort, SYNC_ERROR_CODES } from "./state-sync.port";
 export type { SyncReport } from "./state-sync.schemas";
 export { SyncReportSchema } from "./state-sync.schemas";
 export { OverlayDataPort } from "./overlay-data.port";

@@ -78,23 +78,32 @@ export class SqliteShipRecordRepository extends ShipRecordRepositoryPort {
     const rows = this.db
       .prepare<[string], ShipRecordRow>("SELECT * FROM ship_records WHERE slice_id = ?")
       .all(sliceId);
+    return ok(rows.map((row) => ShipRecord.reconstitute(this.toProps(row))));
+  }
 
-    const records = rows.map((row) => {
-      const props: ShipRecordProps = {
-        id: row.id,
-        sliceId: row.slice_id,
-        prNumber: row.pr_number,
-        prUrl: row.pr_url,
-        headBranch: row.head_branch,
-        baseBranch: row.base_branch,
-        outcome: row.outcome !== null ? MergeGateDecisionSchema.parse(row.outcome) : null,
-        fixCyclesUsed: row.fix_cycles_used,
-        createdAt: new Date(row.created_at),
-        completedAt: row.completed_at !== null ? new Date(row.completed_at) : null,
-      };
-      return ShipRecord.reconstitute(props);
-    });
+  async findAll(): Promise<Result<ShipRecord[], PersistenceError>> {
+    const rows = this.db
+      .prepare<[], ShipRecordRow>("SELECT * FROM ship_records")
+      .all();
+    return ok(rows.map((row) => ShipRecord.reconstitute(this.toProps(row))));
+  }
 
-    return ok(records);
+  reset(): void {
+    this.db.exec("DELETE FROM ship_records");
+  }
+
+  private toProps(row: ShipRecordRow): ShipRecordProps {
+    return {
+      id: row.id,
+      sliceId: row.slice_id,
+      prNumber: row.pr_number,
+      prUrl: row.pr_url,
+      headBranch: row.head_branch,
+      baseBranch: row.base_branch,
+      outcome: row.outcome !== null ? MergeGateDecisionSchema.parse(row.outcome) : null,
+      fixCyclesUsed: row.fix_cycles_used,
+      createdAt: new Date(row.created_at),
+      completedAt: row.completed_at !== null ? new Date(row.completed_at) : null,
+    };
   }
 }

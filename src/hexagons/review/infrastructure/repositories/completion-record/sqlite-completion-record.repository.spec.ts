@@ -113,4 +113,33 @@ describe("SqliteCompletionRecordRepository", () => {
     expect(found?.auditReports[1].agentType).toBe("security-auditor");
     expect(found?.toJSON().outcome).toBeNull();
   });
+
+  it("findAll returns empty array when no records", async () => {
+    const result = await repo.findAll();
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data).toEqual([]);
+  });
+
+  it("findAll returns all records", async () => {
+    const r1 = makeRecord({ id: crypto.randomUUID(), milestoneId: crypto.randomUUID() });
+    const r2 = makeRecord({ id: crypto.randomUUID(), milestoneId: crypto.randomUUID() });
+    await repo.save(r1);
+    await repo.save(r2);
+
+    const result = await repo.findAll();
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data).toHaveLength(2);
+  });
+
+  it("reset clears all records", async () => {
+    await repo.save(makeRecord({ id: crypto.randomUUID(), milestoneId: crypto.randomUUID() }));
+    repo.reset();
+
+    const result = await repo.findAll();
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data).toEqual([]);
+  });
 });

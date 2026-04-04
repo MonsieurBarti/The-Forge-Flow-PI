@@ -10,9 +10,9 @@ import { MarkdownExecutionSessionAdapter } from "@hexagons/execution/infrastruct
 import { registerExecutionExtension } from "@hexagons/execution/infrastructure/pi/execution.extension";
 import { PiAgentDispatchAdapter } from "@hexagons/execution/infrastructure/adapters/agent-dispatch/pi-agent-dispatch.adapter";
 import { ProcessSignalPauseAdapter } from "@hexagons/execution/infrastructure/adapters/pause-signal/process-signal-pause.adapter";
-import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/in-memory-milestone.repository";
+import { SqliteMilestoneRepository } from "@hexagons/milestone/infrastructure/sqlite-milestone.repository";
 import { registerProjectExtension } from "@hexagons/project";
-import { InMemoryProjectRepository } from "@hexagons/project/infrastructure/in-memory-project.repository";
+import { SqliteProjectRepository } from "@hexagons/project/infrastructure/sqlite-project.repository";
 import { NodeProjectFileSystemAdapter } from "@hexagons/project/infrastructure/node-project-filesystem.adapter";
 import { CompleteMilestoneUseCase } from "@hexagons/review/application/complete-milestone.use-case";
 import { ConductReviewUseCase } from "@hexagons/review/application/conduct-review.use-case";
@@ -37,11 +37,11 @@ import { SqliteCompletionRecordRepository } from "@hexagons/review/infrastructur
 import { SqliteShipRecordRepository } from "@hexagons/review/infrastructure/repositories/ship-record/sqlite-ship-record.repository";
 import { TerminalReviewUIAdapter } from "@hexagons/review/infrastructure/adapters/review-ui/terminal-review-ui.adapter";
 import { HOTKEYS_DEFAULTS, MergeSettingsUseCase } from "@hexagons/settings";
-import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
+import { SqliteSliceRepository } from "@hexagons/slice/infrastructure/sqlite-slice.repository";
 import { WorkflowSliceTransitionAdapter } from "@hexagons/slice/infrastructure/workflow-slice-transition.adapter";
 import { CreateTasksUseCase } from "@hexagons/task/application/create-tasks.use-case";
 import { DetectWavesUseCase } from "@hexagons/task/domain/detect-waves.use-case";
-import { InMemoryTaskRepository } from "@hexagons/task/infrastructure/in-memory-task.repository";
+import { SqliteTaskRepository } from "@hexagons/task/infrastructure/sqlite-task.repository";
 import {
   type ContextPackage,
   type ContextStagingError,
@@ -71,6 +71,12 @@ import {
   SystemDateProvider,
 } from "@kernel";
 import { GhCliAdapter } from "@kernel/infrastructure/gh-cli.adapter";
+import { GitStateBranchOpsAdapter } from "@kernel/infrastructure/state-branch/git-state-branch-ops.adapter";
+import { GitStateSyncAdapter } from "@kernel/infrastructure/state-branch/git-state-sync.adapter";
+import { AdvisoryLock } from "@kernel/infrastructure/state-branch/advisory-lock";
+import { StateBranchCreationHandler } from "@kernel/infrastructure/state-branch/state-branch-creation.handler";
+import { StateExporter } from "@kernel/services/state-exporter";
+import { StateImporter } from "@kernel/services/state-importer";
 import Database from "better-sqlite3";
 
 function detectPlannotator(): string | undefined {
@@ -112,11 +118,16 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     initializeAgentRegistry(agentRegistryResult.data);
   }
 
-  // --- Repositories (in-memory for now; SQLite swap in later slice) ---
-  const projectRepo = new InMemoryProjectRepository();
-  const milestoneRepo = new InMemoryMilestoneRepository();
-  const sliceRepo = new InMemorySliceRepository();
-  const taskRepo = new InMemoryTaskRepository();
+  // --- Shared SQLite database for core entities ---
+  const tffDir = join(options.projectRoot, ".tff");
+  mkdirSync(tffDir, { recursive: true });
+  const stateDb = new Database(join(tffDir, "state.db"));
+
+  // --- Repositories (SQLite-backed) ---
+  const projectRepo = new SqliteProjectRepository(stateDb);
+  const milestoneRepo = new SqliteMilestoneRepository(stateDb);
+  const sliceRepo = new SqliteSliceRepository(stateDb);
+  const taskRepo = new SqliteTaskRepository(stateDb);
 
   // --- Hexagon extensions ---
   registerProjectExtension(api, {
@@ -283,8 +294,6 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const worktreeAdapter = new GitWorktreeAdapter(gitPort, options.projectRoot);
   const ghCliAdapter = new GhCliAdapter(options.projectRoot);
   const mergeGateAdapter = new PiMergeGateAdapter();
-  const tffDir = join(options.projectRoot, ".tff");
-  mkdirSync(tffDir, { recursive: true });
   const shipRecordDb = new Database(join(tffDir, "ship-records.db"));
   const shipRecordRepository = new SqliteShipRecordRepository(shipRecordDb);
 
@@ -336,6 +345,40 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     logger,
   );
   void completeMilestoneUseCase;
+
+  // --- State sync wiring ---
+  const stateBranchOps = new GitStateBranchOpsAdapter(options.projectRoot);
+  const stateExporter = new StateExporter({
+    projectRepo,
+    milestoneRepo,
+    sliceRepo,
+    taskRepo,
+    shipRecordRepo: shipRecordRepository,
+    completionRecordRepo: completionRecordRepository,
+  });
+  const stateImporter = new StateImporter({
+    projectRepo,
+    milestoneRepo,
+    sliceRepo,
+    taskRepo,
+    shipRecordRepo: shipRecordRepository,
+    completionRecordRepo: completionRecordRepository,
+  });
+  const gitStateSyncAdapter = new GitStateSyncAdapter({
+    stateBranchOps,
+    stateExporter,
+    stateImporter,
+    advisoryLock: new AdvisoryLock(),
+    tffDir,
+    projectRoot: options.projectRoot,
+  });
+  const stateBranchCreationHandler = new StateBranchCreationHandler(
+    gitStateSyncAdapter,
+    milestoneRepo,
+    sliceRepo,
+    logger,
+  );
+  stateBranchCreationHandler.register(eventBus);
 
   // --- Overlay extension wiring ---
   const overlayDataAdapter = new OverlayDataAdapter(

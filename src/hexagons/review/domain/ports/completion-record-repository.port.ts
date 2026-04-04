@@ -6,4 +6,6 @@ export abstract class CompletionRecordRepositoryPort {
   abstract findByMilestoneId(
     milestoneId: string,
   ): Promise<Result<CompletionRecord | null, PersistenceError>>;
+  abstract findAll(): Promise<Result<CompletionRecord[], PersistenceError>>;
+  abstract reset(): void;
 }

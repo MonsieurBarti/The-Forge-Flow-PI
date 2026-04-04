@@ -6,4 +6,5 @@ export abstract class TaskRepositoryPort {
   abstract findById(id: Id): Promise<Result<Task | null, PersistenceError>>;
   abstract findByLabel(label: string): Promise<Result<Task | null, PersistenceError>>;
   abstract findBySliceId(sliceId: Id): Promise<Result<Task[], PersistenceError>>;
+  abstract reset(): void;
 }

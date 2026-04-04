@@ -1,8 +1,10 @@
 import { isErr, isOk } from "@kernel";
+import Database from "better-sqlite3";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { ProjectRepositoryPort } from "../domain/ports/project-repository.port";
 import { ProjectBuilder } from "../domain/project.builder";
 import { InMemoryProjectRepository } from "./in-memory-project.repository";
+import { SqliteProjectRepository } from "./sqlite-project.repository";
 
 function runContractTests(name: string, factory: () => ProjectRepositoryPort & { reset(): void }) {
   describe(`${name} contract`, () => {
@@ -81,3 +83,8 @@ function runContractTests(name: string, factory: () => ProjectRepositoryPort & {
 }
 
 runContractTests("InMemoryProjectRepository", () => new InMemoryProjectRepository());
+
+runContractTests("SqliteProjectRepository", () => {
+  const db = new Database(":memory:");
+  return new SqliteProjectRepository(db);
+});

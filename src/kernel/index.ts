@@ -112,6 +112,7 @@ export {
   PullRequestConfigSchema,
   PullRequestInfoSchema,
   StateSyncPort,
+  SYNC_ERROR_CODES,
   SyncReportSchema,
 } from "./ports";
 export type { Result } from "./result";
