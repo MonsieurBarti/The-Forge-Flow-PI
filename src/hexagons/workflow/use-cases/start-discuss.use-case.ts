@@ -1,12 +1,12 @@
 import type { MilestoneRepositoryPort } from "@hexagons/milestone";
 import type { SliceRepositoryPort } from "@hexagons/slice";
 import { SliceNotFoundError } from "@hexagons/slice";
-import type { DateProviderPort, EventBusPort, PersistenceError, SyncError } from "@kernel";
+import { type DateProviderPort, type EventBusPort, PersistenceError, type SyncError } from "@kernel";
 import { err, isErr, ok, type Result } from "@kernel";
 import type { WorktreeError } from "@kernel/errors/worktree.error";
 import type { StateSyncPort } from "@kernel/ports/state-sync.port";
 import type { WorktreePort } from "@kernel/ports/worktree.port";
-import type { WorkflowBaseError } from "../domain/errors/workflow-base.error";
+import { WorkflowBaseError } from "../domain/errors/workflow-base.error";
 import type { AutonomyModeProvider } from "../domain/ports/autonomy-mode.provider";
 import type { WorkflowSessionRepositoryPort } from "../domain/ports/workflow-session.repository.port";
 import { WorkflowSession } from "../domain/workflow-session.aggregate";
@@ -57,7 +57,7 @@ export class StartDiscussUseCase {
       if (isErr(wsResult)) return wsResult;
     }
 
-    // 2. Find or create session
+    // 3. Find or create session
     const sessionResult = await this.sessionRepo.findByMilestoneId(input.milestoneId);
     if (isErr(sessionResult)) return sessionResult;
 
@@ -72,12 +72,12 @@ export class StartDiscussUseCase {
       });
     }
 
-    // 3. Assign slice
+    // 4. Assign slice
     const fromPhase = session.currentPhase;
     const assignResult = session.assignSlice(input.sliceId);
     if (isErr(assignResult)) return assignResult;
 
-    // 4. Trigger start transition
+    // 5. Trigger start transition
     const triggerResult = session.trigger(
       "start",
       {
@@ -91,11 +91,11 @@ export class StartDiscussUseCase {
     );
     if (isErr(triggerResult)) return triggerResult;
 
-    // 5. Save session
+    // 6. Save session
     const saveResult = await this.sessionRepo.save(session);
     if (isErr(saveResult)) return saveResult;
 
-    // 6. Publish events
+    // 7. Publish events
     for (const event of session.pullEvents()) {
       await this.eventBus.publish(event);
     }
@@ -120,7 +120,7 @@ export class StartDiscussUseCase {
     const msResult = await milestoneRepo.findById(milestoneId);
     if (isErr(msResult)) return msResult;
     if (!msResult.data) {
-      return err(new SliceNotFoundError(`milestone not found: ${milestoneId}`));
+      return err(new PersistenceError(`Milestone not found: ${milestoneId}`));
     }
     const msLabel = msResult.data.label;
     const baseBranch = `milestone/${msLabel}`;

@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import type { WorktreePort } from "@kernel/ports/worktree.port";
 import type { StateSyncPort } from "@kernel/ports/state-sync.port";
 import type { SliceTransitionPort } from "@hexagons/workflow/domain/ports/slice-transition.port";
@@ -184,7 +185,6 @@ export class ShipSliceUseCase {
 
     // Step 7: Restore top-level .tff/ from milestone state branch (hard fail)
     if (this.stateSyncPort && this.resolvedRoot) {
-      const { join } = await import("node:path");
       const rootTffDir = join(this.resolvedRoot, ".tff");
       const restoreResult = await this.stateSyncPort.restoreFromStateBranch(parsed.baseBranch, rootTffDir);
       if (!restoreResult.ok) return err(ShipError.mergeBackFailed(parsed.sliceId, restoreResult.error));
@@ -195,11 +195,11 @@ export class ShipSliceUseCase {
       return err(ShipError.cleanupFailed(parsed.sliceId, transitionResult.error));
     }
 
-    // Step 8: Record merge and save
+    // Step 9: Record merge and save
     record.recordMerge(cycle, this.dateProvider.now());
     await this.shipRecordRepository.save(record);
 
-    // Step 7: Emit event
+    // Step 10: Emit event
     await this.eventBus.publish(
       new SliceShippedEvent({
         id: this.generateId(),
@@ -212,7 +212,7 @@ export class ShipSliceUseCase {
       }),
     );
 
-    // Step 8: Return result
+    // Step 11: Return result
     return ok({
       sliceId: parsed.sliceId,
       prNumber,
