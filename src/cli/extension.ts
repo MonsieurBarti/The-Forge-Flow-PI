@@ -77,9 +77,17 @@ import { GitStateSyncAdapter } from "@kernel/infrastructure/state-branch/git-sta
 import { AdvisoryLock } from "@kernel/infrastructure/state-branch/advisory-lock";
 import { StateBranchCreationHandler } from "@kernel/infrastructure/state-branch/state-branch-creation.handler";
 import { BackupService } from "@kernel/services/backup-service";
-import { BranchConsistencyGuard } from "@kernel/services/branch-consistency-guard";
-import { DoctorService } from "@kernel/services/doctor-service";
 import { RestoreStateUseCase } from "@kernel/services/restore-state.use-case";
+import { HealthCheckService } from "@kernel/services/health-check.service";
+import { StateGuard } from "@kernel/services/state-guard";
+import { ForceSyncUseCase } from "@kernel/services/force-sync.use-case";
+import { StateRecoveryAdapter } from "@kernel/infrastructure/state-recovery/state-recovery.adapter";
+import { CrashRecoveryStrategy } from "@kernel/infrastructure/state-recovery/crash-recovery.strategy";
+import { MismatchRecoveryStrategy } from "@kernel/infrastructure/state-recovery/mismatch-recovery.strategy";
+import { RenameRecoveryStrategy } from "@kernel/infrastructure/state-recovery/rename-recovery.strategy";
+import { FreshCloneStrategy } from "@kernel/infrastructure/state-recovery/fresh-clone.strategy";
+import type { RecoveryType } from "@kernel/schemas/recovery.schemas";
+import type { RecoveryStrategy } from "@kernel/ports/recovery-strategy";
 import { StateExporter } from "@kernel/services/state-exporter";
 import { StateImporter } from "@kernel/services/state-importer";
 import Database from "better-sqlite3";
@@ -415,16 +423,48 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   });
   const hookScript =
     'if [ "$3" = "1" ]; then\n  node -e "require(\'./node_modules/.tff-restore.js\')" 2>/dev/null || true\nfi';
-  const doctorService = new DoctorService({
+  const healthCheckService = new HealthCheckService({
     gitHookPort: gitHookAdapter,
     stateBranchOps,
     gitPort,
-    backupService,
     hookScriptContent: hookScript,
     projectRoot: options.projectRoot,
   });
-  const guard = new BranchConsistencyGuard(doctorService, gitPort, restoreUseCase, stateBranchOps);
-  void guard; // Available for command-time invocation
+
+  const strategies = new Map<RecoveryType, RecoveryStrategy>([
+    ['crash', new CrashRecoveryStrategy(backupService, stateBranchOps, restoreUseCase)],
+    ['mismatch', new MismatchRecoveryStrategy(restoreUseCase)],
+    ['rename', new RenameRecoveryStrategy(stateBranchOps)],
+    ['fresh-clone', new FreshCloneStrategy(backupService, stateBranchOps, restoreUseCase, healthCheckService, options.projectRoot)],
+  ]);
+  const stateRecoveryAdapter = new StateRecoveryAdapter(strategies, gitPort, stateBranchOps, options.projectRoot);
+  const stateGuard = new StateGuard(stateRecoveryAdapter, healthCheckService);
+
+  const forceSyncUseCase = new ForceSyncUseCase(gitStateSyncAdapter, restoreUseCase, gitPort);
+
+  // --- /tff:sync command ---
+  api.registerCommand("tff:sync", {
+    description: "Force-push or force-pull state to/from state branch",
+    handler: async (args: string) => {
+      const guardResult = await stateGuard.ensure(rootTffDir);
+      if (!guardResult.ok) {
+        api.sendUserMessage(`State guard failed: ${guardResult.error.message}`);
+        return;
+      }
+      const isPull = args.trim() === "--pull";
+      if (isPull) {
+        const pullResult = await forceSyncUseCase.pull(rootTffDir);
+        api.sendUserMessage(pullResult.ok
+          ? `Pulled state from state branch (${pullResult.data.filesRestored} files restored)`
+          : `Pull failed: ${pullResult.error.message}`);
+      } else {
+        const pushResult = await forceSyncUseCase.push(rootTffDir);
+        api.sendUserMessage(pushResult.ok
+          ? "State pushed to state branch"
+          : `Push failed: ${pushResult.error.message}`);
+      }
+    },
+  });
 
   // --- Overlay extension wiring ---
   const overlayDataAdapter = new OverlayDataAdapter(
