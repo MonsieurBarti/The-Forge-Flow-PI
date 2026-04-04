@@ -21,8 +21,8 @@ S01-S04 built full state sync infrastructure: `StateSyncPort`, `StateBranchOpsPo
 ```typescript
 // src/kernel/ports/state-recovery.port.ts
 abstract class StateRecoveryPort {
-  abstract detect(tffDir: string): Promise<Result<RecoveryScenario, RecoveryError>>;
-  abstract recover(scenario: RecoveryScenario, tffDir: string): Promise<Result<RecoveryReport, RecoveryError>>;
+  abstract detect(tffDir: string): Promise<Result<RecoveryScenario, SyncError>>;
+  abstract recover(scenario: RecoveryScenario, tffDir: string): Promise<Result<RecoveryReport, SyncError>>;
 }
 ```
 
@@ -57,7 +57,7 @@ interface RecoveryReport {
 // src/kernel/ports/recovery-strategy.ts (domain-level interface, co-located with port)
 interface RecoveryStrategy {
   readonly handles: RecoveryType;
-  execute(scenario: RecoveryScenario, tffDir: string): Promise<Result<RecoveryReport, RecoveryError>>;
+  execute(scenario: RecoveryScenario, tffDir: string): Promise<Result<RecoveryReport, SyncError>>;
 }
 ```
 
@@ -138,7 +138,7 @@ class StateGuard {
     private healthCheck: HealthCheckService,
   ) {}
 
-  async ensure(tffDir: string): Result<void, RecoveryError> {
+  async ensure(tffDir: string): Result<void, SyncError> {
     // 1. Health checks (hook, gitignore, stale locks)
     // 2. Detect recovery scenario
     // 3. healthy → ok | recovery needed → recover → log | fail → error
@@ -173,10 +173,8 @@ src/kernel/
   ports/
     state-recovery.port.ts              (NEW)
     recovery-strategy.ts                (NEW — domain interface)
-  domain/
-    value-objects/
-      recovery-scenario.ts              (NEW)
-      recovery-report.ts                (NEW)
+  schemas/
+    recovery.schemas.ts                 (NEW — RecoveryType, RecoveryScenario, RecoveryReport)
   infrastructure/
     state-recovery/                     (NEW directory)
       state-recovery.adapter.ts
