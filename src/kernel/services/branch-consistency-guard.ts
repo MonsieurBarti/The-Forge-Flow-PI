@@ -4,8 +4,9 @@ import type { GitPort } from "@kernel/ports/git.port";
 import type { StateBranchOpsPort } from "@kernel/ports/state-branch-ops.port";
 import type { DoctorService } from "./doctor-service";
 import type { RestoreStateUseCase } from "./restore-state.use-case";
-import { BranchMetaSchema } from "@kernel/infrastructure/state-branch/state-snapshot.schemas";
-import { existsSync, readFileSync } from "node:fs";
+import { BranchMetaSchema, type BranchMeta } from "@kernel/infrastructure/state-branch/state-snapshot.schemas";
+import type { RenameDetectionResult } from "@kernel/schemas/rename-detection.schemas";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 export class BranchConsistencyGuard {
@@ -36,8 +37,18 @@ export class BranchConsistencyGuard {
       // 5. Match → ok
       if (meta.codeBranch === currentBranch) return ok(undefined);
 
-      // 6. Mismatch → restore
-      return this.tryRestore(currentBranch);
+      // 6. Disambiguate using 3-way detection
+      const detection = await this.disambiguate(meta, currentBranch);
+      switch (detection.kind) {
+        case "match":
+          return ok(undefined);
+        case "untracked":
+          return ok(undefined);
+        case "rename":
+          return this.handleRename(meta, currentBranch, tffDir);
+        case "switch":
+          return this.tryRestore(currentBranch);
+      }
     }
 
     // 7. No meta — check if state branch exists for current branch
@@ -48,6 +59,75 @@ export class BranchConsistencyGuard {
     }
 
     // No state branch — ok (untracked branch)
+    return ok(undefined);
+  }
+
+  private async disambiguate(
+    meta: BranchMeta,
+    currentBranch: string,
+  ): Promise<RenameDetectionResult> {
+    const oldExists = await this.gitPort.branchExists(meta.codeBranch);
+    const stateForCurrentResult = await this.stateBranchOps.branchExists(
+      `tff-state/${currentBranch}`,
+    );
+    const stateForCurrentExists =
+      stateForCurrentResult.ok && stateForCurrentResult.data;
+
+    if (oldExists.ok && oldExists.data) {
+      // Old branch still exists
+      return stateForCurrentExists
+        ? { kind: "switch" }
+        : { kind: "untracked" };
+    }
+
+    // Old branch gone
+    if (!stateForCurrentExists) {
+      return { kind: "rename", newBranch: currentBranch };
+    }
+
+    // Ambiguous: state exists for current AND old branch is gone
+    // Compare stateId to resolve
+    const remoteMetaResult = await this.stateBranchOps.readFromStateBranch(
+      `tff-state/${currentBranch}`,
+      "branch-meta.json",
+    );
+    if (remoteMetaResult.ok && remoteMetaResult.data) {
+      try {
+        const remoteMeta = BranchMetaSchema.parse(JSON.parse(remoteMetaResult.data));
+        if (remoteMeta.stateId === meta.stateId) {
+          return { kind: "rename", newBranch: currentBranch };
+        }
+      } catch {
+        // Parse failure → treat as switch (safe fallback)
+      }
+    }
+
+    // stateId mismatch or unreadable → switch (restore)
+    return { kind: "switch" };
+  }
+
+  private async handleRename(
+    meta: BranchMeta,
+    newBranch: string,
+    tffDir: string,
+  ): Promise<Result<void, SyncError>> {
+    const oldStateBranch = meta.stateBranch;
+    const newStateBranch = `tff-state/${newBranch}`;
+
+    const renameResult = await this.stateBranchOps.renameBranch(oldStateBranch, newStateBranch);
+    if (!renameResult.ok) {
+      return err(new SyncError("RENAME_FAILED", `Failed to rename state branch: ${renameResult.error.message}`));
+    }
+
+    // Update local branch-meta.json
+    const updatedMeta: BranchMeta = {
+      ...meta,
+      codeBranch: newBranch,
+      stateBranch: newStateBranch,
+    };
+    const metaPath = join(tffDir, "branch-meta.json");
+    writeFileSync(metaPath, JSON.stringify(updatedMeta, null, 2), "utf-8");
+
     return ok(undefined);
   }
 

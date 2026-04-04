@@ -1,7 +1,9 @@
+import { join } from "node:path";
 import { err, ok, type Result } from "@kernel";
 import type { DateProviderPort, EventBusPort, LoggerPort } from "@kernel/ports";
 import type { GitPort } from "@kernel/ports/git.port";
 import type { GitHubPort } from "@kernel/ports/github.port";
+import type { StateSyncPort } from "@kernel/ports/state-sync.port";
 import type { PullRequestInfo } from "@kernel/ports/github.schemas";
 import {
   type AuditReportProps,
@@ -48,6 +50,7 @@ export class CompleteMilestoneUseCase {
     private readonly dateProvider: DateProviderPort,
     private readonly generateId: () => string,
     private readonly logger: LoggerPort,
+    private readonly stateSyncPort?: StateSyncPort,
   ) {}
 
   async execute(
@@ -219,6 +222,25 @@ export class CompleteMilestoneUseCase {
         // Max fix cycles exhausted — increment cycle and re-ask once more (forced decide)
         cycle++;
       }
+    }
+
+    // Step 5.5: State merge-back (hard fail)
+    if (this.stateSyncPort) {
+      const milestoneCodeBranch = parsed.headBranch;
+      const defaultBranch = parsed.baseBranch;
+      const tffDir = join(parsed.workingDirectory, ".tff");
+
+      const syncResult = await this.stateSyncPort.syncToStateBranch(milestoneCodeBranch, tffDir);
+      if (!syncResult.ok) return err(CompleteMilestoneError.mergeBackFailed(parsed.milestoneId, syncResult.error));
+
+      const mergeResult = await this.stateSyncPort.mergeStateBranches(milestoneCodeBranch, defaultBranch, parsed.milestoneId);
+      if (!mergeResult.ok) return err(CompleteMilestoneError.mergeBackFailed(parsed.milestoneId, mergeResult.error));
+
+      const deleteResult = await this.stateSyncPort.deleteStateBranch(milestoneCodeBranch);
+      if (!deleteResult.ok) return err(CompleteMilestoneError.mergeBackFailed(parsed.milestoneId, deleteResult.error));
+
+      const restoreResult = await this.stateSyncPort.restoreFromStateBranch(defaultBranch, tffDir);
+      if (!restoreResult.ok) return err(CompleteMilestoneError.mergeBackFailed(parsed.milestoneId, restoreResult.error));
     }
 
     // Step 6: Post-merge cleanup (best-effort)

@@ -278,4 +278,17 @@ export class GitCliAdapter extends GitPort {
     const branch = result.data.trim();
     return ok(branch === "HEAD" ? null : branch);
   }
+
+  async branchExists(name: string): Promise<Result<boolean, GitError>> {
+    const result = await this.runGit(["rev-parse", "--verify", `refs/heads/${name}`]);
+    if (result.ok) return ok(true);
+    if (
+      result.error.code === "REF_NOT_FOUND" ||
+      result.error.message.includes("not a valid object name") ||
+      result.error.message.includes("Needed a single revision")
+    ) {
+      return ok(false);
+    }
+    return err(result.error);
+  }
 }

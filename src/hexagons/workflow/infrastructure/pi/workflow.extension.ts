@@ -45,6 +45,7 @@ export interface WorkflowExtensionDeps {
   autonomyModeProvider: AutonomyModeProvider;
   reviewUI: ReviewUIPort;
   maxRetries: number;
+  resolveActiveTffDir?: (sliceId?: string) => Promise<string>;
 }
 
 function formatStatusReport(report: StatusReport): string {

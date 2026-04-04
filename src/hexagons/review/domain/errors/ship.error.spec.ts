@@ -24,4 +24,10 @@ describe("ShipError", () => {
     const e = ShipError.contextResolutionFailed("slice-1", new Error("no spec"));
     expect(e.code).toBe("SHIP.CONTEXT_RESOLUTION_FAILED");
   });
+  it("mergeBackFailed", () => {
+    const e = ShipError.mergeBackFailed("slice-1", new Error("sync failed"));
+    expect(e.code).toBe("SHIP.MERGE_BACK_FAILED");
+    expect(e.message).toContain("slice-1");
+    expect(e.message).toContain("sync failed");
+  });
 });

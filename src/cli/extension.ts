@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ExecuteSliceUseCase } from "@hexagons/execution/application/execute-slice.use-case";
 import { ReplayJournalUseCase } from "@hexagons/execution/application/replay-journal.use-case";
-import { GitWorktreeAdapter } from "@hexagons/execution/infrastructure/adapters/worktree/git-worktree.adapter";
+import { GitWorktreeAdapter } from "@kernel/infrastructure/worktree/git-worktree.adapter";
 import { InMemoryCheckpointRepository } from "@hexagons/execution/infrastructure/repositories/checkpoint/in-memory-checkpoint.repository";
 import { InMemoryJournalRepository } from "@hexagons/execution/infrastructure/repositories/journal/in-memory-journal.repository";
 import { MarkdownExecutionSessionAdapter } from "@hexagons/execution/infrastructure/adapters/execution-session/markdown-execution-session.adapter";
@@ -123,10 +123,22 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     initializeAgentRegistry(agentRegistryResult.data);
   }
 
+  // --- Core infrastructure ---
+  const gitPort = new GitCliAdapter(options.projectRoot);
+
+  // --- tffDir resolution ---
+  const rootTffDir = join(options.projectRoot, ".tff");
+  mkdirSync(rootTffDir, { recursive: true });
+  const worktreeAdapter = new GitWorktreeAdapter(gitPort, options.projectRoot);
+  const resolveActiveTffDir = async (sliceId?: string): Promise<string> => {
+    if (sliceId && (await worktreeAdapter.exists(sliceId))) {
+      return worktreeAdapter.resolveTffDir(sliceId);
+    }
+    return rootTffDir;
+  };
+
   // --- Shared SQLite database for core entities ---
-  const tffDir = join(options.projectRoot, ".tff");
-  mkdirSync(tffDir, { recursive: true });
-  const stateDb = new Database(join(tffDir, "state.db"));
+  const stateDb = new Database(join(rootTffDir, "state.db"));
 
   // --- Repositories (SQLite-backed) ---
   const projectRepo = new SqliteProjectRepository(stateDb);
@@ -173,6 +185,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     autonomyModeProvider,
     reviewUI,
     maxRetries: 2,
+    resolveActiveTffDir,
   });
 
   // --- Execution extension ---
@@ -205,7 +218,6 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   });
 
   // --- Review pipeline wiring ---
-  const gitPort = new GitCliAdapter(options.projectRoot);
   const reviewRepository = new InMemoryReviewRepository();
   const executorQueryAdapter = new CachedExecutorQueryAdapter(async (_sliceId) => {
     // Stub: returns empty set. Real implementation will query execution session.
@@ -299,63 +311,14 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   );
   void verifyUseCase; // Available for verify command wiring
 
-  // --- Ship pipeline wiring ---
-  const worktreeAdapter = new GitWorktreeAdapter(gitPort, options.projectRoot);
+  // --- State sync wiring (moved before ship/complete for dependency injection) ---
   const ghCliAdapter = new GhCliAdapter(options.projectRoot);
   const mergeGateAdapter = new PiMergeGateAdapter();
-  const shipRecordDb = new Database(join(tffDir, "ship-records.db"));
+  const shipRecordDb = new Database(join(rootTffDir, "ship-records.db"));
   const shipRecordRepository = new SqliteShipRecordRepository(shipRecordDb);
-
-  const shipSliceUseCase = new ShipSliceUseCase(
-    beadSliceSpecAdapter,
-    ghCliAdapter,
-    mergeGateAdapter,
-    shipRecordRepository,
-    conductReviewUseCase,
-    piFixerAdapter,
-    gitPort,
-    worktreeAdapter,
-    sliceTransitionPort,
-    eventBus,
-    dateProvider,
-    () => crypto.randomUUID(),
-    logger,
-  );
-  void shipSliceUseCase; // Available for ship command wiring
-
-  // --- Complete milestone pipeline wiring ---
-  const milestoneQueryAdapter = new MilestoneQueryAdapter(
-    sliceRepo,
-    milestoneRepo,
-    options.projectRoot,
-  );
-  const milestoneTransitionAdapter = new MilestoneTransitionAdapter(milestoneRepo, dateProvider);
-  const piAuditAdapter = new PiAuditAdapter(
-    new PiAgentDispatchAdapter(),
-    templateLoader,
-    modelResolver,
-    logger,
-  );
-  const completionRecordDb = new Database(join(tffDir, "completion-records.db"));
+  const completionRecordDb = new Database(join(rootTffDir, "completion-records.db"));
   const completionRecordRepository = new SqliteCompletionRecordRepository(completionRecordDb);
 
-  const completeMilestoneUseCase = new CompleteMilestoneUseCase(
-    milestoneQueryAdapter,
-    piAuditAdapter,
-    ghCliAdapter,
-    mergeGateAdapter,
-    completionRecordRepository,
-    piFixerAdapter,
-    gitPort,
-    milestoneTransitionAdapter,
-    eventBus,
-    dateProvider,
-    () => crypto.randomUUID(),
-    logger,
-  );
-  void completeMilestoneUseCase;
-
-  // --- State sync wiring ---
   const stateBranchOps = new GitStateBranchOpsAdapter(options.projectRoot);
   const stateExporter = new StateExporter({
     projectRepo,
@@ -378,7 +341,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     stateExporter,
     stateImporter,
     advisoryLock: new AdvisoryLock(),
-    tffDir,
+    tffDir: rootTffDir,
     projectRoot: options.projectRoot,
   });
   const stateBranchCreationHandler = new StateBranchCreationHandler(
@@ -389,6 +352,57 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   );
   stateBranchCreationHandler.register(eventBus);
 
+  // --- Ship pipeline wiring ---
+  const shipSliceUseCase = new ShipSliceUseCase(
+    beadSliceSpecAdapter,
+    ghCliAdapter,
+    mergeGateAdapter,
+    shipRecordRepository,
+    conductReviewUseCase,
+    piFixerAdapter,
+    gitPort,
+    worktreeAdapter,
+    sliceTransitionPort,
+    eventBus,
+    dateProvider,
+    () => crypto.randomUUID(),
+    logger,
+    gitStateSyncAdapter,
+    options.projectRoot,
+  );
+  void shipSliceUseCase;
+
+  // --- Complete milestone pipeline wiring ---
+  const milestoneQueryAdapter = new MilestoneQueryAdapter(
+    sliceRepo,
+    milestoneRepo,
+    options.projectRoot,
+  );
+  const milestoneTransitionAdapter = new MilestoneTransitionAdapter(milestoneRepo, dateProvider);
+  const piAuditAdapter = new PiAuditAdapter(
+    new PiAgentDispatchAdapter(),
+    templateLoader,
+    modelResolver,
+    logger,
+  );
+
+  const completeMilestoneUseCase = new CompleteMilestoneUseCase(
+    milestoneQueryAdapter,
+    piAuditAdapter,
+    ghCliAdapter,
+    mergeGateAdapter,
+    completionRecordRepository,
+    piFixerAdapter,
+    gitPort,
+    milestoneTransitionAdapter,
+    eventBus,
+    dateProvider,
+    () => crypto.randomUUID(),
+    logger,
+    gitStateSyncAdapter,
+  );
+  void completeMilestoneUseCase;
+
   // --- Restore + guard wiring ---
   const backupService = new BackupService();
   const restoreUseCase = new RestoreStateUseCase({
@@ -397,7 +411,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     advisoryLock: new AdvisoryLock(),
     stateExporter,
     backupService,
-    tffDir,
+    tffDir: rootTffDir,
   });
   const hookScript =
     'if [ "$3" = "1" ]; then\n  node -e "require(\'./node_modules/.tff-restore.js\')" 2>/dev/null || true\nfi';

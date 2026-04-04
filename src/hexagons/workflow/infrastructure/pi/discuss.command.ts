@@ -59,6 +59,7 @@ export function registerDiscussCommand(api: ExtensionAPI, deps: DiscussCommandDe
       const result = await deps.startDiscuss.execute({
         sliceId: slice.id,
         milestoneId: milestone.id,
+        tffDir: "", // Resolved by extension wiring
       });
 
       if (isErr(result)) {

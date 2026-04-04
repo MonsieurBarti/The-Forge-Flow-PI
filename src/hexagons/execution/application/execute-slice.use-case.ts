@@ -36,7 +36,7 @@ import type { MetricsRepositoryPort } from "../domain/ports/metrics-repository.p
 import type { OutputGuardrailPort } from "../domain/ports/output-guardrail.port";
 import type { OverseerPort } from "../domain/ports/overseer.port";
 import type { RetryPolicy } from "../domain/ports/retry-policy.port";
-import type { WorktreePort } from "../domain/ports/worktree.port";
+import type { WorktreePort } from "@kernel/ports/worktree.port";
 import { DomainRouter } from "./domain-router";
 import type { ExecuteSliceInput, ExecuteSliceResult } from "./execute-slice.schemas";
 import { JournalEventHandler } from "./journal-event-handler";

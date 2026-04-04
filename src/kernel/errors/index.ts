@@ -4,3 +4,4 @@ export { GitHubError } from "./github.error";
 export { InvalidTransitionError } from "./invalid-transition.error";
 export { PersistenceError } from "./persistence.error";
 export { SyncError } from "./sync.error";
+export { WorktreeError } from "./worktree.error";

@@ -277,4 +277,18 @@ describe("GitCliAdapter", () => {
       }
     });
   });
+
+  describe("branchExists", () => {
+    it("returns true for existing branch", async () => {
+      const result = await adapter.branchExists("main");
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) expect(result.data).toBe(true);
+    });
+
+    it("returns false for non-existent branch", async () => {
+      const result = await adapter.branchExists("no-such-branch-xyz");
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) expect(result.data).toBe(false);
+    });
+  });
 });

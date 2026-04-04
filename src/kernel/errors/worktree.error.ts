@@ -1,5 +1,5 @@
-import { BaseDomainError } from "@kernel";
-import type { WorktreeHealth } from "../worktree.schemas";
+import { BaseDomainError } from "@kernel/errors";
+import type { WorktreeHealth } from "@kernel/ports/worktree.schemas";
 
 export class WorktreeError extends BaseDomainError {
   readonly code: string;

@@ -29,3 +29,6 @@ export type { OverlayProjectSnapshot, OverlaySliceSnapshot } from "./overlay-dat
 export { StateBranchOpsPort } from "./state-branch-ops.port";
 export { GitHookPort, HookError } from "./git-hook.port";
 export type { HookErrorCode } from "./git-hook.port";
+export { WorktreePort } from "./worktree.port";
+export type { CleanupReport, WorktreeHealth, WorktreeInfo } from "./worktree.schemas";
+export { CleanupReportSchema, WorktreeHealthSchema, WorktreeInfoSchema } from "./worktree.schemas";

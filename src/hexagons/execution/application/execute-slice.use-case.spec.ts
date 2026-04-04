@@ -31,7 +31,7 @@ import { InMemoryGuardrailAdapter } from "../infrastructure/adapters/guardrails/
 import { InMemoryJournalRepository } from "../infrastructure/repositories/journal/in-memory-journal.repository";
 import { InMemoryMetricsRepository } from "../infrastructure/repositories/metrics/in-memory-metrics.repository";
 import { InMemoryOverseerAdapter } from "../infrastructure/adapters/overseer/in-memory-overseer.adapter";
-import { InMemoryWorktreeAdapter } from "../infrastructure/adapters/worktree/in-memory-worktree.adapter";
+import { InMemoryWorktreeAdapter } from "@kernel/infrastructure/worktree/in-memory-worktree.adapter";
 import type { ExecuteSliceInput } from "./execute-slice.schemas";
 import { ExecuteSliceUseCase } from "./execute-slice.use-case";
 

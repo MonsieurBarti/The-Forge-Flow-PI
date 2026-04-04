@@ -1,10 +1,12 @@
-import { err, ok, type Result } from "@kernel";
-import { WorktreeError } from "../../../domain/errors/worktree.error";
-import { WorktreePort } from "../../../domain/ports/worktree.port";
-import type { WorktreeHealth, WorktreeInfo } from "../../../domain/worktree.schemas";
+import { err, ok, type Result } from "@kernel/result";
+import type { BranchMeta } from "@kernel/infrastructure/state-branch/state-snapshot.schemas";
+import { WorktreeError } from "@kernel/errors/worktree.error";
+import { WorktreePort } from "@kernel/ports/worktree.port";
+import type { WorktreeHealth, WorktreeInfo } from "@kernel/ports/worktree.schemas";
 
 export class InMemoryWorktreeAdapter extends WorktreePort {
   private store = new Map<string, WorktreeInfo>();
+  private workspaces = new Map<string, BranchMeta>();
 
   async create(sliceId: string, baseBranch: string): Promise<Result<WorktreeInfo, WorktreeError>> {
     if (this.store.has(sliceId)) return err(WorktreeError.alreadyExists(sliceId));
@@ -43,11 +45,29 @@ export class InMemoryWorktreeAdapter extends WorktreePort {
     });
   }
 
+  async initializeWorkspace(
+    sliceId: string,
+    _sourceTffDir: string,
+    branchMeta: BranchMeta,
+  ): Promise<Result<void, WorktreeError>> {
+    this.workspaces.set(sliceId, branchMeta);
+    return ok(undefined);
+  }
+
+  resolveTffDir(sliceId: string): string {
+    return `/mock/.tff/worktrees/${sliceId}/.tff`;
+  }
+
+  getWorkspaceMeta(sliceId: string): BranchMeta | undefined {
+    return this.workspaces.get(sliceId);
+  }
+
   seed(info: WorktreeInfo): void {
     this.store.set(info.sliceId, info);
   }
 
   reset(): void {
     this.store.clear();
+    this.workspaces.clear();
   }
 }

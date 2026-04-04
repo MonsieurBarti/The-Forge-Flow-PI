@@ -5,3 +5,5 @@ export { InMemoryGitAdapter } from "./in-memory-git.adapter";
 export { InProcessEventBus } from "./in-process-event-bus";
 export { SilentLoggerAdapter } from "./silent-logger.adapter";
 export { SystemDateProvider } from "./system-date-provider.adapter";
+export { GitWorktreeAdapter } from "./worktree/git-worktree.adapter";
+export { InMemoryWorktreeAdapter } from "./worktree/in-memory-worktree.adapter";
