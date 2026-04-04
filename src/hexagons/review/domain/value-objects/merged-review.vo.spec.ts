@@ -1,9 +1,9 @@
 import { faker } from "@faker-js/faker";
 import { describe, expect, it } from "vitest";
-import { FindingBuilder } from "./finding.builder";
+import { FindingBuilder } from "../builders/finding.builder";
 import { MergedReview } from "./merged-review.vo";
-import { Review } from "./review.aggregate";
-import { ReviewBuilder } from "./review.builder";
+import { Review } from "../aggregates/review.aggregate";
+import { ReviewBuilder } from "../builders/review.builder";
 
 const sliceId = faker.string.uuid();
 const now = new Date();

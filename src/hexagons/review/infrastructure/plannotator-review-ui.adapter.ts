@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { ok, type Result } from "@kernel";
 import type { ReviewUIError } from "../domain/errors/review-ui.error";
 import { ReviewUIPort } from "../domain/ports/review-ui.port";
-import { SEVERITY_RANK } from "../domain/review.schemas";
+import { SEVERITY_RANK } from "../domain/schemas/review.schemas";
 import type {
   ApprovalUIContext,
   ApprovalUIResponse,
@@ -13,7 +13,7 @@ import type {
   FindingsUIResponse,
   VerificationUIContext,
   VerificationUIResponse,
-} from "../domain/review-ui.schemas";
+} from "../domain/schemas/review-ui.schemas";
 
 const CHANGE_MARKERS = ["[DELETION]", "[REPLACEMENT]", "[INSERTION]"];
 

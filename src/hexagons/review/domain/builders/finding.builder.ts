@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import type { FindingImpact, FindingProps, ReviewSeverity } from "./review.schemas";
+import type { FindingImpact, FindingProps, ReviewSeverity } from "../schemas/review.schemas";
 
 export class FindingBuilder {
   private _id: string = faker.string.uuid();

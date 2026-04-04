@@ -8,7 +8,7 @@ import type {
   FindingsUIResponse,
   VerificationUIContext,
   VerificationUIResponse,
-} from "../domain/review-ui.schemas";
+} from "../domain/schemas/review-ui.schemas";
 
 interface PresentationRecord {
   method: "presentFindings" | "presentVerification" | "presentForApproval";

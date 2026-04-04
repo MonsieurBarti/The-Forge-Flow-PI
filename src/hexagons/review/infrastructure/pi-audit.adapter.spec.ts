@@ -2,7 +2,7 @@ import { InMemoryAgentDispatchAdapter } from "@hexagons/execution";
 import { err, isErr, isOk, ok, SilentLoggerAdapter } from "@kernel";
 import { AgentDispatchError, AgentResultBuilder } from "@kernel/agents";
 import { describe, expect, it } from "vitest";
-import type { AuditReportProps } from "../domain/completion.schemas";
+import type { AuditReportProps } from "../domain/schemas/completion.schemas";
 import { PiAuditAdapter } from "./pi-audit.adapter";
 
 // ---------------------------------------------------------------------------

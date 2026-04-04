@@ -1,6 +1,6 @@
 import { isOk } from "@kernel";
 import { describe, expect, it } from "vitest";
-import { FindingBuilder } from "../domain/finding.builder";
+import { FindingBuilder } from "../domain/builders/finding.builder";
 import { TerminalReviewUIAdapter } from "./terminal-review-ui.adapter";
 
 describe("TerminalReviewUIAdapter", () => {

@@ -4,14 +4,14 @@ import {
   type MergedFindingProps,
   type MergedReviewProps,
   MergedReviewPropsSchema,
-} from "./merged-review.schemas";
-import type { Review } from "./review.aggregate";
+} from "../schemas/merged-review.schemas";
+import type { Review } from "../aggregates/review.aggregate";
 import {
   type ReviewRole,
   type ReviewSeverity,
   type ReviewVerdict,
   SEVERITY_RANK,
-} from "./review.schemas";
+} from "../schemas/review.schemas";
 
 export class MergeValidationError extends BaseDomainError {
   readonly code = "REVIEW.MERGE_VALIDATION";

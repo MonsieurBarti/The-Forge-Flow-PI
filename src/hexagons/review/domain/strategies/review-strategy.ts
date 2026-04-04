@@ -1,4 +1,4 @@
-import type { ReviewRole, ReviewStrategy } from "./review.schemas";
+import type { ReviewRole, ReviewStrategy } from "../schemas/review.schemas";
 
 const ROLE_STRATEGY_MAP: Record<ReviewRole, ReviewStrategy> = {
   "code-reviewer": "critique-then-reflection",

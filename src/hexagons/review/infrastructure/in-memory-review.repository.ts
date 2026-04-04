@@ -1,7 +1,7 @@
 import { type Id, ok, type PersistenceError, type Result } from "@kernel";
 import { ReviewRepositoryPort } from "../domain/ports/review-repository.port";
-import { Review } from "../domain/review.aggregate";
-import type { ReviewProps } from "../domain/review.schemas";
+import { Review } from "../domain/aggregates/review.aggregate";
+import type { ReviewProps } from "../domain/schemas/review.schemas";
 
 export class InMemoryReviewRepository extends ReviewRepositoryPort {
   private store = new Map<string, ReviewProps>();

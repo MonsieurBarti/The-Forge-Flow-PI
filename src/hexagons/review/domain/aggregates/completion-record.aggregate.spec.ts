@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { AuditReportProps } from "./completion.schemas";
+import type { AuditReportProps } from "../schemas/completion.schemas";
 import { CompletionRecord } from "./completion-record.aggregate";
 
 const NOW = new Date("2026-04-02T12:00:00Z");

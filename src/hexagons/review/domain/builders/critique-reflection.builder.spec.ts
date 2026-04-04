@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CritiqueReflectionResultBuilder } from "./critique-reflection.builder";
-import { CritiqueReflectionResultSchema } from "./critique-reflection.schemas";
+import { CritiqueReflectionResultSchema } from "../schemas/critique-reflection.schemas";
 
 describe("CritiqueReflectionResultBuilder", () => {
   it("produces coordinated IDs: prioritizedFindings IDs match rawFindings IDs (AC20)", () => {

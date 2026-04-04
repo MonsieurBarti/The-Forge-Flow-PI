@@ -1,12 +1,12 @@
 import { AggregateRoot, type BaseDomainError, ok, type Result } from "@kernel";
-import { ReviewRecordedEvent } from "./events/review-recorded.event";
+import { ReviewRecordedEvent } from "../events/review-recorded.event";
 import {
   type FindingProps,
   type ReviewProps,
   ReviewPropsSchema,
   type ReviewRole,
   type ReviewVerdict,
-} from "./review.schemas";
+} from "../schemas/review.schemas";
 
 export class Review extends AggregateRoot<ReviewProps> {
   private constructor(props: ReviewProps) {

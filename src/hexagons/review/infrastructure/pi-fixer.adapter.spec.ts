@@ -2,7 +2,7 @@ import { InMemoryAgentDispatchAdapter } from "@hexagons/execution";
 import { err, isErr, isOk, ok, SilentLoggerAdapter } from "@kernel";
 import { AgentDispatchError, AgentResultBuilder } from "@kernel/agents";
 import { describe, expect, it } from "vitest";
-import { FindingBuilder } from "../domain/finding.builder";
+import { FindingBuilder } from "../domain/builders/finding.builder";
 import { PiFixerAdapter } from "./pi-fixer.adapter";
 
 // ---------------------------------------------------------------------------

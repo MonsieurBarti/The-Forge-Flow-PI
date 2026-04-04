@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Verification } from "../domain/verification.aggregate";
+import { Verification } from "../domain/aggregates/verification.aggregate";
 import { InMemoryVerificationRepository } from "./in-memory-verification.repository";
 
 const NOW = new Date("2026-04-01T12:00:00Z");

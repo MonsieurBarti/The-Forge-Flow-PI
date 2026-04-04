@@ -1,22 +1,18 @@
 import { AggregateRoot } from "@kernel";
-import type { AuditReportProps, CompletionRecordProps } from "./completion.schemas";
-import { CompletionRecordPropsSchema } from "./completion.schemas";
+import type { ShipRecordProps } from "../schemas/ship.schemas";
+import { ShipRecordPropsSchema } from "../schemas/ship.schemas";
 
-export class CompletionRecord extends AggregateRoot<CompletionRecordProps> {
-  private constructor(props: CompletionRecordProps) {
-    super(props, CompletionRecordPropsSchema);
+export class ShipRecord extends AggregateRoot<ShipRecordProps> {
+  private constructor(props: ShipRecordProps) {
+    super(props, ShipRecordPropsSchema);
   }
 
   get id(): string {
     return this.props.id;
   }
 
-  get milestoneId(): string {
-    return this.props.milestoneId;
-  }
-
-  get milestoneLabel(): string {
-    return this.props.milestoneLabel;
+  get sliceId(): string {
+    return this.props.sliceId;
   }
 
   get prNumber(): number {
@@ -35,10 +31,6 @@ export class CompletionRecord extends AggregateRoot<CompletionRecordProps> {
     return this.props.baseBranch;
   }
 
-  get auditReports(): AuditReportProps[] {
-    return this.props.auditReports;
-  }
-
   get isMerged(): boolean {
     return this.props.outcome === "merged";
   }
@@ -49,24 +41,20 @@ export class CompletionRecord extends AggregateRoot<CompletionRecordProps> {
 
   static createNew(params: {
     id: string;
-    milestoneId: string;
-    milestoneLabel: string;
+    sliceId: string;
     prNumber: number;
     prUrl: string;
     headBranch: string;
     baseBranch: string;
-    auditReports: AuditReportProps[];
     now: Date;
-  }): CompletionRecord {
-    return new CompletionRecord({
+  }): ShipRecord {
+    return new ShipRecord({
       id: params.id,
-      milestoneId: params.milestoneId,
-      milestoneLabel: params.milestoneLabel,
+      sliceId: params.sliceId,
       prNumber: params.prNumber,
       prUrl: params.prUrl,
       headBranch: params.headBranch,
       baseBranch: params.baseBranch,
-      auditReports: params.auditReports,
       outcome: null,
       fixCyclesUsed: 0,
       createdAt: params.now,
@@ -74,8 +62,8 @@ export class CompletionRecord extends AggregateRoot<CompletionRecordProps> {
     });
   }
 
-  static reconstitute(props: CompletionRecordProps): CompletionRecord {
-    return new CompletionRecord(props);
+  static reconstitute(props: ShipRecordProps): ShipRecord {
+    return new ShipRecord(props);
   }
 
   recordMerge(fixCyclesUsed: number, now: Date): void {

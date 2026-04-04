@@ -16,7 +16,7 @@ import type { GitPort } from "@kernel/ports/git.port";
 import type { GitHubPort } from "@kernel/ports/github.port";
 import type { PullRequestInfo } from "@kernel/ports/github.schemas";
 import { describe, expect, it, vi } from "vitest";
-import type { ConductReviewRequest, ConductReviewResult } from "../domain/conduct-review.schemas";
+import type { ConductReviewRequest, ConductReviewResult } from "../domain/schemas/conduct-review.schemas";
 import { FixerError } from "../domain/errors/fixer.error";
 import { SliceSpecError } from "../domain/errors/review-context.error";
 import { ShipError } from "../domain/errors/ship.error";
@@ -26,7 +26,7 @@ import { FixerPort } from "../domain/ports/fixer.port";
 import type { MergeGateContext } from "../domain/ports/merge-gate.port";
 import { MergeGatePort } from "../domain/ports/merge-gate.port";
 import { type SliceSpec, SliceSpecPort } from "../domain/ports/slice-spec.port";
-import type { MergeGateDecision } from "../domain/ship.schemas";
+import type { MergeGateDecision } from "../domain/schemas/ship.schemas";
 import { InMemoryShipRecordRepository } from "../infrastructure/in-memory-ship-record.repository";
 import { ShipSliceUseCase } from "./ship-slice.use-case";
 

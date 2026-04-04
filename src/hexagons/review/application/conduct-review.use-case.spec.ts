@@ -19,7 +19,7 @@ import {
 } from "@kernel/agents";
 import type { DateProviderPort, EventBusPort } from "@kernel/ports";
 import { describe, expect, it } from "vitest";
-import type { ConductReviewRequest } from "../domain/conduct-review.schemas";
+import type { ConductReviewRequest } from "../domain/schemas/conduct-review.schemas";
 import { ConductReviewError } from "../domain/errors/conduct-review.error";
 import { ExecutorQueryError } from "../domain/errors/executor-query.error";
 import { FixerError } from "../domain/errors/fixer.error";
@@ -29,7 +29,7 @@ import { ChangedFilesPort } from "../domain/ports/changed-files.port";
 import { ExecutorQueryPort } from "../domain/ports/executor-query.port";
 import { FixerPort, type FixRequest, type FixResult } from "../domain/ports/fixer.port";
 import { type SliceSpec, SliceSpecPort } from "../domain/ports/slice-spec.port";
-import type { FindingProps } from "../domain/review.schemas";
+import type { FindingProps } from "../domain/schemas/review.schemas";
 import { CritiqueReflectionService } from "../domain/services/critique-reflection.service";
 import { FreshReviewerService } from "../domain/services/fresh-reviewer.service";
 import { InMemoryReviewRepository } from "../infrastructure/in-memory-review.repository";

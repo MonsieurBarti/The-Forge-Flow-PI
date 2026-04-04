@@ -3,7 +3,7 @@ import { err, ok } from "@kernel";
 import { z } from "zod";
 import { FixerError } from "../domain/errors/fixer.error";
 import type { FixResult } from "../domain/ports/fixer.port";
-import type { FindingProps } from "../domain/review.schemas";
+import type { FindingProps } from "../domain/schemas/review.schemas";
 
 const FixerOutputSchema = z.object({
   fixed: z.array(z.string()),

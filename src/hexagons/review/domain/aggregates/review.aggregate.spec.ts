@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { describe, expect, it } from "vitest";
 
-import { ReviewRecordedEvent } from "./events/review-recorded.event";
+import { ReviewRecordedEvent } from "../events/review-recorded.event";
 import { Review } from "./review.aggregate";
 
 const sliceId = faker.string.uuid();

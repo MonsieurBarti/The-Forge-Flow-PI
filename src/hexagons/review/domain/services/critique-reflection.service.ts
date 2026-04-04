@@ -2,7 +2,7 @@ import { err, ok, type Result } from "@kernel";
 import {
   CritiqueReflectionResultSchema,
   type ProcessedReviewResult,
-} from "../critique-reflection.schemas";
+} from "../schemas/critique-reflection.schemas";
 import { CritiqueReflectionError } from "../errors/critique-reflection.error";
 
 export class CritiqueReflectionService {

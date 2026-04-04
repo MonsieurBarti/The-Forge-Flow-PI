@@ -3,8 +3,8 @@ import type {
   CriterionVerdictProps,
   VerificationProps,
   VerificationVerdict,
-} from "./verification.schemas";
-import { VerificationPropsSchema } from "./verification.schemas";
+} from "../schemas/verification.schemas";
+import { VerificationPropsSchema } from "../schemas/verification.schemas";
 
 export class Verification extends AggregateRoot<VerificationProps> {
   private constructor(props: VerificationProps) {

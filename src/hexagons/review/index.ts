@@ -20,7 +20,7 @@ export type {
   CompleteMilestoneResult,
   CompletionOutcome,
   CompletionRecordProps,
-} from "./domain/completion.schemas";
+} from "./domain/schemas/completion.schemas";
 export {
   AuditAgentTypeSchema,
   AuditReportSchema,
@@ -29,17 +29,17 @@ export {
   CompleteMilestoneResultSchema,
   CompletionOutcomeSchema,
   CompletionRecordPropsSchema,
-} from "./domain/completion.schemas";
+} from "./domain/schemas/completion.schemas";
 // Domain — CompletionRecord Aggregate
-export { CompletionRecord } from "./domain/completion-record.aggregate";
+export { CompletionRecord } from "./domain/aggregates/completion-record.aggregate";
 // Domain — ConductReview schemas
-export type { ConductReviewRequest, ConductReviewResult } from "./domain/conduct-review.schemas";
+export type { ConductReviewRequest, ConductReviewResult } from "./domain/schemas/conduct-review.schemas";
 export {
   ConductReviewRequestSchema,
   ConductReviewResultSchema,
-} from "./domain/conduct-review.schemas";
+} from "./domain/schemas/conduct-review.schemas";
 // Domain -- Builders
-export { CritiqueReflectionResultBuilder } from "./domain/critique-reflection.builder";
+export { CritiqueReflectionResultBuilder } from "./domain/builders/critique-reflection.builder";
 // Domain -- Schemas (types)
 export type {
   CritiquePassResult,
@@ -47,14 +47,14 @@ export type {
   ProcessedReviewResult,
   ReflectionInsight,
   ReflectionPassResult,
-} from "./domain/critique-reflection.schemas";
+} from "./domain/schemas/critique-reflection.schemas";
 export {
   CritiquePassResultSchema,
   CritiqueReflectionResultSchema,
   ProcessedReviewResultSchema,
   ReflectionInsightSchema,
   ReflectionPassResultSchema,
-} from "./domain/critique-reflection.schemas";
+} from "./domain/schemas/critique-reflection.schemas";
 // Domain — CompleteMilestone Errors
 export { AuditError } from "./domain/errors/audit.error";
 export { CompleteMilestoneError } from "./domain/errors/complete-milestone.error";
@@ -80,18 +80,18 @@ export { ReviewRecordedEvent } from "./domain/events/review-recorded.event";
 // Domain — Ship Events
 export { SliceShippedEvent } from "./domain/events/slice-shipped.event";
 export { VerificationCompletedEvent } from "./domain/events/verification-completed.event";
-export { FindingBuilder } from "./domain/finding.builder";
+export { FindingBuilder } from "./domain/builders/finding.builder";
 export type {
   ConflictProps,
   MergedFindingProps,
   MergedReviewProps,
-} from "./domain/merged-review.schemas";
+} from "./domain/schemas/merged-review.schemas";
 export {
   ConflictPropsSchema,
   MergedFindingPropsSchema,
   MergedReviewPropsSchema,
-} from "./domain/merged-review.schemas";
-export { MergedReview, MergeValidationError } from "./domain/merged-review.vo";
+} from "./domain/schemas/merged-review.schemas";
+export { MergedReview, MergeValidationError } from "./domain/value-objects/merged-review.vo";
 // Domain — CompleteMilestone Ports
 export { AuditPort } from "./domain/ports/audit.port";
 export { ChangedFilesPort } from "./domain/ports/changed-files.port";
@@ -115,8 +115,8 @@ export type { SliceSpec } from "./domain/ports/slice-spec.port";
 export { SliceSpecPort, SliceSpecSchema } from "./domain/ports/slice-spec.port";
 export { VerificationRepositoryPort } from "./domain/ports/verification-repository.port";
 // Domain -- Aggregates & Value Objects
-export { Review } from "./domain/review.aggregate";
-export { ReviewBuilder } from "./domain/review.builder";
+export { Review } from "./domain/aggregates/review.aggregate";
+export { ReviewBuilder } from "./domain/builders/review.builder";
 export type {
   FindingImpact,
   FindingProps,
@@ -125,7 +125,7 @@ export type {
   ReviewSeverity,
   ReviewStrategy,
   ReviewVerdict,
-} from "./domain/review.schemas";
+} from "./domain/schemas/review.schemas";
 // Domain -- Schemas (values)
 export {
   FindingImpactSchema,
@@ -136,9 +136,9 @@ export {
   ReviewStrategySchema,
   ReviewVerdictSchema,
   SEVERITY_RANK,
-} from "./domain/review.schemas";
+} from "./domain/schemas/review.schemas";
 // Domain -- Strategy
-export { strategyForRole } from "./domain/review-strategy";
+export { strategyForRole } from "./domain/strategies/review-strategy";
 // Domain — ReviewUI Schemas
 export type {
   ApprovalUIContext,
@@ -147,7 +147,7 @@ export type {
   FindingsUIResponse,
   VerificationUIContext,
   VerificationUIResponse,
-} from "./domain/review-ui.schemas";
+} from "./domain/schemas/review-ui.schemas";
 export {
   ApprovalUIContextSchema,
   ApprovalUIResponseSchema,
@@ -155,7 +155,7 @@ export {
   FindingsUIResponseSchema,
   VerificationUIContextSchema,
   VerificationUIResponseSchema,
-} from "./domain/review-ui.schemas";
+} from "./domain/schemas/review-ui.schemas";
 // Domain -- Services
 export { CritiqueReflectionService } from "./domain/services/critique-reflection.service";
 export { FreshReviewerService } from "./domain/services/fresh-reviewer.service";
@@ -165,31 +165,31 @@ export type {
   ShipRecordProps,
   ShipRequest,
   ShipResult,
-} from "./domain/ship.schemas";
+} from "./domain/schemas/ship.schemas";
 export {
   MergeGateDecisionSchema,
   ShipRecordPropsSchema,
   ShipRequestSchema,
   ShipResultSchema,
-} from "./domain/ship.schemas";
+} from "./domain/schemas/ship.schemas";
 // Domain — ShipRecord aggregate
-export { ShipRecord } from "./domain/ship-record.aggregate";
+export { ShipRecord } from "./domain/aggregates/ship-record.aggregate";
 // Domain — Verification
-export { Verification } from "./domain/verification.aggregate";
+export { Verification } from "./domain/aggregates/verification.aggregate";
 export type {
   CriterionVerdictProps,
   VerificationProps,
   VerificationVerdict,
   VerifyRequest,
   VerifyResult,
-} from "./domain/verification.schemas";
+} from "./domain/schemas/verification.schemas";
 export {
   CriterionVerdictSchema,
   VerificationPropsSchema,
   VerificationVerdictSchema,
   VerifyRequestSchema,
   VerifyResultSchema,
-} from "./domain/verification.schemas";
+} from "./domain/schemas/verification.schemas";
 export { BeadSliceSpecAdapter } from "./infrastructure/bead-slice-spec.adapter";
 // Infrastructure -- Adapters
 export { CachedExecutorQueryAdapter } from "./infrastructure/cached-executor-query.adapter";

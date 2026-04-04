@@ -1,6 +1,6 @@
 import { ok, type PersistenceError, type Result } from "@kernel";
-import type { CompletionRecordProps } from "../domain/completion.schemas";
-import { CompletionRecord } from "../domain/completion-record.aggregate";
+import type { CompletionRecordProps } from "../domain/schemas/completion.schemas";
+import { CompletionRecord } from "../domain/aggregates/completion-record.aggregate";
 import { CompletionRecordRepositoryPort } from "../domain/ports/completion-record-repository.port";
 
 export class InMemoryCompletionRecordRepository extends CompletionRecordRepositoryPort {
