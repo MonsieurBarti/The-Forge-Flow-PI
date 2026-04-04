@@ -1,10 +1,9 @@
 import type { SyncError } from "@kernel/errors";
 import type { Result } from "@kernel/result";
-import type { LockRelease } from "@kernel/infrastructure/state-branch/advisory-lock";
 import type { SyncReport } from "./state-sync.schemas";
 
 export interface SyncOptions {
-  lockToken?: LockRelease;
+  lockToken?: () => void;
 }
 
 export abstract class StateSyncPort {

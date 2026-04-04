@@ -40,7 +40,7 @@ class StubDoctorService {
   async diagnoseAndFix(_tffDir: string): Promise<DiagnosticReport> {
     this.wasCalled = true;
     this.callOrder.push("diagnoseAndFix");
-    return { issues: [], fixed: [] };
+    return { fixed: [], warnings: [] };
   }
 }
 
@@ -314,7 +314,7 @@ describe("BranchConsistencyGuard", () => {
     const trackingDoctor = {
       async diagnoseAndFix(_tffDir: string): Promise<DiagnosticReport> {
         doctorCallIndex = callCount++;
-        return { issues: [], fixed: [] };
+        return { fixed: [], warnings: [] };
       },
     };
 

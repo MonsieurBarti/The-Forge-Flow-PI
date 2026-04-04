@@ -1,9 +1,13 @@
 import type { StateSyncPort } from "@kernel/ports/state-sync.port";
 import type { GitPort } from "@kernel/ports/git.port";
-import type { AdvisoryLock, LockRelease } from "@kernel/infrastructure/state-branch/advisory-lock";
 import type { StateExporter } from "@kernel/services/state-exporter";
 import type { BackupService } from "./backup-service";
 import { BranchMetaSchema, type BranchMeta } from "@kernel/infrastructure/state-branch/state-snapshot.schemas";
+
+/** Structural interface for lock acquisition — avoids importing infrastructure AdvisoryLock */
+export interface LockAcquirer {
+  acquire(lockPath: string, timeoutMs?: number): Result<() => void, SyncError>;
+}
 import { computeStateHash } from "./canonical-hash";
 import { SyncError } from "@kernel/errors";
 import { err, ok, type Result } from "@kernel/result";
@@ -22,7 +26,7 @@ export interface RestoreReport {
 export interface RestoreStateUseCaseDeps {
   stateSync: StateSyncPort;
   gitPort: GitPort;
-  advisoryLock: AdvisoryLock;
+  advisoryLock: LockAcquirer;
   stateExporter: StateExporter;
   backupService: BackupService;
   tffDir: string;
@@ -41,7 +45,7 @@ export class RestoreStateUseCase {
     const lockResult = advisoryLock.acquire(lockPath);
     if (!lockResult.ok) return lockResult;
     const release = lockResult.data;
-    const lockToken: LockRelease = () => {}; // no-op signal — this use case holds the real lock
+    const lockToken = () => {}; // no-op signal — this use case holds the real lock
 
     try {
       // 2. Read branch-meta → previousBranch

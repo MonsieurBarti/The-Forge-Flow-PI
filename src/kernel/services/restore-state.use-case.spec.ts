@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SyncOptions } from "@kernel/ports/state-sync.port";
 import type { SyncReport } from "@kernel/ports/state-sync.schemas";
 import type { StateSnapshot } from "@kernel/infrastructure/state-branch/state-snapshot.schemas";
-import type { LockRelease } from "@kernel/infrastructure/state-branch/advisory-lock";
+import type { LockAcquirer } from "./restore-state.use-case";
 import { SyncError } from "@kernel/errors";
 import { err, ok, type Result } from "@kernel/result";
 import { computeStateHash } from "./canonical-hash";
@@ -106,15 +106,15 @@ class StubStateExporter {
   }
 }
 
-class StubAdvisoryLock {
+class StubAdvisoryLock implements LockAcquirer {
   shouldFail = false;
   released = false;
 
-  acquire(_lockPath: string): Result<LockRelease, SyncError> {
+  acquire(_lockPath: string): Result<() => void, SyncError> {
     if (this.shouldFail) {
       return err(new SyncError("LOCK_CONTENTION", "Lock held by another process"));
     }
-    const release: LockRelease = () => { this.released = true; };
+    const release = () => { this.released = true; };
     return ok(release);
   }
 }

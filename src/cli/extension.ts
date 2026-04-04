@@ -134,6 +134,9 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const sliceRepo = new SqliteSliceRepository(stateDb);
   const taskRepo = new SqliteTaskRepository(stateDb);
 
+  // --- Shared infrastructure ---
+  const gitHookAdapter = new GitHookAdapter(join(options.projectRoot, ".git"));
+
   // --- Hexagon extensions ---
   registerProjectExtension(api, {
     projectRoot: options.projectRoot,
@@ -142,7 +145,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     mergeSettings: new MergeSettingsUseCase(),
     eventBus,
     dateProvider,
-    gitHookPort: new GitHookAdapter(join(options.projectRoot, ".git")),
+    gitHookPort: gitHookAdapter,
   });
 
   const sliceTransitionPort = new WorkflowSliceTransitionAdapter(sliceRepo, dateProvider);
@@ -387,7 +390,6 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   stateBranchCreationHandler.register(eventBus);
 
   // --- Restore + guard wiring ---
-  const gitHookAdapter = new GitHookAdapter(join(options.projectRoot, ".git"));
   const backupService = new BackupService();
   const restoreUseCase = new RestoreStateUseCase({
     stateSync: gitStateSyncAdapter,
