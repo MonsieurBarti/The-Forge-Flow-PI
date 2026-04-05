@@ -1,3 +1,4 @@
+import type { SliceKind } from "@hexagons/slice";
 import { ok, type Result } from "@kernel";
 import type { FileIOError } from "../domain/errors/file-io.error";
 import {
@@ -9,27 +10,42 @@ import {
 export class InMemoryArtifactFileAdapter extends ArtifactFilePort {
   private store = new Map<string, string>();
 
-  private key(milestoneLabel: string, sliceLabel: string, artifactType: ArtifactType): string {
-    return `${milestoneLabel}/${sliceLabel}/${artifactType}`;
+  private key(
+    milestoneLabel: string | null,
+    sliceLabel: string,
+    artifactType: ArtifactType,
+    kind: SliceKind = "milestone",
+  ): string {
+    return `${kind}:${milestoneLabel ?? ""}/${sliceLabel}/${artifactType}`;
   }
 
   async write(
-    milestoneLabel: string,
+    milestoneLabel: string | null,
     sliceLabel: string,
     artifactType: ArtifactType,
     content: string,
+    kind?: SliceKind,
   ): Promise<Result<string, FileIOError>> {
-    this.store.set(this.key(milestoneLabel, sliceLabel, artifactType), content);
-    const path = `.tff/milestones/${milestoneLabel}/slices/${sliceLabel}/${ARTIFACT_FILENAMES[artifactType]}`;
+    this.store.set(this.key(milestoneLabel, sliceLabel, artifactType, kind), content);
+    let path: string;
+    const resolvedKind = kind ?? "milestone";
+    if (resolvedKind === "quick") {
+      path = `.tff/quick/${sliceLabel}/${ARTIFACT_FILENAMES[artifactType]}`;
+    } else if (resolvedKind === "debug") {
+      path = `.tff/debug/${sliceLabel}/${ARTIFACT_FILENAMES[artifactType]}`;
+    } else {
+      path = `.tff/milestones/${milestoneLabel}/slices/${sliceLabel}/${ARTIFACT_FILENAMES[artifactType]}`;
+    }
     return ok(path);
   }
 
   async read(
-    milestoneLabel: string,
+    milestoneLabel: string | null,
     sliceLabel: string,
     artifactType: ArtifactType,
+    kind?: SliceKind,
   ): Promise<Result<string | null, FileIOError>> {
-    return ok(this.store.get(this.key(milestoneLabel, sliceLabel, artifactType)) ?? null);
+    return ok(this.store.get(this.key(milestoneLabel, sliceLabel, artifactType, kind)) ?? null);
   }
 
   reset(): void {

@@ -9,6 +9,7 @@ export type {
   DomainScope,
   RequirementClarity,
   SliceDTO,
+  SliceKind,
   SliceStatus,
 } from "./domain/slice.schemas";
 export {

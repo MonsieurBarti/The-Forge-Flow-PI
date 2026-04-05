@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
+import type { SliceKind } from "@hexagons/slice";
 import { err, ok, type Result } from "@kernel";
 import { FileIOError } from "../domain/errors/file-io.error";
 import {
@@ -9,18 +10,43 @@ import {
 } from "../domain/ports/artifact-file.port";
 
 export class NodeArtifactFileAdapter extends ArtifactFilePort {
+  private readonly projectRoot: string;
   private readonly basePath: string;
 
   constructor(projectRoot: string) {
     super();
+    this.projectRoot = projectRoot;
     this.basePath = resolve(projectRoot, ".tff", "milestones");
   }
 
   private resolvePath(
-    milestoneLabel: string,
+    milestoneLabel: string | null,
     sliceLabel: string,
     artifactType: ArtifactType,
+    kind: SliceKind = "milestone",
   ): string {
+    if (kind === "quick") {
+      return resolve(
+        this.projectRoot,
+        ".tff",
+        "quick",
+        sliceLabel,
+        ARTIFACT_FILENAMES[artifactType],
+      );
+    }
+    if (kind === "debug") {
+      return resolve(
+        this.projectRoot,
+        ".tff",
+        "debug",
+        sliceLabel,
+        ARTIFACT_FILENAMES[artifactType],
+      );
+    }
+    // milestone (default) — existing behavior
+    if (milestoneLabel === null) {
+      throw new FileIOError("milestoneLabel is required for milestone kind");
+    }
     const target = resolve(
       this.basePath,
       milestoneLabel,
@@ -35,12 +61,13 @@ export class NodeArtifactFileAdapter extends ArtifactFilePort {
   }
 
   async write(
-    milestoneLabel: string,
+    milestoneLabel: string | null,
     sliceLabel: string,
     artifactType: ArtifactType,
     content: string,
+    kind?: SliceKind,
   ): Promise<Result<string, FileIOError>> {
-    const path = this.resolvePath(milestoneLabel, sliceLabel, artifactType);
+    const path = this.resolvePath(milestoneLabel, sliceLabel, artifactType, kind);
     try {
       await mkdir(dirname(path), { recursive: true });
       await writeFile(path, content, "utf-8");
@@ -51,11 +78,12 @@ export class NodeArtifactFileAdapter extends ArtifactFilePort {
   }
 
   async read(
-    milestoneLabel: string,
+    milestoneLabel: string | null,
     sliceLabel: string,
     artifactType: ArtifactType,
+    kind?: SliceKind,
   ): Promise<Result<string | null, FileIOError>> {
-    const path = this.resolvePath(milestoneLabel, sliceLabel, artifactType);
+    const path = this.resolvePath(milestoneLabel, sliceLabel, artifactType, kind);
     try {
       const content = await readFile(path, "utf-8");
       return ok(content);

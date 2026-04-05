@@ -43,6 +43,44 @@ describe("GitWorktreeAdapter", () => {
     });
   });
 
+  describe("baseBranchFor (via list)", () => {
+    it("M07-S01 → milestone/M07", async () => {
+      const adapter = new GitWorktreeAdapter(gitPort, repoDir);
+      await adapter.create("M07-S01", "milestone/M04");
+      const result = await adapter.list();
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        const wt = result.data.find((w) => w.sliceId === "M07-S01");
+        expect(wt?.baseBranch).toBe("milestone/M07");
+      }
+      await adapter.delete("M07-S01");
+    });
+
+    it("Q-01 → main", async () => {
+      const adapter = new GitWorktreeAdapter(gitPort, repoDir);
+      await adapter.create("Q-01", "milestone/M04");
+      const result = await adapter.list();
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        const wt = result.data.find((w) => w.sliceId === "Q-01");
+        expect(wt?.baseBranch).toBe("main");
+      }
+      await adapter.delete("Q-01");
+    });
+
+    it("D-01 → main", async () => {
+      const adapter = new GitWorktreeAdapter(gitPort, repoDir);
+      await adapter.create("D-01", "milestone/M04");
+      const result = await adapter.list();
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        const wt = result.data.find((w) => w.sliceId === "D-01");
+        expect(wt?.baseBranch).toBe("main");
+      }
+      await adapter.delete("D-01");
+    });
+  });
+
   describe("adapter-specific", () => {
     it("validate detects missing directory (AC4)", async () => {
       const adapter = new GitWorktreeAdapter(gitPort, repoDir);

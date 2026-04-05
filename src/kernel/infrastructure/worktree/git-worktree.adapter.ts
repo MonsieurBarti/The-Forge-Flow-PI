@@ -27,8 +27,9 @@ export class GitWorktreeAdapter extends WorktreePort {
   }
 
   private baseBranchFor(sliceId: string): string {
-    const milestone = sliceId.split("-")[0];
-    return `milestone/${milestone}`;
+    const match = sliceId.match(/^(M\d+)/);
+    if (match) return `milestone/${match[1]}`;
+    return "main";
   }
 
   async create(sliceId: string, baseBranch: string): Promise<Result<WorktreeInfo, WorktreeError>> {
