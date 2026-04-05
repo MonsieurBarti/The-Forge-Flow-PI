@@ -7,7 +7,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json && npm run copy-resources",
-    "copy-resources": "cp -r src/resources dist/resources",
+    "copy-resources": "cp -r src/resources/agents src/resources/prompts src/resources/protocols dist/resources/",
     "lint": "biome check .",
     "lint:fix": "biome check --fix .",
     "format": "biome format --fix .",
