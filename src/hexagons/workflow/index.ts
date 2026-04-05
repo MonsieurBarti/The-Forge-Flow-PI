@@ -73,6 +73,9 @@ export {
 export { ModelProfileResolverPort } from "./domain/ports/model-profile-resolver.port";
 export { SliceTransitionPort } from "./domain/ports/slice-transition.port";
 export { WorkflowSessionRepositoryPort } from "./domain/ports/workflow-session.repository.port";
+export { WorkflowJournalPort } from "./domain/ports/workflow-journal.port";
+export type { WorkflowJournalEntry } from "./domain/ports/workflow-journal.port";
+export { WorkflowJournalEntrySchema } from "./domain/ports/workflow-journal.port";
 // Domain — Transition Table
 export {
   ACTIVE_PHASES,
@@ -109,7 +112,7 @@ export {
 } from "./domain/workflow-session.schemas";
 // Infrastructure — Adapters
 export { InMemoryArtifactFileAdapter } from "./infrastructure/in-memory-artifact-file.adapter";
-export { InMemoryContextStagingAdapter } from "./infrastructure/in-memory-context-staging.adapter";
+export { DefaultContextStagingAdapter } from "./infrastructure/default-context-staging.adapter";
 export { InMemoryWorkflowSessionRepository } from "./infrastructure/in-memory-workflow-session.repository";
 // Infrastructure — PI Tools & Commands
 export { createClassifyComplexityTool } from "./infrastructure/pi/classify-complexity.tool";
