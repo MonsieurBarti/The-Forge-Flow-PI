@@ -12,6 +12,16 @@ import type {
   WorkflowTrigger,
 } from "../domain/workflow-session.schemas";
 
+export const PHASE_SUCCESS_TRIGGERS: Record<string, string> = {
+  discussing: "next",
+  researching: "next",
+  planning: "approve",
+  executing: "next",
+  verifying: "approve",
+  reviewing: "approve",
+  shipping: "next",
+};
+
 export interface PhaseTransitionInput {
   milestoneId?: string;
   sliceId?: string;
@@ -74,9 +84,66 @@ export class OrchestratePhaseTransitionUseCase {
     const fromPhase = session.currentPhase;
     const capturedSliceId = session.sliceId;
 
-    // 2. Trigger transition
+    // 2. Trigger transition (with failure policy routing)
     const triggerResult = session.trigger(input.trigger, input.guardContext, now);
-    if (isErr(triggerResult)) return triggerResult;
+    if (isErr(triggerResult)) {
+      const policy = input.guardContext.failurePolicy ?? "strict";
+
+      if (policy === "strict") {
+        return triggerResult;
+      }
+
+      if (policy === "tolerant") {
+        if (this.workflowJournal) {
+          await this.workflowJournal.append({
+            type: "failure-recorded",
+            sessionId: session.id,
+            milestoneId: input.milestoneId ?? null,
+            sliceId: session.sliceId,
+            timestamp: now,
+            metadata: {
+              phase: fromPhase,
+              policy: "tolerant",
+              action: "retried",
+              error: String(triggerResult.error),
+            },
+          });
+        }
+        return triggerResult;
+      }
+
+      // lenient: attempt the success trigger for the current phase
+      const successTrigger = PHASE_SUCCESS_TRIGGERS[fromPhase];
+      if (!successTrigger) {
+        // Unknown phase — fall back to strict
+        return triggerResult;
+      }
+
+      if (this.workflowJournal) {
+        await this.workflowJournal.append({
+          type: "failure-recorded",
+          sessionId: session.id,
+          milestoneId: input.milestoneId ?? null,
+          sliceId: session.sliceId,
+          timestamp: now,
+          metadata: {
+            phase: fromPhase,
+            policy: "lenient",
+            action: "continued",
+            error: String(triggerResult.error),
+          },
+        });
+      }
+
+      const recoveryResult = session.trigger(
+        successTrigger as WorkflowTrigger,
+        input.guardContext,
+        now,
+      );
+      if (isErr(recoveryResult)) {
+        return triggerResult; // Return the original error
+      }
+    }
 
     // 3. Detect slice effects
     const sliceCleared = capturedSliceId !== undefined && session.sliceId === undefined;
