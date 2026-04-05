@@ -53,14 +53,19 @@ describe("SettingsSchema", () => {
 });
 
 describe("ModelNameSchema", () => {
-  it("accepts valid model names", () => {
+  it("accepts short model aliases", () => {
     expect(ModelNameSchema.parse("opus")).toBe("opus");
     expect(ModelNameSchema.parse("sonnet")).toBe("sonnet");
     expect(ModelNameSchema.parse("haiku")).toBe("haiku");
   });
 
-  it("rejects invalid model names", () => {
-    expect(() => ModelNameSchema.parse("invalid")).toThrow();
+  it("accepts full model IDs", () => {
+    expect(ModelNameSchema.parse("claude-opus-4-6")).toBe("claude-opus-4-6");
+    expect(ModelNameSchema.parse("claude-sonnet-4-6")).toBe("claude-sonnet-4-6");
+  });
+
+  it("rejects empty string", () => {
+    expect(() => ModelNameSchema.parse("")).toThrow();
   });
 });
 

@@ -5,7 +5,7 @@ import { z } from "zod";
 // Primitive schemas
 // ---------------------------------------------------------------------------
 
-export const ModelNameSchema = z.enum(["opus", "sonnet", "haiku"]);
+export const ModelNameSchema = z.string().min(1);
 export type ModelName = z.infer<typeof ModelNameSchema>;
 
 export { ModelProfileNameSchema };

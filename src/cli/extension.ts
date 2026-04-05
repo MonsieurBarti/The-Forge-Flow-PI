@@ -108,9 +108,40 @@ import { RestoreStateUseCase } from "@kernel/services/restore-state.use-case";
 import { StateExporter } from "@kernel/services/state-exporter";
 import { StateGuard } from "@kernel/services/state-guard";
 import { StateImporter } from "@kernel/services/state-importer";
+import type { KnownProvider } from "@mariozechner/pi-ai";
+import { getModels } from "@mariozechner/pi-ai";
 import Database from "better-sqlite3";
 import { OverlayDataAdapter } from "./infrastructure/overlay-data.adapter";
 import { registerOverlayExtension } from "./overlay.extension";
+
+/**
+ * Resolve model ID from PI's registry by name.
+ * Tries exact match, then partial (substring) match.
+ * Returns undefined when nothing matches.
+ */
+function resolveModelFromRegistry(provider: KnownProvider, name: string): string | undefined {
+  const models = getModels(provider);
+  // Exact match (full model ID like "claude-sonnet-4-6")
+  const exact = models.find((m) => m.id === name);
+  if (exact) return exact.id;
+  // Partial match (short alias like "opus", "sonnet", "haiku")
+  const partials = models.filter((m) => m.id.includes(name));
+  if (partials.length === 0) return undefined;
+  // Prefer non-dated alias over dated snapshot
+  const alias = partials.find((m) => !/-\d{8}$/.test(m.id));
+  return alias?.id ?? partials[partials.length - 1].id;
+}
+
+/**
+ * Return PI's default model ID for the given provider.
+ * Picks the latest non-dated opus alias (the SDK default for anthropic).
+ * Falls back to the first model in the registry.
+ */
+function piDefaultModelId(provider: KnownProvider): string {
+  const models = getModels(provider);
+  const opusAlias = models.find((m) => m.id.includes("opus") && !/-\d{8}$/.test(m.id));
+  return opusAlias?.id ?? models[0]?.id ?? `unknown-${provider}`;
+}
 
 function detectPlannotator(): string | undefined {
   try {
@@ -193,19 +224,18 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   });
   const modelProfiles = settingsForModel.ok ? settingsForModel.data.modelRouting.profiles : null;
 
-  const MODEL_ID_MAP: Record<string, string> = {
-    opus: "claude-opus-4-6",
-    sonnet: "claude-sonnet-4-6",
-    haiku: "claude-haiku-4-5-20251001",
-  };
-
   const modelResolver = (profileName: string): ResolvedModel => {
+    const provider: KnownProvider = "anthropic";
     const profile = modelProfiles?.[profileName as "quality" | "balanced" | "budget"];
-    const modelName = profile?.model ?? "sonnet";
-    return {
-      provider: "anthropic",
-      modelId: MODEL_ID_MAP[modelName] ?? `claude-${modelName}-4-6`,
-    };
+    const modelName = profile?.model;
+
+    if (!modelName) {
+      // No profile configured — use PI's default model for the provider
+      return { provider, modelId: piDefaultModelId(provider) };
+    }
+
+    const resolved = resolveModelFromRegistry(provider, modelName);
+    return { provider, modelId: resolved ?? piDefaultModelId(provider) };
   };
 
   // --- Execution extension ---
