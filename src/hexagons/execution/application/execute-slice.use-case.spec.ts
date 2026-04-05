@@ -161,6 +161,7 @@ describe("ExecuteSliceUseCase", () => {
       overseerConfig: OVERSEER_CONFIG,
       preDispatchGuardrail: preDispatchAdapter,
       modelResolver: () => ({ provider: "anthropic", modelId: "claude-sonnet-4-6" }),
+      checkpointBeforeRetry: true,
     });
   });
 
@@ -1301,6 +1302,41 @@ describe("ExecuteSliceUseCase", () => {
 
       // Only 1 dispatch (clean self-review → fast path)
       expect(agentDispatch.dispatchedConfigs.length).toBe(1);
+    });
+
+    it("F-full with clean self-review: still gets full path (AC5)", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      // Clean self-review — all dimensions passed, no concerns, DONE
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(new AgentResultBuilder().withTaskId(T1_ID).asDone().build()),
+      );
+
+      // Reflection dispatch for full path
+      agentDispatch.givenResult(
+        `${T1_ID}-reflection`,
+        ok(
+          new AgentResultBuilder()
+            .withTaskId(T1_ID)
+            .asDone()
+            .withOutput(
+              '<!-- TFF_REFLECTION_REPORT -->\n{"passed": true, "issues": []}\n<!-- /TFF_REFLECTION_REPORT -->',
+            )
+            .build(),
+        ),
+      );
+
+      const result = await useCase.execute(makeInput({ complexity: "F-full" }));
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.completedTasks).toContain(T1_ID);
+
+      // F-full ALWAYS gets full path — 2 dispatches even with clean self-review
+      expect(agentDispatch.dispatchedConfigs.length).toBe(2);
+      expect(agentDispatch.dispatchedConfigs[1]?.taskId).toBe(`${T1_ID}-reflection`);
     });
 
     it("F-full with concerns: full reflection path dispatched", async () => {

@@ -79,6 +79,7 @@ interface ExecuteSliceUseCaseDeps {
   readonly overseerConfig: OverseerConfig;
   readonly preDispatchGuardrail: PreDispatchGuardrailPort;
   readonly modelResolver: (profileName: string) => { provider: string; modelId: string };
+  readonly checkpointBeforeRetry: boolean;
 }
 
 export class ExecuteSliceUseCase {
@@ -657,10 +658,11 @@ export class ExecuteSliceUseCase {
     const noConcerns = agentResult.concerns.length === 0;
     const isDone = agentResult.status === "DONE";
     const isSTier = input.complexity === "S";
+    const isFull = input.complexity === "F-full";
 
     // S-tier: always fast path
-    // F-lite with clean self-review: fast path
-    if (isSTier || (allPassed && noConcerns && isDone)) {
+    // F-lite with clean self-review: fast path (F-full always gets full path)
+    if (isSTier || (!isFull && allPassed && noConcerns && isDone)) {
       return {
         passed: true,
         tier: "fast",
@@ -794,8 +796,10 @@ export class ExecuteSliceUseCase {
         }
 
         // action === "retry"
-        // Checkpoint before retry
-        await this.deps.checkpointRepository.save(checkpoint);
+        // Checkpoint before retry (gated by config)
+        if (this.deps.checkpointBeforeRetry) {
+          await this.deps.checkpointRepository.save(checkpoint);
+        }
 
         // Restore worktree (safe: sequential, no sibling tasks running)
         await this.deps.gitPort.restoreWorktree(input.workingDirectory);
