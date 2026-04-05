@@ -1,8 +1,7 @@
 import Database from "better-sqlite3";
 import { beforeEach, describe, expect, it } from "vitest";
-
-import type { AuditReportProps } from "../../../domain/schemas/completion.schemas";
 import { CompletionRecord } from "../../../domain/aggregates/completion-record.aggregate";
+import type { AuditReportProps } from "../../../domain/schemas/completion.schemas";
 import { SqliteCompletionRecordRepository } from "./sqlite-completion-record.repository";
 
 const NOW = new Date("2026-04-02T12:00:00Z");

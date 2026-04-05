@@ -1,4 +1,5 @@
 import { IdSchema, ModelProfileNameSchema, TimestampSchema } from "@kernel";
+import { TurnMetricsSchema } from "@kernel/agents";
 import { z } from "zod";
 
 export const TaskMetricsModelSchema = z.object({
@@ -26,6 +27,7 @@ export const TaskMetricsSchema = z.object({
   reflectionTier: z.enum(["fast", "full", "skipped"]).default("skipped"),
   finalProfile: z.string().optional(),
   totalAttempts: z.number().int().nonnegative().optional(),
+  turns: z.array(TurnMetricsSchema).optional().default([]),
   timestamp: TimestampSchema,
 });
 export type TaskMetrics = z.infer<typeof TaskMetricsSchema>;

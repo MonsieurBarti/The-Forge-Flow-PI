@@ -1,11 +1,11 @@
 import { BaseDomainError, err, ok, type Result, ValueObject } from "@kernel";
+import type { Review } from "../aggregates/review.aggregate";
 import {
   type ConflictProps,
   type MergedFindingProps,
   type MergedReviewProps,
   MergedReviewPropsSchema,
 } from "../schemas/merged-review.schemas";
-import type { Review } from "../aggregates/review.aggregate";
 import {
   type ReviewRole,
   type ReviewSeverity,

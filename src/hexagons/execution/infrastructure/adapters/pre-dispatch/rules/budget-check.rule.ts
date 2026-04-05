@@ -1,5 +1,8 @@
+import type {
+  PreDispatchContext,
+  PreDispatchViolation,
+} from "../../../../domain/pre-dispatch.schemas";
 import type { PreDispatchGuardrailRule } from "../../../../domain/pre-dispatch-guardrail-rule";
-import type { PreDispatchContext, PreDispatchViolation } from "../../../../domain/pre-dispatch.schemas";
 
 export class BudgetCheckRule implements PreDispatchGuardrailRule {
   readonly id = "budget-check";
@@ -9,11 +12,13 @@ export class BudgetCheckRule implements PreDispatchGuardrailRule {
       return [];
     }
     if (context.budgetRemaining < context.budgetEstimated) {
-      return [{
-        ruleId: this.id,
-        severity: "warning",
-        message: `Budget may be insufficient: ${context.budgetRemaining} remaining, ${context.budgetEstimated} estimated`,
-      }];
+      return [
+        {
+          ruleId: this.id,
+          severity: "warning",
+          message: `Budget may be insufficient: ${context.budgetRemaining} remaining, ${context.budgetEstimated} estimated`,
+        },
+      ];
     }
     return [];
   }

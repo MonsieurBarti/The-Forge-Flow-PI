@@ -38,6 +38,10 @@ export class InMemoryWorkflowSessionRepository extends WorkflowSessionRepository
     return ok(null);
   }
 
+  async findAll(): Promise<Result<WorkflowSession[], PersistenceError>> {
+    return ok(Array.from(this.store.values()).map((p) => WorkflowSession.reconstitute(p)));
+  }
+
   seed(session: WorkflowSession): void {
     this.store.set(session.id, session.toJSON());
   }

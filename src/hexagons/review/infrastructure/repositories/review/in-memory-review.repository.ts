@@ -1,6 +1,6 @@
 import { type Id, ok, type PersistenceError, type Result } from "@kernel";
-import { ReviewRepositoryPort } from "../../../domain/ports/review-repository.port";
 import { Review } from "../../../domain/aggregates/review.aggregate";
+import { ReviewRepositoryPort } from "../../../domain/ports/review-repository.port";
 import type { ReviewProps } from "../../../domain/schemas/review.schemas";
 
 export class InMemoryReviewRepository extends ReviewRepositoryPort {
@@ -30,6 +30,10 @@ export class InMemoryReviewRepository extends ReviewRepositoryPort {
   async delete(id: Id): Promise<Result<void, PersistenceError>> {
     this.store.delete(id);
     return ok(undefined);
+  }
+
+  async findAll(): Promise<Result<Review[], PersistenceError>> {
+    return ok(Array.from(this.store.values()).map((p) => Review.reconstitute(p)));
   }
 
   seed(review: Review): void {

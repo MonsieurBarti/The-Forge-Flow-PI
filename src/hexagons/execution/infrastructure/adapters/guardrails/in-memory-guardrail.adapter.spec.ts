@@ -1,6 +1,9 @@
 import { AgentResultBuilder } from "@kernel/agents";
 import { describe, expect, it } from "vitest";
-import type { GuardrailContext, GuardrailValidationReport } from "../../../domain/guardrail.schemas";
+import type {
+  GuardrailContext,
+  GuardrailValidationReport,
+} from "../../../domain/guardrail.schemas";
 import { InMemoryGuardrailAdapter } from "./in-memory-guardrail.adapter";
 
 function makeContext(overrides?: Partial<GuardrailContext>): GuardrailContext {

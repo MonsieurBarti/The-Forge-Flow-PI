@@ -1,7 +1,7 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { ok, err, type Result } from "@kernel/result";
 import { GitHookPort, HookError } from "@kernel/ports/git-hook.port";
+import { err, ok, type Result } from "@kernel/result";
 
 const BEGIN_MARKER = "# --- TFF-PI BEGIN (do not edit) ---";
 const END_MARKER = "# --- TFF-PI END ---";

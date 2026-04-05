@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { mergeSnapshots, type Snapshot } from "./json-snapshot-merger";
 
 describe("mergeSnapshots", () => {
@@ -136,8 +136,16 @@ describe("mergeSnapshots", () => {
   });
 
   it("undefined/missing arrays — no crash", () => {
-    const parent = { milestones: undefined, slices: undefined, tasks: undefined } as unknown as Snapshot;
-    const child = { milestones: undefined, slices: undefined, tasks: undefined } as unknown as Snapshot;
+    const parent = {
+      milestones: undefined,
+      slices: undefined,
+      tasks: undefined,
+    } as unknown as Snapshot;
+    const child = {
+      milestones: undefined,
+      slices: undefined,
+      tasks: undefined,
+    } as unknown as Snapshot;
     const result = mergeSnapshots(parent, child, "M07-S01");
 
     expect(result.milestones).toEqual([]);
@@ -161,7 +169,7 @@ describe("mergeSnapshots", () => {
     const result = mergeSnapshots(parent, child, "M07-S01");
 
     expect(result.shipRecords).toHaveLength(1);
-    expect(result.shipRecords![0].outcome).toBe("merged");
+    expect(result.shipRecords?.[0].outcome).toBe("merged");
   });
 
   it("shipRecords — parent wins for non-owned slice", () => {
@@ -180,7 +188,7 @@ describe("mergeSnapshots", () => {
     const result = mergeSnapshots(parent, child, "M07-S01");
 
     expect(result.shipRecords).toHaveLength(1);
-    expect(result.shipRecords![0].outcome).toBe("parent");
+    expect(result.shipRecords?.[0].outcome).toBe("parent");
   });
 
   it("completionRecords — parent always wins", () => {
@@ -199,7 +207,7 @@ describe("mergeSnapshots", () => {
     const result = mergeSnapshots(parent, child, "M07-S01");
 
     expect(result.completionRecords).toHaveLength(1);
-    expect(result.completionRecords![0].outcome).toBe("parent");
+    expect(result.completionRecords?.[0].outcome).toBe("parent");
   });
 
   it("backward compat — missing shipRecords/completionRecords", () => {

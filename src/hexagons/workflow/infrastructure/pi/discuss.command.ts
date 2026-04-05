@@ -17,7 +17,8 @@ export interface DiscussCommandDeps {
 export function registerDiscussCommand(api: ExtensionAPI, deps: DiscussCommandDeps): void {
   api.registerCommand("tff:discuss", {
     description: "Start the discuss phase for a slice -- multi-turn Q&A producing SPEC.md",
-    handler: async (args: string) => {
+    handler: async (args: string, ctx) => {
+      if (ctx?.newSession) await ctx.newSession();
       await deps.withGuard?.();
       // 1. Resolve target slice from args (label or ID)
       const identifier = args.trim();

@@ -95,6 +95,26 @@ describe("BranchMetaSchema", () => {
   });
 });
 
+describe("v2 fields", () => {
+  it("v1 snapshot with missing v2 fields parses to empty arrays via .default([])", () => {
+    const raw = {
+      version: 2,
+      exportedAt: new Date().toISOString(),
+      project: null,
+      milestones: [],
+      slices: [],
+      tasks: [],
+      shipRecords: [],
+      completionRecords: [],
+      // workflowSessions, reviews, verifications intentionally omitted
+    };
+    const result = StateSnapshotSchema.parse(raw);
+    expect(result.workflowSessions).toEqual([]);
+    expect(result.reviews).toEqual([]);
+    expect(result.verifications).toEqual([]);
+  });
+});
+
 describe("migrateSnapshot", () => {
   it("returns data unchanged when version matches SCHEMA_VERSION", () => {
     const raw = { version: SCHEMA_VERSION, data: "test" };
@@ -106,5 +126,26 @@ describe("migrateSnapshot", () => {
   it("throws when version > SCHEMA_VERSION", () => {
     const raw = { version: SCHEMA_VERSION + 1 };
     expect(() => migrateSnapshot(raw)).toThrow("newer than supported");
+  });
+
+  it("migrates v1 → v2 by adding empty workflow arrays", () => {
+    const v1 = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      project: null,
+      milestones: [],
+      slices: [],
+      tasks: [],
+      shipRecords: [],
+      completionRecords: [],
+    };
+    const migrated = migrateSnapshot(v1);
+    expect(migrated.version).toBe(2);
+    expect(migrated.workflowSessions).toEqual([]);
+    expect(migrated.reviews).toEqual([]);
+    expect(migrated.verifications).toEqual([]);
+    // Should also parse cleanly through StateSnapshotSchema
+    const parsed = StateSnapshotSchema.parse(migrated);
+    expect(parsed.version).toBe(2);
   });
 });

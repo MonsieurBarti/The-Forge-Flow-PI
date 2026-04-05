@@ -1,8 +1,8 @@
-import { err, ok, type Result } from "@kernel/result";
-import type { BranchMeta } from "@kernel/infrastructure/state-branch/state-snapshot.schemas";
 import { WorktreeError } from "@kernel/errors/worktree.error";
+import type { BranchMeta } from "@kernel/infrastructure/state-branch/state-snapshot.schemas";
 import { WorktreePort } from "@kernel/ports/worktree.port";
 import type { WorktreeHealth, WorktreeInfo } from "@kernel/ports/worktree.schemas";
+import { err, ok, type Result } from "@kernel/result";
 
 export class InMemoryWorktreeAdapter extends WorktreePort {
   private store = new Map<string, WorktreeInfo>();

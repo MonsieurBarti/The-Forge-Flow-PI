@@ -5,7 +5,7 @@ import type { ContextStagingRequest } from "../domain/ports/context-staging.port
 import { ModelProfileResolverPort } from "../domain/ports/model-profile-resolver.port";
 import { ACTIVE_PHASES } from "../domain/transition-table";
 import type { WorkflowPhase } from "../domain/workflow-session.schemas";
-import { InMemoryContextStagingAdapter } from "./in-memory-context-staging.adapter";
+import { DefaultContextStagingAdapter } from "./default-context-staging.adapter";
 
 class StubModelProfileResolver extends ModelProfileResolverPort {
   readonly lastCall: { phase?: WorkflowPhase; complexity?: ComplexityTier } = {};
@@ -32,10 +32,10 @@ function validRequest(overrides?: Partial<ContextStagingRequest>): ContextStagin
   };
 }
 
-describe("InMemoryContextStagingAdapter", () => {
+describe("DefaultContextStagingAdapter", () => {
   function createSut() {
     const resolver = new StubModelProfileResolver();
-    const adapter = new InMemoryContextStagingAdapter({
+    const adapter = new DefaultContextStagingAdapter({
       modelProfileResolver: resolver,
     });
     return { adapter, resolver };

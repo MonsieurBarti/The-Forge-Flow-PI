@@ -21,10 +21,7 @@ export class GitStateBranchOpsAdapter extends StateBranchOpsPort {
     return env;
   }
 
-  private runGit(
-    args: string[],
-    opts?: { cwd?: string },
-  ): Promise<Result<string, GitError>> {
+  private runGit(args: string[], opts?: { cwd?: string }): Promise<Result<string, GitError>> {
     const cwd = opts?.cwd ?? this.cwd;
 
     return new Promise((resolve) => {
@@ -147,9 +144,7 @@ export class GitStateBranchOpsAdapter extends StateBranchOpsPort {
       });
       if (!commitResult.ok) return commitResult;
 
-      const match = commitResult.data.match(
-        /\[[\w/.-]+\s+(?:\(root-commit\)\s+)?([a-f0-9]+)\]/,
-      );
+      const match = commitResult.data.match(/\[[\w/.-]+\s+(?:\(root-commit\)\s+)?([a-f0-9]+)\]/);
       const sha = match ? match[1] : commitResult.data.trim();
       return ok(sha);
     } finally {

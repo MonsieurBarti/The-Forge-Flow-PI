@@ -94,9 +94,9 @@ export class InitProjectUseCase {
     if (this.gitHookPort) {
       const hookScript = [
         'if [ "$3" = "1" ]; then',
-        '  node -e "require(\'./node_modules/.tff-restore.js\')" 2>/dev/null || true',
-        'fi',
-      ].join('\n');
+        "  node -e \"require('./node_modules/.tff-restore.js')\" 2>/dev/null || true",
+        "fi",
+      ].join("\n");
       await this.gitHookPort.installPostCheckoutHook(hookScript);
     }
 

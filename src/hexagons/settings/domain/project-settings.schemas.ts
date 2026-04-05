@@ -5,7 +5,7 @@ import { z } from "zod";
 // Primitive schemas
 // ---------------------------------------------------------------------------
 
-export const ModelNameSchema = z.enum(["opus", "sonnet", "haiku"]);
+export const ModelNameSchema = z.string().min(1);
 export type ModelName = z.infer<typeof ModelNameSchema>;
 
 export { ModelProfileNameSchema };
@@ -216,7 +216,9 @@ export const BeadsConfigSchema = BaseBeadsConfigSchema.catch(BEADS_DEFAULTS);
 export const GuardrailsConfigSchema = BaseGuardrailsConfigSchema.catch(GUARDRAILS_DEFAULTS);
 export const OverseerConfigSchema = BaseOverseerConfigSchema.catch(OVERSEER_DEFAULTS);
 export const HotkeysConfigSchema = BaseHotkeysConfigSchema.catch(HOTKEYS_DEFAULTS);
-export const FallbackStrategyConfigSchema = BaseFallbackStrategyConfigSchema.catch(FALLBACK_STRATEGY_DEFAULTS);
+export const FallbackStrategyConfigSchema = BaseFallbackStrategyConfigSchema.catch(
+  FALLBACK_STRATEGY_DEFAULTS,
+);
 
 // ---------------------------------------------------------------------------
 // Top-level SettingsSchema

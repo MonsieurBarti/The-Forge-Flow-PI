@@ -8,21 +8,28 @@ import {
   type ResolvedModel,
 } from "@kernel/agents";
 import type { DateProviderPort, EventBusPort, LoggerPort } from "@kernel/ports";
-import type { ConductReviewRequest, ConductReviewResult } from "../domain/schemas/conduct-review.schemas";
-import { ConductReviewRequestSchema } from "../domain/schemas/conduct-review.schemas";
+import { Review } from "../domain/aggregates/review.aggregate";
 import { ConductReviewError } from "../domain/errors/conduct-review.error";
 import { FreshReviewerViolationError } from "../domain/errors/fresh-reviewer-violation.error";
 import { ReviewPipelineCompletedEvent } from "../domain/events/review-pipeline-completed.event";
-import { MergedReview } from "../domain/value-objects/merged-review.vo";
 import type { ChangedFilesPort } from "../domain/ports/changed-files.port";
 import type { FixerPort } from "../domain/ports/fixer.port";
 import type { ReviewRepositoryPort } from "../domain/ports/review-repository.port";
 import type { SliceSpec, SliceSpecPort } from "../domain/ports/slice-spec.port";
-import { Review } from "../domain/aggregates/review.aggregate";
-import { type FindingProps, FindingPropsSchema, type ReviewRole } from "../domain/schemas/review.schemas";
-import { strategyForRole } from "../domain/strategies/review-strategy";
+import type {
+  ConductReviewRequest,
+  ConductReviewResult,
+} from "../domain/schemas/conduct-review.schemas";
+import { ConductReviewRequestSchema } from "../domain/schemas/conduct-review.schemas";
+import {
+  type FindingProps,
+  FindingPropsSchema,
+  type ReviewRole,
+} from "../domain/schemas/review.schemas";
 import type { CritiqueReflectionService } from "../domain/services/critique-reflection.service";
 import type { FreshReviewerService } from "../domain/services/fresh-reviewer.service";
+import { strategyForRole } from "../domain/strategies/review-strategy";
+import { MergedReview } from "../domain/value-objects/merged-review.vo";
 import type { ReviewPromptBuilder } from "./review-prompt-builder";
 
 const REVIEWER_ROLES: readonly ReviewRole[] = [

@@ -1,14 +1,14 @@
 import { existsSync } from "node:fs";
 import { basename, join } from "node:path";
 
-import { SyncError } from "@kernel/errors";
-import { ok, type Result } from "@kernel/result";
+import type { SyncError } from "@kernel/errors";
 import type { RecoveryStrategy } from "@kernel/ports/recovery-strategy";
+import type { StateBranchOpsPort } from "@kernel/ports/state-branch-ops.port";
+import { ok, type Result } from "@kernel/result";
+import { BranchMetaSchema } from "@kernel/schemas/branch-meta.schemas";
 import type { RecoveryReport, RecoveryScenario } from "@kernel/schemas/recovery.schemas";
 import type { BackupService } from "@kernel/services/backup-service";
 import type { RestoreStateUseCase } from "@kernel/services/restore-state.use-case";
-import type { StateBranchOpsPort } from "@kernel/ports/state-branch-ops.port";
-import { BranchMetaSchema } from "@kernel/schemas/branch-meta.schemas";
 
 /**
  * Extracts the ISO timestamp from a backup directory name.
@@ -28,9 +28,7 @@ function backupTimestamp(backupPath: string): string {
 }
 
 function sortBackupsNewestFirst(backupPaths: string[]): string[] {
-  return [...backupPaths].sort((a, b) =>
-    backupTimestamp(b).localeCompare(backupTimestamp(a)),
-  );
+  return [...backupPaths].sort((a, b) => backupTimestamp(b).localeCompare(backupTimestamp(a)));
 }
 
 export class CrashRecoveryStrategy implements RecoveryStrategy {
@@ -79,7 +77,10 @@ export class CrashRecoveryStrategy implements RecoveryStrategy {
 
     if (useStateBranch) {
       // Restore via RestoreStateUseCase (state branch is newer)
-      const restoreResult = await this.restoreUseCase.execute(scenario.currentBranch!);
+      if (!scenario.currentBranch) {
+        return ok(this.degradationReport("currentBranch is null in crash recovery"));
+      }
+      const restoreResult = await this.restoreUseCase.execute(scenario.currentBranch);
       if (!restoreResult.ok) {
         return ok(this.degradationReport(restoreResult.error.message));
       }
@@ -92,7 +93,7 @@ export class CrashRecoveryStrategy implements RecoveryStrategy {
       return ok({
         type: "crash",
         action: "restored",
-        source: `tff-state/${scenario.currentBranch!}`,
+        source: `tff-state/${scenario.currentBranch}`,
         filesRestored: restoreResult.data.filesRestored,
         warnings: [],
       });

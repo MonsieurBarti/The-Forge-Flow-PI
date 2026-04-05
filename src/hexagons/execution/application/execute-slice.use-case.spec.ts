@@ -19,20 +19,20 @@ import {
   AgentResultBuilder,
   isSuccessfulStatus,
 } from "@kernel/agents";
+import { InMemoryWorktreeAdapter } from "@kernel/infrastructure/worktree/in-memory-worktree.adapter";
 import { beforeEach, describe, expect, it } from "vitest";
 import { Checkpoint } from "../domain/checkpoint.aggregate";
 import { AllTasksCompletedEvent } from "../domain/events/all-tasks-completed.event";
 import { TaskExecutionCompletedEvent } from "../domain/events/task-execution-completed.event";
 import type { OverseerConfig } from "../domain/overseer.schemas";
-import { DefaultRetryPolicy } from "../infrastructure/policies/default-retry-policy";
 import { InMemoryAgentDispatchAdapter } from "../infrastructure/adapters/agent-dispatch/in-memory-agent-dispatch.adapter";
-import { InMemoryCheckpointRepository } from "../infrastructure/repositories/checkpoint/in-memory-checkpoint.repository";
 import { InMemoryGuardrailAdapter } from "../infrastructure/adapters/guardrails/in-memory-guardrail.adapter";
-import { InMemoryJournalRepository } from "../infrastructure/repositories/journal/in-memory-journal.repository";
-import { InMemoryMetricsRepository } from "../infrastructure/repositories/metrics/in-memory-metrics.repository";
 import { InMemoryOverseerAdapter } from "../infrastructure/adapters/overseer/in-memory-overseer.adapter";
 import { InMemoryPreDispatchAdapter } from "../infrastructure/adapters/pre-dispatch/in-memory-pre-dispatch.adapter";
-import { InMemoryWorktreeAdapter } from "@kernel/infrastructure/worktree/in-memory-worktree.adapter";
+import { DefaultRetryPolicy } from "../infrastructure/policies/default-retry-policy";
+import { InMemoryCheckpointRepository } from "../infrastructure/repositories/checkpoint/in-memory-checkpoint.repository";
+import { InMemoryJournalRepository } from "../infrastructure/repositories/journal/in-memory-journal.repository";
+import { InMemoryMetricsRepository } from "../infrastructure/repositories/metrics/in-memory-metrics.repository";
 import type { ExecuteSliceInput } from "./execute-slice.schemas";
 import { ExecuteSliceUseCase } from "./execute-slice.use-case";
 
@@ -1215,16 +1215,14 @@ describe("ExecuteSliceUseCase", () => {
       // Set up per-task pre-dispatch: block T1 but allow T2
       // InMemoryPreDispatchAdapter returns same report for all tasks,
       // so we use a custom implementation
-      let callCount = 0;
+      let _callCount = 0;
       const origValidate = preDispatchAdapter.validate.bind(preDispatchAdapter);
       preDispatchAdapter.validate = async (ctx) => {
-        callCount++;
+        _callCount++;
         if (ctx.taskId === T1_ID) {
           return ok({
             passed: false,
-            violations: [
-              { ruleId: "scope", severity: "blocker" as const, message: "blocked" },
-            ],
+            violations: [{ ruleId: "scope", severity: "blocker" as const, message: "blocked" }],
             checkedAt: new Date().toISOString(),
           });
         }
@@ -1394,9 +1392,7 @@ describe("ExecuteSliceUseCase", () => {
         ok(
           new AgentResultBuilder()
             .withTaskId(T1_ID)
-            .asDoneWithConcerns([
-              { area: "quality", description: "Issue", severity: "warning" },
-            ])
+            .asDoneWithConcerns([{ area: "quality", description: "Issue", severity: "warning" }])
             .build(),
         ),
       );
@@ -1444,9 +1440,7 @@ describe("ExecuteSliceUseCase", () => {
         ok(
           new AgentResultBuilder()
             .withTaskId(T1_ID)
-            .asDoneWithConcerns([
-              { area: "quality", description: "Issue", severity: "warning" },
-            ])
+            .asDoneWithConcerns([{ area: "quality", description: "Issue", severity: "warning" }])
             .build(),
         ),
       );
@@ -1500,19 +1494,11 @@ describe("ExecuteSliceUseCase", () => {
         if (dispatchCount === 1) {
           // First dispatch returns BLOCKED
           return ok(
-            new AgentResultBuilder()
-              .withTaskId(config.taskId)
-              .asBlocked("Missing dep")
-              .build(),
+            new AgentResultBuilder().withTaskId(config.taskId).asBlocked("Missing dep").build(),
           );
         }
         // Retry dispatch returns DONE
-        return ok(
-          new AgentResultBuilder()
-            .withTaskId(config.taskId)
-            .asDone()
-            .build(),
-        );
+        return ok(new AgentResultBuilder().withTaskId(config.taskId).asDone().build());
       };
 
       const result = await useCase.execute(makeInput());
@@ -1566,19 +1552,11 @@ describe("ExecuteSliceUseCase", () => {
         dispatchCount++;
         if (dispatchCount <= 2) {
           return ok(
-            new AgentResultBuilder()
-              .withTaskId(config.taskId)
-              .asBlocked("Cannot complete")
-              .build(),
+            new AgentResultBuilder().withTaskId(config.taskId).asBlocked("Cannot complete").build(),
           );
         }
         // Third dispatch (after downshift): succeeds
-        return ok(
-          new AgentResultBuilder()
-            .withTaskId(config.taskId)
-            .asDone()
-            .build(),
-        );
+        return ok(new AgentResultBuilder().withTaskId(config.taskId).asDone().build());
       };
 
       const result = await useCase.execute(makeInput());

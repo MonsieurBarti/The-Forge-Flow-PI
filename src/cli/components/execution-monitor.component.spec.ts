@@ -2,8 +2,8 @@ import type { AgentEvent } from "@kernel/agents/schemas/agent-event.schema";
 import type { AgentEventPort } from "@kernel/ports/agent-event.port";
 import type { MarkdownTheme, TUI } from "@mariozechner/pi-tui";
 import { describe, expect, it, vi } from "vitest";
-import { buildMarkdown, ExecutionMonitorComponent } from "./execution-monitor.component";
 import type { ExecutionMonitorState } from "./execution-monitor.component";
+import { buildMarkdown, ExecutionMonitorComponent } from "./execution-monitor.component";
 
 const TASK_A = crypto.randomUUID();
 const TASK_B = crypto.randomUUID();
@@ -12,9 +12,20 @@ const NOW = Date.now();
 function identityTheme(): MarkdownTheme {
   const id = (text: string) => text;
   return {
-    heading: id, link: id, linkUrl: id, code: id, codeBlock: id,
-    codeBlockBorder: id, quote: id, quoteBorder: id, hr: id,
-    listBullet: id, bold: id, italic: id, strikethrough: id, underline: id,
+    heading: id,
+    link: id,
+    linkUrl: id,
+    code: id,
+    codeBlock: id,
+    codeBlockBorder: id,
+    quote: id,
+    quoteBorder: id,
+    hr: id,
+    listBullet: id,
+    bold: id,
+    italic: id,
+    strikethrough: id,
+    underline: id,
   };
 }
 
@@ -31,7 +42,9 @@ function makeMockPort(): {
     subscribe: vi.fn(),
     subscribeAll: vi.fn((l: (e: AgentEvent) => void) => {
       listener = l;
-      return () => { listener = undefined; };
+      return () => {
+        listener = undefined;
+      };
     }),
     emit: vi.fn(),
     clear: vi.fn(),
@@ -59,30 +72,36 @@ describe("buildMarkdown", () => {
   });
 
   it("shows executing header with 1-based turn number (AC5)", () => {
-    const md = buildMarkdown(baseState({
-      activeTaskId: TASK_A,
-      currentTurnIndex: 3,
-      isExecuting: true,
-    }));
+    const md = buildMarkdown(
+      baseState({
+        activeTaskId: TASK_A,
+        currentTurnIndex: 3,
+        isExecuting: true,
+      }),
+    );
     expect(md).toContain("**Executing** — turn 4");
   });
 
   it("shows last-run header when idle (AC5)", () => {
-    const md = buildMarkdown(baseState({
-      activeTaskId: TASK_A,
-      currentTurnIndex: 2,
-      isExecuting: false,
-    }));
+    const md = buildMarkdown(
+      baseState({
+        activeTaskId: TASK_A,
+        currentTurnIndex: 2,
+        isExecuting: false,
+      }),
+    );
     expect(md).toContain("**Last run** — 3 turns completed");
   });
 
   it("includes textBuffer as literal substring (AC3)", () => {
     const text = "Analyzing the overlay structure...";
-    const md = buildMarkdown(baseState({
-      activeTaskId: TASK_A,
-      textBuffer: text,
-      isExecuting: true,
-    }));
+    const md = buildMarkdown(
+      baseState({
+        activeTaskId: TASK_A,
+        textBuffer: text,
+        isExecuting: true,
+      }),
+    );
     expect(md).toContain(text);
   });
 
@@ -92,12 +111,15 @@ describe("buildMarkdown", () => {
       ["Read", { total: 5, errors: 0 }],
       ["Bash", { total: 3, errors: 0 }],
     ]);
-    const md = buildMarkdown(baseState({
-      activeTaskId: TASK_A,
-      toolCounts: tools,
-      isExecuting: true,
-    }));
-    const toolLine = md.split("\n").find((l) => l.startsWith("**Tools:**"))!;
+    const md = buildMarkdown(
+      baseState({
+        activeTaskId: TASK_A,
+        toolCounts: tools,
+        isExecuting: true,
+      }),
+    );
+    const toolLine = md.split("\n").find((l) => l.startsWith("**Tools:**"));
+    if (!toolLine) throw new Error("Expected toolLine to be defined");
     const readIdx = toolLine.indexOf("Read");
     const bashIdx = toolLine.indexOf("Bash");
     const editIdx = toolLine.indexOf("Edit");
@@ -110,32 +132,36 @@ describe("buildMarkdown", () => {
       ["Read", { total: 2, errors: 0 }],
       ["Bash", { total: 0, errors: 0 }],
     ]);
-    const md = buildMarkdown(baseState({
-      activeTaskId: TASK_A,
-      toolCounts: tools,
-      isExecuting: true,
-    }));
+    const md = buildMarkdown(
+      baseState({
+        activeTaskId: TASK_A,
+        toolCounts: tools,
+        isExecuting: true,
+      }),
+    );
     expect(md).toContain("Read");
     expect(md).not.toContain("Bash");
   });
 
   it("shows error suffix when errors > 0 (AC4)", () => {
-    const tools = new Map([
-      ["Read", { total: 3, errors: 1 }],
-    ]);
-    const md = buildMarkdown(baseState({
-      activeTaskId: TASK_A,
-      toolCounts: tools,
-      isExecuting: true,
-    }));
+    const tools = new Map([["Read", { total: 3, errors: 1 }]]);
+    const md = buildMarkdown(
+      baseState({
+        activeTaskId: TASK_A,
+        toolCounts: tools,
+        isExecuting: true,
+      }),
+    );
     expect(md).toContain("Read ×3 (×1 err)");
   });
 
   it("omits tool line entirely when no tools used", () => {
-    const md = buildMarkdown(baseState({
-      activeTaskId: TASK_A,
-      isExecuting: true,
-    }));
+    const md = buildMarkdown(
+      baseState({
+        activeTaskId: TASK_A,
+        isExecuting: true,
+      }),
+    );
     expect(md).not.toContain("**Tools:**");
   });
 });
@@ -164,8 +190,20 @@ describe("ExecutionMonitorComponent", () => {
     const comp = new ExecutionMonitorComponent(tui, port, identityTheme(), 2, 1);
 
     trigger({ type: "turn_start", taskId: TASK_A, turnIndex: 0, timestamp: NOW });
-    trigger({ type: "message_update", taskId: TASK_A, turnIndex: 0, timestamp: NOW, textDelta: "Hello " });
-    trigger({ type: "message_update", taskId: TASK_A, turnIndex: 0, timestamp: NOW, textDelta: "world" });
+    trigger({
+      type: "message_update",
+      taskId: TASK_A,
+      turnIndex: 0,
+      timestamp: NOW,
+      textDelta: "Hello ",
+    });
+    trigger({
+      type: "message_update",
+      taskId: TASK_A,
+      turnIndex: 0,
+      timestamp: NOW,
+      textDelta: "world",
+    });
 
     const output = comp.render(80).join("\n");
     expect(output).toContain("Hello world");
@@ -178,11 +216,23 @@ describe("ExecutionMonitorComponent", () => {
 
     // Task A
     trigger({ type: "turn_start", taskId: TASK_A, turnIndex: 0, timestamp: NOW });
-    trigger({ type: "message_update", taskId: TASK_A, turnIndex: 0, timestamp: NOW, textDelta: "Old text" });
+    trigger({
+      type: "message_update",
+      taskId: TASK_A,
+      turnIndex: 0,
+      timestamp: NOW,
+      textDelta: "Old text",
+    });
 
     // Task B — should reset
     trigger({ type: "turn_start", taskId: TASK_B, turnIndex: 0, timestamp: NOW });
-    trigger({ type: "message_update", taskId: TASK_B, turnIndex: 0, timestamp: NOW, textDelta: "New text" });
+    trigger({
+      type: "message_update",
+      taskId: TASK_B,
+      turnIndex: 0,
+      timestamp: NOW,
+      textDelta: "New text",
+    });
 
     const output = comp.render(80).join("\n");
     expect(output).not.toContain("Old text");
@@ -209,8 +259,22 @@ describe("ExecutionMonitorComponent", () => {
     const comp = new ExecutionMonitorComponent(tui, port, identityTheme(), 2, 1);
 
     trigger({ type: "turn_start", taskId: TASK_A, turnIndex: 0, timestamp: NOW });
-    trigger({ type: "tool_execution_start", taskId: TASK_A, turnIndex: 0, timestamp: NOW, toolCallId: "tc1", toolName: "Read" });
-    trigger({ type: "tool_execution_start", taskId: TASK_A, turnIndex: 0, timestamp: NOW, toolCallId: "tc2", toolName: "Read" });
+    trigger({
+      type: "tool_execution_start",
+      taskId: TASK_A,
+      turnIndex: 0,
+      timestamp: NOW,
+      toolCallId: "tc1",
+      toolName: "Read",
+    });
+    trigger({
+      type: "tool_execution_start",
+      taskId: TASK_A,
+      turnIndex: 0,
+      timestamp: NOW,
+      toolCallId: "tc2",
+      toolName: "Read",
+    });
 
     const output = comp.render(80).join("\n");
     expect(output).toContain("Read ×2");
@@ -222,8 +286,24 @@ describe("ExecutionMonitorComponent", () => {
     const comp = new ExecutionMonitorComponent(tui, port, identityTheme(), 2, 1);
 
     trigger({ type: "turn_start", taskId: TASK_A, turnIndex: 0, timestamp: NOW });
-    trigger({ type: "tool_execution_start", taskId: TASK_A, turnIndex: 0, timestamp: NOW, toolCallId: "tc1", toolName: "Bash" });
-    trigger({ type: "tool_execution_end", taskId: TASK_A, turnIndex: 0, timestamp: NOW, toolCallId: "tc1", toolName: "Bash", isError: true, durationMs: 100 });
+    trigger({
+      type: "tool_execution_start",
+      taskId: TASK_A,
+      turnIndex: 0,
+      timestamp: NOW,
+      toolCallId: "tc1",
+      toolName: "Bash",
+    });
+    trigger({
+      type: "tool_execution_end",
+      taskId: TASK_A,
+      turnIndex: 0,
+      timestamp: NOW,
+      toolCallId: "tc1",
+      toolName: "Bash",
+      isError: true,
+      durationMs: 100,
+    });
 
     const output = comp.render(80).join("\n");
     expect(output).toContain("Bash ×1 (×1 err)");
@@ -235,7 +315,13 @@ describe("ExecutionMonitorComponent", () => {
     new ExecutionMonitorComponent(tui, port, identityTheme(), 2, 1);
 
     trigger({ type: "turn_start", taskId: TASK_A, turnIndex: 0, timestamp: NOW });
-    trigger({ type: "message_update", taskId: TASK_A, turnIndex: 0, timestamp: NOW, textDelta: "hi" });
+    trigger({
+      type: "message_update",
+      taskId: TASK_A,
+      turnIndex: 0,
+      timestamp: NOW,
+      textDelta: "hi",
+    });
 
     expect(tui.requestRender).toHaveBeenCalledTimes(2);
   });

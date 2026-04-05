@@ -1,7 +1,7 @@
 import type { AgentEvent } from "@kernel/agents/schemas/agent-event.schema";
 import {
-  AgentEventPort,
   type AgentEventListener,
+  AgentEventPort,
   type Unsubscribe,
 } from "@kernel/ports/agent-event.port";
 

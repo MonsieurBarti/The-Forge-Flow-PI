@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "milestone/*"]
+  pull_request:
+    branches: [main, "milestone/*"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Configure git for tests
+        run: |
+          git config --global user.name "CI"
+          git config --global user.email "ci@test.local"
+          git config --global init.defaultBranch main
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test

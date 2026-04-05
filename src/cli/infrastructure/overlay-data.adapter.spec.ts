@@ -1,18 +1,22 @@
-import { ok } from "@kernel";
-import type { PersistenceError } from "@kernel";
 import type { Milestone } from "@hexagons/milestone/domain/milestone.aggregate";
 import type { MilestoneRepositoryPort } from "@hexagons/milestone/domain/ports/milestone-repository.port";
-import type { Project } from "@hexagons/project/domain/project.aggregate";
 import type { ProjectRepositoryPort } from "@hexagons/project/domain/ports/project-repository.port";
-import type { Slice } from "@hexagons/slice/domain/slice.aggregate";
+import type { Project } from "@hexagons/project/domain/project.aggregate";
 import type { SliceRepositoryPort } from "@hexagons/slice/domain/ports/slice-repository.port";
-import type { Task } from "@hexagons/task/domain/task.aggregate";
+import type { Slice } from "@hexagons/slice/domain/slice.aggregate";
 import type { TaskRepositoryPort } from "@hexagons/task/domain/ports/task-repository.port";
+import type { Task } from "@hexagons/task/domain/task.aggregate";
+import { ok } from "@kernel";
 import { describe, expect, it, vi } from "vitest";
 import { OverlayDataAdapter } from "./overlay-data.adapter";
 
 function stubProjectRepo(project: Project | null): ProjectRepositoryPort {
-  return { save: vi.fn(), findById: vi.fn(), findSingleton: vi.fn().mockResolvedValue(ok(project)) };
+  return {
+    save: vi.fn(),
+    findById: vi.fn(),
+    findSingleton: vi.fn().mockResolvedValue(ok(project)),
+    reset: vi.fn(),
+  };
 }
 
 function stubMilestoneRepo(milestones: Milestone[]): MilestoneRepositoryPort {
@@ -21,15 +25,19 @@ function stubMilestoneRepo(milestones: Milestone[]): MilestoneRepositoryPort {
     findById: vi.fn(),
     findByLabel: vi.fn(),
     findByProjectId: vi.fn().mockResolvedValue(ok(milestones)),
+    reset: vi.fn(),
   };
 }
 
 function stubSliceRepo(slices: Slice[]): SliceRepositoryPort {
   return {
     save: vi.fn(),
-    findById: vi.fn().mockImplementation(async (id: string) => ok(slices.find((s) => s.id === id) ?? null)),
+    findById: vi
+      .fn()
+      .mockImplementation(async (id: string) => ok(slices.find((s) => s.id === id) ?? null)),
     findByLabel: vi.fn(),
     findByMilestoneId: vi.fn().mockResolvedValue(ok(slices)),
+    reset: vi.fn(),
   };
 }
 
@@ -38,9 +46,12 @@ function stubTaskRepo(tasks: Task[]): TaskRepositoryPort {
     save: vi.fn(),
     findById: vi.fn(),
     findByLabel: vi.fn(),
-    findBySliceId: vi.fn().mockImplementation(async (sliceId: string) =>
-      ok(tasks.filter((t) => t.sliceId === sliceId)),
-    ),
+    findBySliceId: vi
+      .fn()
+      .mockImplementation(async (sliceId: string) =>
+        ok(tasks.filter((t) => t.sliceId === sliceId)),
+      ),
+    reset: vi.fn(),
   };
 }
 
@@ -49,7 +60,9 @@ function fakeProject(): Project {
   return { id: "proj-1", name: "Test" } as unknown as Project;
 }
 
-function fakeMilestone(overrides: Partial<{ id: string; status: string; projectId: string }> = {}): Milestone {
+function fakeMilestone(
+  overrides: Partial<{ id: string; status: string; projectId: string }> = {},
+): Milestone {
   return {
     id: overrides.id ?? "ms-1",
     status: overrides.status ?? "in_progress",

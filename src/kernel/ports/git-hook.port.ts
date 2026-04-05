@@ -1,5 +1,5 @@
-import type { Result } from "@kernel/result";
 import { BaseDomainError } from "@kernel/errors";
+import type { Result } from "@kernel/result";
 
 export type HookErrorCode = "HOOK_DIR_NOT_FOUND" | "PERMISSION_DENIED" | "WRITE_FAILED";
 

@@ -58,7 +58,22 @@ export class SqliteSliceRepository extends SliceRepositoryPort {
     }
 
     this.db
-      .prepare<[string, string, string, string, string, string, string | null, string | null, string | null, string | null, string, string]>(
+      .prepare<
+        [
+          string,
+          string,
+          string,
+          string,
+          string,
+          string,
+          string | null,
+          string | null,
+          string | null,
+          string | null,
+          string,
+          string,
+        ]
+      >(
         `INSERT OR REPLACE INTO slices (id, milestone_id, label, title, description, status, complexity, spec_path, plan_path, research_path, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
@@ -80,9 +95,7 @@ export class SqliteSliceRepository extends SliceRepositoryPort {
   }
 
   async findById(id: Id): Promise<Result<Slice | null, PersistenceError>> {
-    const row = this.db
-      .prepare<[string], SliceRow>("SELECT * FROM slices WHERE id = ?")
-      .get(id);
+    const row = this.db.prepare<[string], SliceRow>("SELECT * FROM slices WHERE id = ?").get(id);
     if (!row) return ok(null);
     return ok(Slice.reconstitute(this.toProps(row)));
   }

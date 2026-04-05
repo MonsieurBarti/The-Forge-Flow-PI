@@ -1,15 +1,15 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ok, err } from "@kernel/result";
-import { GitError, SyncError } from "@kernel/errors";
-import type { StateBranchOpsPort } from "@kernel/ports/state-branch-ops.port";
-import { AdvisoryLock } from "./advisory-lock";
-import { GitStateSyncAdapter, type GitStateSyncAdapterDeps } from "./git-state-sync.adapter";
-import type { StateExporter } from "@kernel/services/state-exporter";
-import type { StateImporter } from "@kernel/services/state-importer";
-import { SCHEMA_VERSION } from "./state-snapshot.schemas";
-import { mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { GitError } from "@kernel/errors";
+import type { StateBranchOpsPort } from "@kernel/ports/state-branch-ops.port";
+import { err, ok } from "@kernel/result";
+import type { StateExporter } from "@kernel/services/state-exporter";
+import type { StateImporter } from "@kernel/services/state-importer";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { AdvisoryLock } from "./advisory-lock";
+import { GitStateSyncAdapter, type GitStateSyncAdapterDeps } from "./git-state-sync.adapter";
+import { SCHEMA_VERSION } from "./state-snapshot.schemas";
 
 function createMockBranchOps(): StateBranchOpsPort {
   const files = new Map<string, Map<string, string>>();
@@ -25,12 +25,14 @@ function createMockBranchOps(): StateBranchOpsPort {
       return ok(files.has(name));
     }),
     renameBranch: vi.fn().mockResolvedValue(ok(undefined)),
-    syncToStateBranch: vi.fn().mockImplementation(async (branch: string, newFiles: Map<string, string>) => {
-      const existing = files.get(branch) ?? new Map();
-      for (const [k, v] of newFiles) existing.set(k, v);
-      files.set(branch, existing);
-      return ok("abc1234");
-    }),
+    syncToStateBranch: vi
+      .fn()
+      .mockImplementation(async (branch: string, newFiles: Map<string, string>) => {
+        const existing = files.get(branch) ?? new Map();
+        for (const [k, v] of newFiles) existing.set(k, v);
+        files.set(branch, existing);
+        return ok("abc1234");
+      }),
     readFromStateBranch: vi.fn().mockImplementation(async (branch: string, path: string) => {
       const branchFiles = files.get(branch);
       if (!branchFiles) return ok(null);
@@ -57,16 +59,18 @@ describe("GitStateSyncAdapter", () => {
 
     mockBranchOps = createMockBranchOps();
     mockExporter = {
-      export: vi.fn().mockResolvedValue(ok({
-        version: SCHEMA_VERSION,
-        exportedAt: new Date(),
-        project: null,
-        milestones: [],
-        slices: [],
-        tasks: [],
-        shipRecords: [],
-        completionRecords: [],
-      })),
+      export: vi.fn().mockResolvedValue(
+        ok({
+          version: SCHEMA_VERSION,
+          exportedAt: new Date(),
+          project: null,
+          milestones: [],
+          slices: [],
+          tasks: [],
+          shipRecords: [],
+          completionRecords: [],
+        }),
+      ),
     } as unknown as StateExporter;
     mockImporter = {
       import: vi.fn().mockResolvedValue(ok(undefined)),
@@ -86,20 +90,27 @@ describe("GitStateSyncAdapter", () => {
   afterEach(() => {
     try {
       rmSync(tffDir, { recursive: true, force: true });
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   });
 
   it("createStateBranch forks from parent and writes branch-meta", async () => {
     const result = await adapter.createStateBranch("milestone/M07", "tff-state/main");
     expect(result.ok).toBe(true);
-    expect(mockBranchOps.forkBranch).toHaveBeenCalledWith("tff-state/main", "tff-state/milestone/M07");
+    expect(mockBranchOps.forkBranch).toHaveBeenCalledWith(
+      "tff-state/main",
+      "tff-state/milestone/M07",
+    );
     expect(mockBranchOps.syncToStateBranch).toHaveBeenCalled();
 
     // Verify branch-meta was written
     const call = (mockBranchOps.syncToStateBranch as ReturnType<typeof vi.fn>).mock.calls[0];
     const filesMap: Map<string, string> = call[1];
     expect(filesMap.has("branch-meta.json")).toBe(true);
-    const meta = JSON.parse(filesMap.get("branch-meta.json")!);
+    const metaJson = filesMap.get("branch-meta.json");
+    if (!metaJson) throw new Error("Expected branch-meta.json in filesMap");
+    const meta = JSON.parse(metaJson);
     expect(meta.codeBranch).toBe("milestone/M07");
     expect(meta.parentStateBranch).toBe("tff-state/main");
   });
@@ -198,10 +209,13 @@ describe("GitStateSyncAdapter", () => {
       const lockPath = join(tffDir, ".lock");
       const lockResult = externalLock.acquire(lockPath);
       expect(lockResult.ok).toBe(true);
-      const externalRelease = lockResult.data!;
+      if (!lockResult.ok) throw new Error("lock failed");
+      const externalRelease = lockResult.data;
 
       // Adapter should succeed using caller's lock (not try to re-acquire)
-      const result = await adapter.syncToStateBranch("milestone/M07", tffDir, { lockToken: externalRelease });
+      const result = await adapter.syncToStateBranch("milestone/M07", tffDir, {
+        lockToken: externalRelease,
+      });
       expect(result.ok).toBe(true);
 
       // Release the external lock — adapter must NOT have released it already
@@ -222,10 +236,13 @@ describe("GitStateSyncAdapter", () => {
       const lockPath = join(tffDir, ".lock");
       const lockResult = externalLock.acquire(lockPath);
       expect(lockResult.ok).toBe(true);
-      const externalRelease = lockResult.data!;
+      if (!lockResult.ok) throw new Error("lock failed");
+      const externalRelease = lockResult.data;
 
       // Adapter should succeed using caller's lock
-      const result = await adapter.restoreFromStateBranch("milestone/M07", tffDir, { lockToken: externalRelease });
+      const result = await adapter.restoreFromStateBranch("milestone/M07", tffDir, {
+        lockToken: externalRelease,
+      });
       expect(result.ok).toBe(true);
 
       // Release the external lock — adapter must NOT have released it already

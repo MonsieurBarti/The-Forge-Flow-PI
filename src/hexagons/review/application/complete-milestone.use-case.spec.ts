@@ -12,7 +12,6 @@ import type { GitPort } from "@kernel/ports/git.port";
 import type { GitHubPort } from "@kernel/ports/github.port";
 import type { PullRequestInfo } from "@kernel/ports/github.schemas";
 import { describe, expect, it, vi } from "vitest";
-import type { AuditReportProps } from "../domain/schemas/completion.schemas";
 import { AuditError } from "../domain/errors/audit.error";
 import { CompleteMilestoneError } from "../domain/errors/complete-milestone.error";
 import type { FixerError } from "../domain/errors/fixer.error";
@@ -29,6 +28,7 @@ import {
   type MilestoneSliceStatus,
 } from "../domain/ports/milestone-query.port";
 import { MilestoneTransitionPort } from "../domain/ports/milestone-transition.port";
+import type { AuditReportProps } from "../domain/schemas/completion.schemas";
 import type { MergeGateDecision } from "../domain/schemas/ship.schemas";
 import { InMemoryCompletionRecordRepository } from "../infrastructure/repositories/completion-record/in-memory-completion-record.repository";
 import {

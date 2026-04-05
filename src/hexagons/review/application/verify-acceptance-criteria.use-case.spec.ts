@@ -38,8 +38,8 @@ import type {
   VerificationUIContext,
   VerificationUIResponse,
 } from "../domain/schemas/review-ui.schemas";
-import { FreshReviewerService } from "../domain/services/fresh-reviewer.service";
 import type { CriterionVerdictProps } from "../domain/schemas/verification.schemas";
+import { FreshReviewerService } from "../domain/services/fresh-reviewer.service";
 import { InMemoryVerificationRepository } from "../infrastructure/repositories/verification/in-memory-verification.repository";
 import { VerifyAcceptanceCriteriaUseCase } from "./verify-acceptance-criteria.use-case";
 

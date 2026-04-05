@@ -1,12 +1,20 @@
 import type { MilestoneRepositoryPort } from "@hexagons/milestone";
 import type { SliceRepositoryPort } from "@hexagons/slice";
 import { SliceNotFoundError } from "@hexagons/slice";
-import { type DateProviderPort, type EventBusPort, PersistenceError, type SyncError } from "@kernel";
-import { err, isErr, ok, type Result } from "@kernel";
+import {
+  type DateProviderPort,
+  type EventBusPort,
+  err,
+  isErr,
+  ok,
+  PersistenceError,
+  type Result,
+  type SyncError,
+} from "@kernel";
 import type { WorktreeError } from "@kernel/errors/worktree.error";
 import type { StateSyncPort } from "@kernel/ports/state-sync.port";
 import type { WorktreePort } from "@kernel/ports/worktree.port";
-import { WorkflowBaseError } from "../domain/errors/workflow-base.error";
+import type { WorkflowBaseError } from "../domain/errors/workflow-base.error";
 import type { AutonomyModeProvider } from "../domain/ports/autonomy-mode.provider";
 import type { WorkflowSessionRepositoryPort } from "../domain/ports/workflow-session.repository.port";
 import { WorkflowSession } from "../domain/workflow-session.aggregate";
@@ -43,9 +51,7 @@ export class StartDiscussUseCase {
     private readonly milestoneRepo?: MilestoneRepositoryPort,
   ) {}
 
-  async execute(
-    input: StartDiscussInput,
-  ): Promise<Result<StartDiscussOutput, StartDiscussError>> {
+  async execute(input: StartDiscussInput): Promise<Result<StartDiscussOutput, StartDiscussError>> {
     // 1. Validate slice exists
     const sliceResult = await this.sliceRepo.findById(input.sliceId);
     if (isErr(sliceResult)) return sliceResult;
@@ -112,9 +118,12 @@ export class StartDiscussUseCase {
     input: StartDiscussInput,
     milestoneId: string,
   ): Promise<Result<void, StartDiscussError>> {
-    const worktreePort = this.worktreePort!;
-    const stateSyncPort = this.stateSyncPort!;
-    const milestoneRepo = this.milestoneRepo!;
+    if (!this.worktreePort || !this.stateSyncPort || !this.milestoneRepo) {
+      return err(new PersistenceError("Required ports not available for workspace creation"));
+    }
+    const worktreePort = this.worktreePort;
+    const stateSyncPort = this.stateSyncPort;
+    const milestoneRepo = this.milestoneRepo;
 
     // Load milestone to derive branch names
     const msResult = await milestoneRepo.findById(milestoneId);

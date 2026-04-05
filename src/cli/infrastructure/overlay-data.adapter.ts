@@ -1,18 +1,18 @@
-import { ok, err } from "@kernel/result";
-import type { Result } from "@kernel/result";
-import type { Id } from "@kernel/schemas";
+import type { Milestone } from "@hexagons/milestone/domain/milestone.aggregate";
+import type { MilestoneRepositoryPort } from "@hexagons/milestone/domain/ports/milestone-repository.port";
+import type { ProjectRepositoryPort } from "@hexagons/project/domain/ports/project-repository.port";
+import type { SliceRepositoryPort } from "@hexagons/slice/domain/ports/slice-repository.port";
+import type { Slice } from "@hexagons/slice/domain/slice.aggregate";
+import type { TaskRepositoryPort } from "@hexagons/task/domain/ports/task-repository.port";
+import type { Task } from "@hexagons/task/domain/task.aggregate";
 import {
   OverlayDataPort,
   type OverlayProjectSnapshot,
   type OverlaySliceSnapshot,
 } from "@kernel/ports/overlay-data.port";
-import type { Milestone } from "@hexagons/milestone/domain/milestone.aggregate";
-import type { MilestoneRepositoryPort } from "@hexagons/milestone/domain/ports/milestone-repository.port";
-import type { ProjectRepositoryPort } from "@hexagons/project/domain/ports/project-repository.port";
-import type { Slice } from "@hexagons/slice/domain/slice.aggregate";
-import type { SliceRepositoryPort } from "@hexagons/slice/domain/ports/slice-repository.port";
-import type { Task } from "@hexagons/task/domain/task.aggregate";
-import type { TaskRepositoryPort } from "@hexagons/task/domain/ports/task-repository.port";
+import type { Result } from "@kernel/result";
+import { err, ok } from "@kernel/result";
+import type { Id } from "@kernel/schemas";
 
 export class OverlayDataAdapter extends OverlayDataPort {
   constructor(

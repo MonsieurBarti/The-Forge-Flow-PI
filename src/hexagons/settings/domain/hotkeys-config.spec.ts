@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
-  HotkeysConfigSchema,
-  HOTKEYS_DEFAULTS,
-  SettingsSchema,
   ENV_VAR_MAP,
+  HOTKEYS_DEFAULTS,
+  HotkeysConfigSchema,
+  SettingsSchema,
 } from "./project-settings.schemas";
 
 describe("HotkeysConfigSchema", () => {
@@ -48,9 +48,6 @@ describe("HotkeysConfigSchema", () => {
   it("env var mappings include hotkey entries", () => {
     expect(ENV_VAR_MAP.TFF_HOTKEY_DASHBOARD).toEqual(["hotkeys", "dashboard"]);
     expect(ENV_VAR_MAP.TFF_HOTKEY_WORKFLOW).toEqual(["hotkeys", "workflow"]);
-    expect(ENV_VAR_MAP.TFF_HOTKEY_EXECUTION_MONITOR).toEqual([
-      "hotkeys",
-      "executionMonitor",
-    ]);
+    expect(ENV_VAR_MAP.TFF_HOTKEY_EXECUTION_MONITOR).toEqual(["hotkeys", "executionMonitor"]);
   });
 });

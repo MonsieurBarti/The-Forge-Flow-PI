@@ -1,13 +1,13 @@
-import { z } from 'zod';
-import { BranchMetaSchema } from './branch-meta.schemas';
+import { z } from "zod";
+import { BranchMetaSchema } from "./branch-meta.schemas";
 
 export const RecoveryTypeSchema = z.enum([
-  'crash',
-  'mismatch',
-  'rename',
-  'fresh-clone',
-  'untracked',
-  'healthy',
+  "crash",
+  "mismatch",
+  "rename",
+  "fresh-clone",
+  "untracked",
+  "healthy",
 ]);
 export type RecoveryType = z.infer<typeof RecoveryTypeSchema>;
 
@@ -23,7 +23,7 @@ export type RecoveryScenario = z.infer<typeof RecoveryScenarioSchema>;
 
 export const RecoveryReportSchema = z.object({
   type: RecoveryTypeSchema,
-  action: z.enum(['restored', 'renamed', 'created-fresh', 'skipped', 'none']),
+  action: z.enum(["restored", "renamed", "created-fresh", "skipped", "none"]),
   source: z.string(),
   filesRestored: z.number().int().nonnegative(),
   warnings: z.array(z.string()),

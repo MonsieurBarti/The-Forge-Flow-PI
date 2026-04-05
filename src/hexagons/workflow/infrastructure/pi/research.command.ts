@@ -20,7 +20,8 @@ export function registerResearchCommand(api: ExtensionAPI, deps: ResearchCommand
   api.registerCommand("tff:research", {
     description:
       "Start the research phase for a slice — dispatch an Explore agent and produce RESEARCH.md",
-    handler: async (args: string) => {
+    handler: async (args: string, ctx) => {
+      if (ctx?.newSession) await ctx.newSession();
       await deps.withGuard?.();
       // 1. Resolve target slice from args (label or ID)
       const identifier = args.trim();

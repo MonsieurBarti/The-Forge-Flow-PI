@@ -1,18 +1,22 @@
-import type { StateSyncPort } from "@kernel/ports/state-sync.port";
+import {
+  type BranchMeta,
+  BranchMetaSchema,
+} from "@kernel/infrastructure/state-branch/state-snapshot.schemas";
 import type { GitPort } from "@kernel/ports/git.port";
+import type { StateSyncPort } from "@kernel/ports/state-sync.port";
 import type { StateExporter } from "@kernel/services/state-exporter";
 import type { BackupService } from "./backup-service";
-import { BranchMetaSchema, type BranchMeta } from "@kernel/infrastructure/state-branch/state-snapshot.schemas";
 
 /** Structural interface for lock acquisition — avoids importing infrastructure AdvisoryLock */
 export interface LockAcquirer {
   acquire(lockPath: string, timeoutMs?: number): Result<() => void, SyncError>;
 }
-import { computeStateHash } from "./canonical-hash";
-import { SyncError } from "@kernel/errors";
-import { err, ok, type Result } from "@kernel/result";
+
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { SyncError } from "@kernel/errors";
+import { err, ok, type Result } from "@kernel/result";
+import { computeStateHash } from "./canonical-hash";
 
 export interface RestoreReport {
   previousBranch: string | null;
@@ -64,9 +68,9 @@ export class RestoreStateUseCase {
         if (exportResult.ok) {
           const currentHash = computeStateHash(exportResult.data);
           if (meta.lastSyncedHash !== currentHash) {
-            const syncResult = await stateSync.syncToStateBranch(
-              previousBranch, tffDir, { lockToken },
-            );
+            const syncResult = await stateSync.syncToStateBranch(previousBranch, tffDir, {
+              lockToken,
+            });
             dirtySaved = syncResult.ok;
             // If dirty save fails, proceed — backup is safety net
           }
@@ -80,14 +84,16 @@ export class RestoreStateUseCase {
       backupService.clearTffDir(tffDir);
 
       // 6. Restore from target state branch
-      const restoreResult = await stateSync.restoreFromStateBranch(
-        targetCodeBranch, tffDir, { lockToken },
-      );
+      const restoreResult = await stateSync.restoreFromStateBranch(targetCodeBranch, tffDir, {
+        lockToken,
+      });
       if (!restoreResult.ok) {
-        return err(new SyncError(
-          "RESTORE_FAILED",
-          `Restore from tff-state/${targetCodeBranch} failed: ${restoreResult.error.message}`,
-        ));
+        return err(
+          new SyncError(
+            "RESTORE_FAILED",
+            `Restore from tff-state/${targetCodeBranch} failed: ${restoreResult.error.message}`,
+          ),
+        );
       }
 
       // 7. Journal catch-up

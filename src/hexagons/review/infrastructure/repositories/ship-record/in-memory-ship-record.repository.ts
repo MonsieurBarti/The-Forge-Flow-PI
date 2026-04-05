@@ -1,7 +1,7 @@
 import { type Id, ok, type PersistenceError, type Result } from "@kernel";
+import { ShipRecord } from "../../../domain/aggregates/ship-record.aggregate";
 import { ShipRecordRepositoryPort } from "../../../domain/ports/ship-record-repository.port";
 import type { ShipRecordProps } from "../../../domain/schemas/ship.schemas";
-import { ShipRecord } from "../../../domain/aggregates/ship-record.aggregate";
 
 export class InMemoryShipRecordRepository extends ShipRecordRepositoryPort {
   private store = new Map<string, ShipRecordProps>();

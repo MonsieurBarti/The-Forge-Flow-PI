@@ -16,7 +16,7 @@ import {
 } from "../domain/ports/context-staging.port";
 import type { ModelProfileResolverPort } from "../domain/ports/model-profile-resolver.port";
 
-export class InMemoryContextStagingAdapter extends ContextStagingPort {
+export class DefaultContextStagingAdapter extends ContextStagingPort {
   constructor(private readonly deps: { modelProfileResolver: ModelProfileResolverPort }) {
     super();
   }

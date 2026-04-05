@@ -2,9 +2,17 @@ import { MilestoneBuilder } from "@hexagons/milestone/domain/milestone.builder";
 import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/in-memory-milestone.repository";
 import { SliceBuilder } from "@hexagons/slice/domain/slice.builder";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
-import { InProcessEventBus, isErr, isOk, SilentLoggerAdapter, SyncError } from "@kernel";
+import {
+  err,
+  InProcessEventBus,
+  isErr,
+  isOk,
+  ok,
+  type Result,
+  SilentLoggerAdapter,
+  SyncError,
+} from "@kernel";
 import { InMemoryWorktreeAdapter } from "@kernel/infrastructure/worktree/in-memory-worktree.adapter";
-import { ok, err, type Result } from "@kernel";
 import { StateSyncPort } from "@kernel/ports/state-sync.port";
 import type { SyncReport } from "@kernel/ports/state-sync.schemas";
 import { describe, expect, it } from "vitest";
@@ -40,10 +48,7 @@ class StubStateSyncPort extends StateSyncPort {
   }
 }
 
-function setup(overrides?: {
-  autonomyMode?: "guided" | "plan-to-pr";
-  withWorkspace?: boolean;
-}) {
+function setup(overrides?: { autonomyMode?: "guided" | "plan-to-pr"; withWorkspace?: boolean }) {
   const sliceRepo = new InMemorySliceRepository();
   const sessionRepo = new InMemoryWorkflowSessionRepository();
   const eventBus = new InProcessEventBus(new SilentLoggerAdapter());
@@ -68,13 +73,7 @@ function setup(overrides?: {
         stateSyncPort,
         milestoneRepo,
       )
-    : new StartDiscussUseCase(
-        sliceRepo,
-        sessionRepo,
-        eventBus,
-        dateProvider,
-        autonomyModeProvider,
-      );
+    : new StartDiscussUseCase(sliceRepo, sessionRepo, eventBus, dateProvider, autonomyModeProvider);
   return {
     useCase,
     sliceRepo,

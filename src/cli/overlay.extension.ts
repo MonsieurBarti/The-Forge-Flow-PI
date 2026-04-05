@@ -3,10 +3,10 @@ import type { HotkeysConfig } from "@hexagons/settings/domain/project-settings.s
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@infrastructure/pi";
 import type { EventName } from "@kernel/event-names";
 import { EVENT_NAMES } from "@kernel/event-names";
+import type { AgentEventPort } from "@kernel/ports/agent-event.port";
 import type { EventBusPort } from "@kernel/ports/event-bus.port";
 import type { LoggerPort } from "@kernel/ports/logger.port";
 import type { OverlayDataPort } from "@kernel/ports/overlay-data.port";
-import type { AgentEventPort } from "@kernel/ports/agent-event.port";
 import { getMarkdownTheme } from "@mariozechner/pi-coding-agent";
 import type { KeyId, OverlayHandle } from "@mariozechner/pi-tui";
 import { DashboardComponent } from "./components/dashboard.component";

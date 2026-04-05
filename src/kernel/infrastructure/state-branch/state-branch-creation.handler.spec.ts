@@ -1,12 +1,12 @@
-import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/in-memory-milestone.repository";
-import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
 import { MilestoneBuilder } from "@hexagons/milestone/domain/milestone.builder";
+import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/in-memory-milestone.repository";
 import { SliceBuilder } from "@hexagons/slice/domain/slice.builder";
+import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
 import { EVENT_NAMES, InProcessEventBus, SilentLoggerAdapter, SyncError } from "@kernel";
-import { err, ok } from "@kernel/result";
-import type { StateSyncPort } from "@kernel/ports/state-sync.port";
 import { DomainEvent, type DomainEventProps } from "@kernel/domain-event.base";
 import type { EventName } from "@kernel/event-names";
+import type { StateSyncPort } from "@kernel/ports/state-sync.port";
+import { err, ok } from "@kernel/result";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { StateBranchCreationHandler } from "./state-branch-creation.handler";
 
@@ -44,7 +44,9 @@ describe("StateBranchCreationHandler", () => {
       createStateBranch: vi.fn().mockResolvedValue(ok(undefined)),
       deleteStateBranch: vi.fn().mockResolvedValue(ok(undefined)),
       syncToStateBranch: vi.fn().mockResolvedValue(ok(undefined)),
-      restoreFromStateBranch: vi.fn().mockResolvedValue(ok({ pulled: 0, conflicts: [], timestamp: new Date() })),
+      restoreFromStateBranch: vi
+        .fn()
+        .mockResolvedValue(ok({ pulled: 0, conflicts: [], timestamp: new Date() })),
       mergeStateBranches: vi.fn().mockResolvedValue(ok(undefined)),
     } as unknown as StateSyncPort;
 
@@ -54,29 +56,20 @@ describe("StateBranchCreationHandler", () => {
 
   it("creates state branch on MILESTONE_CREATED", async () => {
     const milestoneId = crypto.randomUUID();
-    const milestone = new MilestoneBuilder()
-      .withId(milestoneId)
-      .withLabel("M07")
-      .build();
+    const milestone = new MilestoneBuilder().withId(milestoneId).withLabel("M07").build();
     milestoneRepo.seed(milestone);
 
     const event = makeEvent(EVENT_NAMES.MILESTONE_CREATED, milestoneId);
     await eventBus.publish(event);
 
-    expect(mockStateSync.createStateBranch).toHaveBeenCalledWith(
-      "milestone/M07",
-      "tff-state/main",
-    );
+    expect(mockStateSync.createStateBranch).toHaveBeenCalledWith("milestone/M07", "tff-state/main");
   });
 
   it("creates state branch on SLICE_CREATED with correct parent", async () => {
     const milestoneId = crypto.randomUUID();
     const sliceId = crypto.randomUUID();
 
-    const milestone = new MilestoneBuilder()
-      .withId(milestoneId)
-      .withLabel("M07")
-      .build();
+    const milestone = new MilestoneBuilder().withId(milestoneId).withLabel("M07").build();
     milestoneRepo.seed(milestone);
 
     const slice = new SliceBuilder()
@@ -97,10 +90,7 @@ describe("StateBranchCreationHandler", () => {
 
   it("logs warning on failure without throwing", async () => {
     const milestoneId = crypto.randomUUID();
-    const milestone = new MilestoneBuilder()
-      .withId(milestoneId)
-      .withLabel("M07")
-      .build();
+    const milestone = new MilestoneBuilder().withId(milestoneId).withLabel("M07").build();
     milestoneRepo.seed(milestone);
 
     (mockStateSync.createStateBranch as ReturnType<typeof vi.fn>).mockResolvedValue(

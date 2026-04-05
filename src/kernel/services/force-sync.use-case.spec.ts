@@ -1,10 +1,9 @@
-import { describe, expect, it } from "vitest";
-
-import type { SyncOptions } from "@kernel/ports/state-sync.port";
-import type { SyncReport } from "@kernel/ports/state-sync.schemas";
 import type { GitError } from "@kernel/errors";
 import { SyncError } from "@kernel/errors";
+import type { SyncOptions } from "@kernel/ports/state-sync.port";
+import type { SyncReport } from "@kernel/ports/state-sync.schemas";
 import { err, ok, type Result } from "@kernel/result";
+import { describe, expect, it } from "vitest";
 import { ForceSyncUseCase } from "./force-sync.use-case";
 import type { RestoreReport } from "./restore-state.use-case";
 
@@ -25,10 +24,18 @@ class StubStateSyncPort {
     return this.result;
   }
 
-  async restoreFromStateBranch(): Promise<Result<SyncReport, SyncError>> { return ok({ pulled: 0, conflicts: [], timestamp: new Date() }); }
-  async mergeStateBranches(): Promise<Result<void, SyncError>> { return ok(undefined); }
-  async createStateBranch(): Promise<Result<void, SyncError>> { return ok(undefined); }
-  async deleteStateBranch(): Promise<Result<void, SyncError>> { return ok(undefined); }
+  async restoreFromStateBranch(): Promise<Result<SyncReport, SyncError>> {
+    return ok({ pulled: 0, conflicts: [], timestamp: new Date() });
+  }
+  async mergeStateBranches(): Promise<Result<void, SyncError>> {
+    return ok(undefined);
+  }
+  async createStateBranch(): Promise<Result<void, SyncError>> {
+    return ok(undefined);
+  }
+  async deleteStateBranch(): Promise<Result<void, SyncError>> {
+    return ok(undefined);
+  }
 }
 
 const RESTORE_REPORT: RestoreReport = {
@@ -60,36 +67,76 @@ class StubGitPort {
   }
 
   // Unused — satisfy shape
-  async listBranches(): Promise<Result<string[], GitError>> { return ok([]); }
-  async createBranch(): Promise<Result<void, GitError>> { return ok(undefined); }
-  async showFile(): Promise<Result<string | null, GitError>> { return ok(null); }
-  async log(): Promise<Result<[], GitError>> { return ok([]); }
-  async status(): Promise<Result<never, GitError>> { return err({} as GitError); }
-  async commit(): Promise<Result<string, GitError>> { return ok(""); }
-  async revert(): Promise<Result<void, GitError>> { return ok(undefined); }
-  async isAncestor(): Promise<Result<boolean, GitError>> { return ok(false); }
-  async worktreeAdd(): Promise<Result<void, GitError>> { return ok(undefined); }
-  async worktreeRemove(): Promise<Result<void, GitError>> { return ok(undefined); }
-  async worktreeList(): Promise<Result<[], GitError>> { return ok([]); }
-  async deleteBranch(): Promise<Result<void, GitError>> { return ok(undefined); }
-  async statusAt(): Promise<Result<never, GitError>> { return err({} as GitError); }
-  async diffNameOnly(): Promise<Result<string[], GitError>> { return ok([]); }
-  async diff(): Promise<Result<string, GitError>> { return ok(""); }
-  async diffAgainst(): Promise<Result<string, GitError>> { return ok(""); }
-  async restoreWorktree(): Promise<Result<void, GitError>> { return ok(undefined); }
-  async pushFrom(): Promise<Result<void, GitError>> { return ok(undefined); }
-  async branchExists(): Promise<Result<boolean, GitError>> { return ok(false); }
+  async listBranches(): Promise<Result<string[], GitError>> {
+    return ok([]);
+  }
+  async createBranch(): Promise<Result<void, GitError>> {
+    return ok(undefined);
+  }
+  async showFile(): Promise<Result<string | null, GitError>> {
+    return ok(null);
+  }
+  async log(): Promise<Result<[], GitError>> {
+    return ok([]);
+  }
+  async status(): Promise<Result<never, GitError>> {
+    return err({} as GitError);
+  }
+  async commit(): Promise<Result<string, GitError>> {
+    return ok("");
+  }
+  async revert(): Promise<Result<void, GitError>> {
+    return ok(undefined);
+  }
+  async isAncestor(): Promise<Result<boolean, GitError>> {
+    return ok(false);
+  }
+  async worktreeAdd(): Promise<Result<void, GitError>> {
+    return ok(undefined);
+  }
+  async worktreeRemove(): Promise<Result<void, GitError>> {
+    return ok(undefined);
+  }
+  async worktreeList(): Promise<Result<[], GitError>> {
+    return ok([]);
+  }
+  async deleteBranch(): Promise<Result<void, GitError>> {
+    return ok(undefined);
+  }
+  async statusAt(): Promise<Result<never, GitError>> {
+    return err({} as GitError);
+  }
+  async diffNameOnly(): Promise<Result<string[], GitError>> {
+    return ok([]);
+  }
+  async diff(): Promise<Result<string, GitError>> {
+    return ok("");
+  }
+  async diffAgainst(): Promise<Result<string, GitError>> {
+    return ok("");
+  }
+  async restoreWorktree(): Promise<Result<void, GitError>> {
+    return ok(undefined);
+  }
+  async pushFrom(): Promise<Result<void, GitError>> {
+    return ok(undefined);
+  }
+  async branchExists(): Promise<Result<boolean, GitError>> {
+    return ok(false);
+  }
 }
 
 // ---------------------------------------------------------------------------
 // Factory
 // ---------------------------------------------------------------------------
 
-function makeUseCase(opts: {
-  branch?: string | null;
-  stateSyncResult?: Result<void, SyncError>;
-  restoreResult?: Result<RestoreReport, SyncError>;
-} = {}) {
+function makeUseCase(
+  opts: {
+    branch?: string | null;
+    stateSyncResult?: Result<void, SyncError>;
+    restoreResult?: Result<RestoreReport, SyncError>;
+  } = {},
+) {
   const stateSync = new StubStateSyncPort();
   if (opts.stateSyncResult !== undefined) stateSync.result = opts.stateSyncResult;
 

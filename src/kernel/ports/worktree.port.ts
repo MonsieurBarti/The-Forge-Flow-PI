@@ -1,6 +1,6 @@
+import type { WorktreeError } from "@kernel/errors/worktree.error";
 import type { Result } from "@kernel/result";
 import type { BranchMeta } from "@kernel/schemas/branch-meta.schemas";
-import type { WorktreeError } from "@kernel/errors/worktree.error";
 import type { WorktreeHealth, WorktreeInfo } from "./worktree.schemas";
 
 export abstract class WorktreePort {

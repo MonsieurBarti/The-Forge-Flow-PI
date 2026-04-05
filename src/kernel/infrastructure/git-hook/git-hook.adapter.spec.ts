@@ -1,11 +1,14 @@
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
-import { mkdirSync, statSync, rmSync, writeFileSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import os from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { GitHookAdapter } from "./git-hook.adapter";
 
 function makeTmpGitDir(): string {
-  const dir = join(os.tmpdir(), `tff-git-hook-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const dir = join(
+    os.tmpdir(),
+    `tff-git-hook-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  );
   mkdirSync(dir, { recursive: true });
   return dir;
 }

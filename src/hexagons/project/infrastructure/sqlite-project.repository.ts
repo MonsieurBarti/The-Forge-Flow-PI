@@ -29,9 +29,7 @@ export class SqliteProjectRepository extends ProjectRepositoryPort {
   async save(project: Project): Promise<Result<void, PersistenceError>> {
     const props = project.toJSON();
 
-    const existing = this.db
-      .prepare<[], ProjectRow>("SELECT id FROM projects LIMIT 1")
-      .get();
+    const existing = this.db.prepare<[], ProjectRow>("SELECT id FROM projects LIMIT 1").get();
 
     if (existing && existing.id !== props.id) {
       return err(
@@ -65,9 +63,7 @@ export class SqliteProjectRepository extends ProjectRepositoryPort {
   }
 
   async findSingleton(): Promise<Result<Project | null, PersistenceError>> {
-    const row = this.db
-      .prepare<[], ProjectRow>("SELECT * FROM projects LIMIT 1")
-      .get();
+    const row = this.db.prepare<[], ProjectRow>("SELECT * FROM projects LIMIT 1").get();
 
     if (!row) return ok(null);
     return ok(Project.reconstitute(this.toProps(row)));

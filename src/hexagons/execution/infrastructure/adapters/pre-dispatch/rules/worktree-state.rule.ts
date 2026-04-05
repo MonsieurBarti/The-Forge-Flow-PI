@@ -1,15 +1,19 @@
-import type { PreDispatchGuardrailRule } from "../../../../domain/pre-dispatch-guardrail-rule";
 import type {
   PreDispatchContext,
   PreDispatchViolation,
 } from "../../../../domain/pre-dispatch.schemas";
+import type { PreDispatchGuardrailRule } from "../../../../domain/pre-dispatch-guardrail-rule";
 
 /**
  * Minimal contract for the git operations this rule needs.
  * Avoids coupling to the full GitPort abstract class.
  */
 export interface WorktreeStateGitOps {
-  statusAt(cwd: string): Promise<{ ok: true; value: { branch: string; clean: boolean } } | { ok: false; error: unknown }>;
+  statusAt(
+    cwd: string,
+  ): Promise<
+    { ok: true; value: { branch: string; clean: boolean } } | { ok: false; error: unknown }
+  >;
 }
 
 export class WorktreeStateRule implements PreDispatchGuardrailRule {

@@ -511,10 +511,22 @@ describe("JournalEntrySchema", () => {
 
   it("accepts all 16 entry types in the union", () => {
     const types = [
-      "task-started", "task-completed", "task-failed", "file-written",
-      "checkpoint-saved", "phase-changed", "artifact-written", "guardrail-violation",
-      "overseer-intervention", "execution-lifecycle", "tool-execution", "turn-boundary",
-      "reflection", "model-downshift", "task-escalated", "pre-dispatch-blocked",
+      "task-started",
+      "task-completed",
+      "task-failed",
+      "file-written",
+      "checkpoint-saved",
+      "phase-changed",
+      "artifact-written",
+      "guardrail-violation",
+      "overseer-intervention",
+      "execution-lifecycle",
+      "tool-execution",
+      "turn-boundary",
+      "reflection",
+      "model-downshift",
+      "task-escalated",
+      "pre-dispatch-blocked",
     ];
     expect(types).toHaveLength(16);
   });

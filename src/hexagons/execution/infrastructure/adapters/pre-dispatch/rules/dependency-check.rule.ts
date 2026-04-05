@@ -1,5 +1,8 @@
+import type {
+  PreDispatchContext,
+  PreDispatchViolation,
+} from "../../../../domain/pre-dispatch.schemas";
 import type { PreDispatchGuardrailRule } from "../../../../domain/pre-dispatch-guardrail-rule";
-import type { PreDispatchContext, PreDispatchViolation } from "../../../../domain/pre-dispatch.schemas";
 
 export class DependencyCheckRule implements PreDispatchGuardrailRule {
   readonly id = "dependency-check";

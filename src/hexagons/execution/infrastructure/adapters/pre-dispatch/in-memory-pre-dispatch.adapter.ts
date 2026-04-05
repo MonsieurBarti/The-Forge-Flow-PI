@@ -1,7 +1,7 @@
 import { ok, type Result } from "@kernel";
 import type { GuardrailError } from "../../../domain/errors/guardrail.error";
-import type { PreDispatchContext, PreDispatchReport } from "../../../domain/pre-dispatch.schemas";
 import { PreDispatchGuardrailPort } from "../../../domain/ports/pre-dispatch-guardrail.port";
+import type { PreDispatchContext, PreDispatchReport } from "../../../domain/pre-dispatch.schemas";
 
 export class InMemoryPreDispatchAdapter extends PreDispatchGuardrailPort {
   private report: PreDispatchReport = {
@@ -14,9 +14,7 @@ export class InMemoryPreDispatchAdapter extends PreDispatchGuardrailPort {
     this.report = report;
   }
 
-  async validate(
-    _context: PreDispatchContext,
-  ): Promise<Result<PreDispatchReport, GuardrailError>> {
+  async validate(_context: PreDispatchContext): Promise<Result<PreDispatchReport, GuardrailError>> {
     return ok(this.report);
   }
 }

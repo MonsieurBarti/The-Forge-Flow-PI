@@ -1,16 +1,18 @@
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
-import { SyncError } from "@kernel/errors";
-import { ok, type Result } from "@kernel/result";
-import type { GitError } from "@kernel/errors";
-import type { GitLogEntry, GitStatus, GitWorktreeEntry } from "@kernel/ports/git.schemas";
+import type { GitError, SyncError } from "@kernel/errors";
 import { GitPort } from "@kernel/ports/git.port";
-import type { StateBranchOpsPort } from "@kernel/ports/state-branch-ops.port";
-import type { RecoveryScenario, RecoveryReport, RecoveryType } from "@kernel/schemas/recovery.schemas";
+import type { GitLogEntry, GitStatus, GitWorktreeEntry } from "@kernel/ports/git.schemas";
 import type { RecoveryStrategy } from "@kernel/ports/recovery-strategy";
+import type { StateBranchOpsPort } from "@kernel/ports/state-branch-ops.port";
+import { ok, type Result } from "@kernel/result";
+import type {
+  RecoveryReport,
+  RecoveryScenario,
+  RecoveryType,
+} from "@kernel/schemas/recovery.schemas";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { StateRecoveryAdapter } from "./state-recovery.adapter";
 
 // ---------------------------------------------------------------------------
@@ -77,7 +79,11 @@ class StubGitPort extends GitPort {
   override isAncestor(_ancestor: string, _descendant: string): Promise<Result<boolean, GitError>> {
     return Promise.resolve(ok(true));
   }
-  override worktreeAdd(_path: string, _branch: string, _baseBranch: string): Promise<Result<void, GitError>> {
+  override worktreeAdd(
+    _path: string,
+    _branch: string,
+    _baseBranch: string,
+  ): Promise<Result<void, GitError>> {
     return Promise.resolve(ok(undefined));
   }
   override worktreeRemove(_path: string): Promise<Result<void, GitError>> {
@@ -142,7 +148,10 @@ class StubStateBranchOpsPort implements StateBranchOpsPort {
   renameBranch(_oldName: string, _newName: string): Promise<Result<void, GitError>> {
     return Promise.resolve(ok(undefined));
   }
-  syncToStateBranch(_stateBranch: string, _files: Map<string, string>): Promise<Result<string, GitError>> {
+  syncToStateBranch(
+    _stateBranch: string,
+    _files: Map<string, string>,
+  ): Promise<Result<string, GitError>> {
     return Promise.resolve(ok("abc123"));
   }
   readAllFromStateBranch(_stateBranch: string): Promise<Result<Map<string, string>, GitError>> {
@@ -247,7 +256,12 @@ describe("StateRecoveryAdapter", () => {
     renameStrategy = new StubRecoveryStrategy("rename");
     freshCloneStrategy = new StubRecoveryStrategy("fresh-clone");
 
-    strategies = makeStrategiesMap(crashStrategy, mismatchStrategy, renameStrategy, freshCloneStrategy);
+    strategies = makeStrategiesMap(
+      crashStrategy,
+      mismatchStrategy,
+      renameStrategy,
+      freshCloneStrategy,
+    );
 
     adapter = new StateRecoveryAdapter(strategies, gitPort, stateBranchOps, projectRoot);
   });

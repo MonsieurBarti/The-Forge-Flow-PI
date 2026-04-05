@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PreDispatchContext } from "../../../../domain/pre-dispatch.schemas";
-import { WorktreeStateRule, type WorktreeStateGitOps } from "./worktree-state.rule";
+import { type WorktreeStateGitOps, WorktreeStateRule } from "./worktree-state.rule";
 
 function makeContext(overrides: Partial<PreDispatchContext> = {}): PreDispatchContext {
   return {

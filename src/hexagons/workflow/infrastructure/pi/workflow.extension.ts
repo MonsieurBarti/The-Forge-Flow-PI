@@ -12,6 +12,7 @@ import type { ArtifactFilePort } from "../../domain/ports/artifact-file.port";
 import type { AutonomyModeProvider } from "../../domain/ports/autonomy-mode.provider";
 import type { ContextStagingPort } from "../../domain/ports/context-staging.port";
 import type { SliceTransitionPort } from "../../domain/ports/slice-transition.port";
+import type { WorkflowJournalPort } from "../../domain/ports/workflow-journal.port";
 import type { WorkflowSessionRepositoryPort } from "../../domain/ports/workflow-session.repository.port";
 import { ClassifyComplexityUseCase } from "../../use-cases/classify-complexity.use-case";
 import { GetStatusUseCase, type StatusReport } from "../../use-cases/get-status.use-case";
@@ -47,6 +48,7 @@ export interface WorkflowExtensionDeps {
   maxRetries: number;
   resolveActiveTffDir?: (sliceId?: string) => Promise<string>;
   withGuard?: () => Promise<void>;
+  workflowJournal?: WorkflowJournalPort;
 }
 
 function formatStatusReport(report: StatusReport): string {
@@ -162,6 +164,7 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
     deps.sliceTransitionPort,
     deps.eventBus,
     deps.dateProvider,
+    deps.workflowJournal,
   );
 
   // --- Discuss tools ---

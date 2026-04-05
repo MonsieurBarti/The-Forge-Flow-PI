@@ -1,7 +1,10 @@
 import { faker } from "@faker-js/faker";
-import type { CritiqueReflectionResult, ReflectionInsight } from "../schemas/critique-reflection.schemas";
-import { FindingBuilder } from "./finding.builder";
+import type {
+  CritiqueReflectionResult,
+  ReflectionInsight,
+} from "../schemas/critique-reflection.schemas";
 import type { FindingImpact, FindingProps } from "../schemas/review.schemas";
+import { FindingBuilder } from "./finding.builder";
 
 export class CritiqueReflectionResultBuilder {
   private _rawFindings: FindingProps[] = [];

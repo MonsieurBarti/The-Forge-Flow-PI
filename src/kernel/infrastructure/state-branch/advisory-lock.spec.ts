@@ -44,7 +44,10 @@ describe("AdvisoryLock", () => {
 
   it("stale lock is broken automatically", () => {
     // Write a lock file with a PID that doesn't exist
-    writeFileSync(lockPath, JSON.stringify({ pid: 999999999, acquiredAt: new Date().toISOString() }));
+    writeFileSync(
+      lockPath,
+      JSON.stringify({ pid: 999999999, acquiredAt: new Date().toISOString() }),
+    );
     const result = lock.acquire(lockPath);
     expect(result.ok).toBe(true);
     if (result.ok) {

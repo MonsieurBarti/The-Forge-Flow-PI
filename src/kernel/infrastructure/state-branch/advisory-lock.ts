@@ -21,7 +21,14 @@ export class AdvisoryLock {
 
     while (true) {
       try {
-        writeFileSync(lockPath, JSON.stringify({ pid: process.pid, acquiredAt: new Date().toISOString() } satisfies LockData), { flag: "wx" });
+        writeFileSync(
+          lockPath,
+          JSON.stringify({
+            pid: process.pid,
+            acquiredAt: new Date().toISOString(),
+          } satisfies LockData),
+          { flag: "wx" },
+        );
         const release = () => {
           try {
             unlinkSync(lockPath);
@@ -42,7 +49,12 @@ export class AdvisoryLock {
         }
 
         if (Date.now() >= deadline) {
-          return err(new SyncError("LOCK_CONTENTION", `Lock contention on ${lockPath} — timed out after ${timeoutMs}ms`));
+          return err(
+            new SyncError(
+              "LOCK_CONTENTION",
+              `Lock contention on ${lockPath} — timed out after ${timeoutMs}ms`,
+            ),
+          );
         }
 
         // Busy-wait (synchronous lock)
