@@ -48,6 +48,10 @@ export function registerResearchCommand(api: ExtensionAPI, deps: ResearchCommand
         api.sendUserMessage(`Slice not found: ${identifier}`);
         return;
       }
+      if (!slice.milestoneId) {
+        api.sendUserMessage("Error: ad-hoc slices don't use this command");
+        return;
+      }
 
       // 2. Load milestone
       const msResult = await deps.milestoneRepo.findById(slice.milestoneId);

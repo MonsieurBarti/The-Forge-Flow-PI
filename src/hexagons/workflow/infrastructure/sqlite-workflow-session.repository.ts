@@ -45,10 +45,10 @@ export class SqliteWorkflowSessionRepository extends WorkflowSessionRepositoryPo
     const props = session.toJSON();
 
     const conflict = this.db
-      .prepare<[string, string], { id: string }>(
+      .prepare<[string | null, string], { id: string }>(
         "SELECT id FROM workflow_sessions WHERE milestone_id = ? AND id != ?",
       )
-      .get(props.milestoneId, props.id);
+      .get(props.milestoneId ?? null, props.id);
 
     if (conflict) {
       return err(

@@ -49,7 +49,7 @@ export type AutoTransitionDecision = z.infer<typeof AutoTransitionDecisionSchema
 
 export const WorkflowSessionPropsSchema = z.object({
   id: IdSchema,
-  milestoneId: IdSchema,
+  milestoneId: IdSchema.nullable().default(null),
   sliceId: IdSchema.optional(),
   currentPhase: WorkflowPhaseSchema,
   previousPhase: WorkflowPhaseSchema.optional(),

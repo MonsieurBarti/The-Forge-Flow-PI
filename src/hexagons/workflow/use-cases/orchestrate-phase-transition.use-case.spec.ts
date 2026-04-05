@@ -58,6 +58,7 @@ function seedSlice(repo: InMemorySliceRepository, id: string, status: SliceStatu
     Slice.reconstitute({
       id,
       milestoneId: faker.string.uuid(),
+      kind: "milestone" as const,
       label: "M01-S01",
       title: "Test",
       description: "",
@@ -84,7 +85,7 @@ describe("OrchestratePhaseTransitionUseCase", () => {
     seedSlice(sliceRepo, sliceId, "discussing");
 
     const result = await useCase.execute({
-      milestoneId: session.milestoneId,
+      milestoneId: session.milestoneId as string,
       trigger: "next",
       guardContext: { ...DEFAULT_GUARD_CTX, complexityTier: "F-lite" },
     });
@@ -112,7 +113,7 @@ describe("OrchestratePhaseTransitionUseCase", () => {
     seedSlice(sliceRepo, sliceId, "completing");
 
     const result = await useCase.execute({
-      milestoneId: session.milestoneId,
+      milestoneId: session.milestoneId as string,
       trigger: "next",
       guardContext: DEFAULT_GUARD_CTX,
     });
@@ -139,7 +140,7 @@ describe("OrchestratePhaseTransitionUseCase", () => {
     seedSlice(sliceRepo, sliceId, "executing");
 
     const result = await useCase.execute({
-      milestoneId: session.milestoneId,
+      milestoneId: session.milestoneId as string,
       trigger: "abort",
       guardContext: DEFAULT_GUARD_CTX,
     });
@@ -171,7 +172,7 @@ describe("OrchestratePhaseTransitionUseCase", () => {
     });
 
     await useCase.execute({
-      milestoneId: session.milestoneId,
+      milestoneId: session.milestoneId as string,
       trigger: "next",
       guardContext: { ...DEFAULT_GUARD_CTX, complexityTier: "F-lite" },
     });
@@ -191,7 +192,7 @@ describe("OrchestratePhaseTransitionUseCase", () => {
     sessionRepo.seed(session);
 
     const result = await useCase.execute({
-      milestoneId: session.milestoneId,
+      milestoneId: session.milestoneId as string,
       trigger: "start",
       guardContext: DEFAULT_GUARD_CTX,
     });
@@ -243,7 +244,7 @@ describe("OrchestratePhaseTransitionUseCase", () => {
     seedSlice(sliceRepo, sliceId, "discussing");
 
     const result = await useCase.execute({
-      milestoneId: session.milestoneId,
+      milestoneId: session.milestoneId as string,
       trigger: "next",
       guardContext: { ...DEFAULT_GUARD_CTX, complexityTier: "F-lite" },
     });

@@ -59,8 +59,11 @@ export class StartDiscussUseCase {
 
     // 2. Workspace creation (if ports available)
     if (this.worktreePort && this.stateSyncPort && this.milestoneRepo) {
-      const wsResult = await this.createWorkspace(input, sliceResult.data.milestoneId);
-      if (isErr(wsResult)) return wsResult;
+      const sliceMilestoneId = sliceResult.data.milestoneId;
+      if (sliceMilestoneId) {
+        const wsResult = await this.createWorkspace(input, sliceMilestoneId);
+        if (isErr(wsResult)) return wsResult;
+      }
     }
 
     // 3. Find or create session

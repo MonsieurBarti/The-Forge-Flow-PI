@@ -29,7 +29,7 @@ export class WorkflowSession extends AggregateRoot<WorkflowSessionProps> {
     return this.props.id;
   }
 
-  get milestoneId(): string {
+  get milestoneId(): string | null {
     return this.props.milestoneId;
   }
 
@@ -71,13 +71,13 @@ export class WorkflowSession extends AggregateRoot<WorkflowSessionProps> {
 
   static createNew(params: {
     id: string;
-    milestoneId: string;
+    milestoneId?: string | null;
     autonomyMode: "guided" | "plan-to-pr";
     now: Date;
   }): WorkflowSession {
     return new WorkflowSession({
       id: params.id,
-      milestoneId: params.milestoneId,
+      milestoneId: params.milestoneId ?? null,
       currentPhase: "idle",
       retryCount: 0,
       autonomyMode: params.autonomyMode,

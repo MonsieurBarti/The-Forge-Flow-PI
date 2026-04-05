@@ -52,6 +52,12 @@ export class StateBranchCreationHandler {
       }
 
       const slice = sliceResult.data;
+      if (!slice.milestoneId) {
+        this.logger.warn(
+          `StateBranchCreationHandler: slice ${slice.label} has no milestoneId — skipping state branch creation`,
+        );
+        return;
+      }
       const milestoneResult = await this.milestoneRepo.findById(slice.milestoneId);
       if (!milestoneResult.ok || !milestoneResult.data) {
         this.logger.warn(
