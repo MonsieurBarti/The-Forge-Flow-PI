@@ -9,6 +9,11 @@ export class InMemorySettingsFileAdapter extends SettingsFilePort {
     return ok(this.store.get(path) ?? null);
   }
 
+  async writeFile(path: string, content: string): Promise<Result<void, SettingsFileError>> {
+    this.store.set(path, content);
+    return ok(undefined);
+  }
+
   seed(path: string, content: string): void {
     this.store.set(path, content);
   }

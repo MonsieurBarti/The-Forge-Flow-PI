@@ -1,9 +1,10 @@
 import { BaseDomainError } from "@kernel";
 
 export class SettingsFileError extends BaseDomainError {
-  readonly code = "SETTINGS.FILE_READ_ERROR";
+  readonly code: string;
 
-  constructor(path: string, cause?: Error) {
-    super(`Failed to read settings file: ${path}`, { path, cause: cause?.message });
+  constructor(path: string, cause?: Error, operation: "read" | "write" = "read") {
+    super(`Failed to ${operation} settings file: ${path}`, { path, cause: cause?.message });
+    this.code = operation === "write" ? "SETTINGS.FILE_WRITE_ERROR" : "SETTINGS.FILE_READ_ERROR";
   }
 }
