@@ -4,6 +4,8 @@ import {
   AUTO_LEARN_DEFAULTS,
   AUTONOMY_DEFAULTS,
   BEADS_DEFAULTS,
+  FALLBACK_STRATEGY_DEFAULTS,
+  FallbackStrategyConfigSchema,
   MODEL_ROUTING_DEFAULTS,
   ModelNameSchema,
   ModelProfileNameSchema,
@@ -120,5 +122,54 @@ describe("OverseerConfig in SettingsSchema", () => {
     if (result.success) {
       expect(result.data.overseer.enabled).toBe(true);
     }
+  });
+});
+
+describe("FallbackStrategyConfigSchema", () => {
+  it("produces defaults from empty object", () => {
+    const result = FallbackStrategyConfigSchema.parse({});
+    expect(result).toEqual(FALLBACK_STRATEGY_DEFAULTS);
+  });
+
+  it("accepts valid overrides", () => {
+    const result = FallbackStrategyConfigSchema.parse({
+      retryCount: 2,
+      downshiftChain: ["balanced", "budget"],
+      checkpointBeforeRetry: false,
+    });
+    expect(result.retryCount).toBe(2);
+    expect(result.downshiftChain).toEqual(["balanced", "budget"]);
+    expect(result.checkpointBeforeRetry).toBe(false);
+  });
+
+  it("returns defaults on invalid input via .catch()", () => {
+    const result = FallbackStrategyConfigSchema.parse("garbage");
+    expect(result).toEqual(FALLBACK_STRATEGY_DEFAULTS);
+  });
+
+  it("returns defaults on null via .catch()", () => {
+    const result = FallbackStrategyConfigSchema.parse(null);
+    expect(result).toEqual(FALLBACK_STRATEGY_DEFAULTS);
+  });
+});
+
+describe("SettingsSchema fallback field", () => {
+  it("parses settings without fallback (backward compat)", () => {
+    const result = SettingsSchema.parse({});
+    expect(result.fallback).toBeUndefined();
+  });
+
+  it("accepts fallback config with all defaults", () => {
+    const result = SettingsSchema.parse({ fallback: {} });
+    expect(result.fallback).toEqual(FALLBACK_STRATEGY_DEFAULTS);
+  });
+
+  it("accepts fallback config with custom values", () => {
+    const result = SettingsSchema.parse({
+      fallback: { retryCount: 3, checkpointBeforeRetry: false },
+    });
+    expect(result.fallback?.retryCount).toBe(3);
+    expect(result.fallback?.checkpointBeforeRetry).toBe(false);
+    expect(result.fallback?.downshiftChain).toEqual(["quality", "balanced", "budget"]);
   });
 });

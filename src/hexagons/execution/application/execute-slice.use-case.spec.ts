@@ -31,6 +31,7 @@ import { InMemoryGuardrailAdapter } from "../infrastructure/adapters/guardrails/
 import { InMemoryJournalRepository } from "../infrastructure/repositories/journal/in-memory-journal.repository";
 import { InMemoryMetricsRepository } from "../infrastructure/repositories/metrics/in-memory-metrics.repository";
 import { InMemoryOverseerAdapter } from "../infrastructure/adapters/overseer/in-memory-overseer.adapter";
+import { InMemoryPreDispatchAdapter } from "../infrastructure/adapters/pre-dispatch/in-memory-pre-dispatch.adapter";
 import { InMemoryWorktreeAdapter } from "@kernel/infrastructure/worktree/in-memory-worktree.adapter";
 import type { ExecuteSliceInput } from "./execute-slice.schemas";
 import { ExecuteSliceUseCase } from "./execute-slice.use-case";
@@ -107,6 +108,7 @@ describe("ExecuteSliceUseCase", () => {
   let guardrailAdapter: InMemoryGuardrailAdapter;
   let mockGitPort: InMemoryGitAdapter;
   let overseerAdapter: InMemoryOverseerAdapter;
+  let preDispatchAdapter: InMemoryPreDispatchAdapter;
   let retryPolicy: DefaultRetryPolicy;
   const OVERSEER_CONFIG: OverseerConfig = {
     enabled: true,
@@ -129,6 +131,7 @@ describe("ExecuteSliceUseCase", () => {
     guardrailAdapter = new InMemoryGuardrailAdapter();
     mockGitPort = new InMemoryGitAdapter();
     overseerAdapter = new InMemoryOverseerAdapter();
+    preDispatchAdapter = new InMemoryPreDispatchAdapter();
     retryPolicy = new DefaultRetryPolicy(2, 3);
 
     // Seed worktree for non-S tier by default
@@ -156,6 +159,9 @@ describe("ExecuteSliceUseCase", () => {
       overseer: overseerAdapter,
       retryPolicy,
       overseerConfig: OVERSEER_CONFIG,
+      preDispatchGuardrail: preDispatchAdapter,
+      modelResolver: () => ({ provider: "anthropic", modelId: "claude-sonnet-4-6" }),
+      checkpointBeforeRetry: true,
     });
   });
 
@@ -316,9 +322,9 @@ describe("ExecuteSliceUseCase", () => {
   });
 
   // -------------------------------------------------------------------------
-  // 5. aborts on task failure — in-flight complete, no further waves (AC3)
+  // 5. collects per-task failures without aborting (AC3)
   // -------------------------------------------------------------------------
-  it("aborts on task failure — in-flight complete, ¬further waves (AC3)", async () => {
+  it("collects per-task failures — succeeding sibling completes, wave advances (AC3)", async () => {
     const t1 = makeTask(T1_ID, "T01");
     const t2 = makeTask(T2_ID, "T02");
     const t3 = makeTask(T3_ID, "T03", [T1_ID, T2_ID]);
@@ -335,16 +341,18 @@ describe("ExecuteSliceUseCase", () => {
       T2_ID,
       ok(new AgentResultBuilder().withTaskId(T2_ID).asBlocked("Missing dep").build()),
     );
+    agentDispatch.givenResult(
+      T3_ID,
+      ok(new AgentResultBuilder().withTaskId(T3_ID).asDone().build()),
+    );
 
     const result = await useCase.execute(makeInput());
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.data.aborted).toBe(true);
+    // No longer aborts on per-task failure
     expect(result.data.failedTasks).toContain(T2_ID);
-    // T03 should NOT be dispatched (wave 1 never started)
-    expect(agentDispatch.wasDispatched(T3_ID)).toBe(false);
-    expect(result.data.wavesCompleted).toBe(0);
+    expect(result.data.completedTasks).toContain(T1_ID);
   });
 
   // -------------------------------------------------------------------------
@@ -478,23 +486,35 @@ describe("ExecuteSliceUseCase", () => {
   });
 
   // -------------------------------------------------------------------------
-  // 9. does NOT emit AllTasksCompletedEvent when aborted (AC6)
+  // 9. does NOT emit AllTasksCompletedEvent when aborted via signal (AC6)
   // -------------------------------------------------------------------------
-  it("does NOT emit AllTasksCompletedEvent when aborted (AC6)", async () => {
+  it("does NOT emit AllTasksCompletedEvent when aborted via signal (AC6)", async () => {
     const t1 = makeTask(T1_ID, "T01");
+    const t2 = makeTask(T2_ID, "T02", [T1_ID]);
     taskRepo.seed(t1);
+    taskRepo.seed(t2);
 
     agentDispatch.givenResult(
       T1_ID,
-      ok(new AgentResultBuilder().withTaskId(T1_ID).asBlocked("err").build()),
+      ok(new AgentResultBuilder().withTaskId(T1_ID).asDone().build()),
     );
+
+    const controller = new AbortController();
+    const originalDispatch = agentDispatch.dispatch.bind(agentDispatch);
+    let dispatchCount = 0;
+    agentDispatch.dispatch = async (cfg: AgentDispatchConfig) => {
+      dispatchCount++;
+      const result = await originalDispatch(cfg);
+      if (dispatchCount === 1) controller.abort();
+      return result;
+    };
 
     const events: DomainEvent[] = [];
     eventBus.subscribe(EVENT_NAMES.ALL_TASKS_COMPLETED, async (e) => {
       events.push(e);
     });
 
-    await useCase.execute(makeInput());
+    await useCase.execute(makeInput(), controller.signal);
 
     expect(events.length).toBe(0);
   });
@@ -636,7 +656,7 @@ describe("ExecuteSliceUseCase", () => {
   // Guardrail validation
   // -------------------------------------------------------------------------
   describe("guardrail validation", () => {
-    it("blocks wave when guardrail returns error violations", async () => {
+    it("journals guardrail blocker then recovers via retry pass", async () => {
       const t1 = makeTask(T1_ID, "T01");
       taskRepo.seed(t1);
 
@@ -663,8 +683,8 @@ describe("ExecuteSliceUseCase", () => {
 
       expect(result.ok).toBe(true);
       if (!result.ok) return;
-      expect(result.data.failedTasks).toContain(T1_ID);
-      expect(result.data.aborted).toBe(true);
+      // Task retried successfully (retry pass re-dispatches)
+      expect(result.data.completedTasks).toContain(T1_ID);
     });
 
     it("proceeds with warnings attached as concerns", async () => {
@@ -727,8 +747,8 @@ describe("ExecuteSliceUseCase", () => {
       expect(guardrailAdapter.wasValidated()).toBe(true);
       expect(result.ok).toBe(true);
       if (!result.ok) return;
-      expect(result.data.aborted).toBe(true);
-      expect(result.data.failedTasks).toContain(T1_ID);
+      // Task retried successfully after guardrail block
+      expect(result.data.completedTasks).toContain(T1_ID);
     });
 
     it("journals guardrail-violation entries on block", async () => {
@@ -820,6 +840,9 @@ describe("ExecuteSliceUseCase", () => {
         overseer: overseerAdapter,
         retryPolicy,
         overseerConfig: disabledConfig,
+        preDispatchGuardrail: preDispatchAdapter,
+        modelResolver: () => ({ provider: "anthropic", modelId: "claude-sonnet-4-6" }),
+        checkpointBeforeRetry: true,
       });
 
       const t1 = makeTask(T1_ID, "T01");
@@ -975,8 +998,8 @@ describe("ExecuteSliceUseCase", () => {
     });
 
     it("escalates immediately when retry policy denies retry (AC2)", async () => {
-      // maxRetries=0 → immediate escalation
-      const noRetryPolicy = new DefaultRetryPolicy(0, 3);
+      // maxRetries=0, empty downshift chain, retryCountPerProfile=-1 → immediate escalation
+      const noRetryPolicy = new DefaultRetryPolicy(0, 3, [], -1);
       useCase = new ExecuteSliceUseCase({
         taskRepository: taskRepo,
         waveDetection,
@@ -994,6 +1017,9 @@ describe("ExecuteSliceUseCase", () => {
         overseer: overseerAdapter,
         retryPolicy: noRetryPolicy,
         overseerConfig: OVERSEER_CONFIG,
+        preDispatchGuardrail: preDispatchAdapter,
+        modelResolver: () => ({ provider: "anthropic", modelId: "claude-sonnet-4-6" }),
+        checkpointBeforeRetry: true,
       });
 
       const t1 = makeTask(T1_ID, "T01");
@@ -1015,10 +1041,9 @@ describe("ExecuteSliceUseCase", () => {
 
       const result = await executePromise;
 
-      // Should fail (escalated, no retry)
+      // Should fail (escalated, no retry) — collected as failure, not aborted
       expect(result.ok).toBe(true);
       if (!result.ok) return;
-      expect(result.data.aborted).toBe(true);
       expect(result.data.failedTasks).toContain(T1_ID);
 
       // Verify escalation journal entry
@@ -1085,6 +1110,545 @@ describe("ExecuteSliceUseCase", () => {
       if (result.ok) {
         expect(result.data.aborted).toBe(false);
       }
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Pre-dispatch guardrail (T11)
+  // -----------------------------------------------------------------------
+  describe("pre-dispatch guardrail", () => {
+    it("blocks dispatch when pre-dispatch guardrail returns blocker", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      preDispatchAdapter.setReport({
+        passed: false,
+        violations: [
+          { ruleId: "scope-containment", severity: "blocker", message: "File outside scope" },
+        ],
+        checkedAt: new Date().toISOString(),
+      });
+
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(new AgentResultBuilder().withTaskId(T1_ID).asDone().build()),
+      );
+
+      const result = await useCase.execute(makeInput());
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      // Task should NOT be dispatched (pre-dispatch blocked)
+      expect(agentDispatch.wasDispatched(T1_ID)).toBe(false);
+      expect(result.data.failedTasks).toContain(T1_ID);
+    });
+
+    it("journals pre-dispatch-blocked entry on blocker", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      preDispatchAdapter.setReport({
+        passed: false,
+        violations: [
+          { ruleId: "scope-containment", severity: "blocker", message: "File outside scope" },
+        ],
+        checkedAt: new Date().toISOString(),
+      });
+
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(new AgentResultBuilder().withTaskId(T1_ID).asDone().build()),
+      );
+
+      await useCase.execute(makeInput());
+
+      const journalResult = await journalRepo.readAll(SLICE_ID);
+      expect(journalResult.ok).toBe(true);
+      if (!journalResult.ok) return;
+      const pdEntries = journalResult.data.filter((e) => e.type === "pre-dispatch-blocked");
+      expect(pdEntries.length).toBeGreaterThanOrEqual(1);
+      const entry = pdEntries[0];
+      if (entry?.type !== "pre-dispatch-blocked") return;
+      expect(entry.taskId).toBe(T1_ID);
+      expect(entry.severity).toBe("blocker");
+    });
+
+    it("proceeds with dispatch on pre-dispatch warning", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      preDispatchAdapter.setReport({
+        passed: true,
+        violations: [
+          { ruleId: "budget-check", severity: "warning", message: "Budget running low" },
+        ],
+        checkedAt: new Date().toISOString(),
+      });
+
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(new AgentResultBuilder().withTaskId(T1_ID).asDone().build()),
+      );
+
+      const result = await useCase.execute(makeInput());
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      // Task SHOULD be dispatched despite warning
+      expect(agentDispatch.wasDispatched(T1_ID)).toBe(true);
+      expect(result.data.completedTasks).toContain(T1_ID);
+
+      // Warning should be journaled
+      const journalResult = await journalRepo.readAll(SLICE_ID);
+      expect(journalResult.ok).toBe(true);
+      if (!journalResult.ok) return;
+      const pdEntries = journalResult.data.filter((e) => e.type === "pre-dispatch-blocked");
+      expect(pdEntries.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("one task blocked, sibling in wave still dispatched and succeeds", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      const t2 = makeTask(T2_ID, "T02");
+      taskRepo.seed(t1);
+      taskRepo.seed(t2);
+
+      // Set up per-task pre-dispatch: block T1 but allow T2
+      // InMemoryPreDispatchAdapter returns same report for all tasks,
+      // so we use a custom implementation
+      let callCount = 0;
+      const origValidate = preDispatchAdapter.validate.bind(preDispatchAdapter);
+      preDispatchAdapter.validate = async (ctx) => {
+        callCount++;
+        if (ctx.taskId === T1_ID) {
+          return ok({
+            passed: false,
+            violations: [
+              { ruleId: "scope", severity: "blocker" as const, message: "blocked" },
+            ],
+            checkedAt: new Date().toISOString(),
+          });
+        }
+        return origValidate(ctx);
+      };
+
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(new AgentResultBuilder().withTaskId(T1_ID).asDone().build()),
+      );
+      agentDispatch.givenResult(
+        T2_ID,
+        ok(new AgentResultBuilder().withTaskId(T2_ID).asDone().build()),
+      );
+
+      const result = await useCase.execute(makeInput());
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      // T1 blocked, T2 dispatched
+      expect(agentDispatch.wasDispatched(T1_ID)).toBe(false);
+      expect(agentDispatch.wasDispatched(T2_ID)).toBe(true);
+      expect(result.data.failedTasks).toContain(T1_ID);
+      expect(result.data.completedTasks).toContain(T2_ID);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Reflection step (T12)
+  // -----------------------------------------------------------------------
+  describe("reflection step", () => {
+    it("S-tier: fast path, no second dispatch", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(new AgentResultBuilder().withTaskId(T1_ID).asDone().build()),
+      );
+
+      const result = await useCase.execute(makeInput({ complexity: "S" }));
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.completedTasks).toContain(T1_ID);
+
+      // Only 1 dispatch (no reflection dispatch for S-tier)
+      expect(agentDispatch.dispatchedConfigs.length).toBe(1);
+
+      // Journal should contain a reflection entry with tier=fast
+      const journalResult = await journalRepo.readAll(SLICE_ID);
+      expect(journalResult.ok).toBe(true);
+      if (!journalResult.ok) return;
+      const reflectionEntries = journalResult.data.filter((e) => e.type === "reflection");
+      expect(reflectionEntries.length).toBe(1);
+      const entry = reflectionEntries[0];
+      if (entry?.type !== "reflection") return;
+      expect(entry.tier).toBe("fast");
+      expect(entry.passed).toBe(true);
+    });
+
+    it("F-lite clean self-review: fast path", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      // Default AgentResultBuilder has all dimensions passed, no concerns, status DONE
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(new AgentResultBuilder().withTaskId(T1_ID).asDone().build()),
+      );
+
+      const result = await useCase.execute(makeInput({ complexity: "F-lite" }));
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.completedTasks).toContain(T1_ID);
+
+      // Only 1 dispatch (clean self-review → fast path)
+      expect(agentDispatch.dispatchedConfigs.length).toBe(1);
+    });
+
+    it("F-full with clean self-review: still gets full path (AC5)", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      // Clean self-review — all dimensions passed, no concerns, DONE
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(new AgentResultBuilder().withTaskId(T1_ID).asDone().build()),
+      );
+
+      // Reflection dispatch for full path
+      agentDispatch.givenResult(
+        `${T1_ID}-reflection`,
+        ok(
+          new AgentResultBuilder()
+            .withTaskId(T1_ID)
+            .asDone()
+            .withOutput(
+              '<!-- TFF_REFLECTION_REPORT -->\n{"passed": true, "issues": []}\n<!-- /TFF_REFLECTION_REPORT -->',
+            )
+            .build(),
+        ),
+      );
+
+      const result = await useCase.execute(makeInput({ complexity: "F-full" }));
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.completedTasks).toContain(T1_ID);
+
+      // F-full ALWAYS gets full path — 2 dispatches even with clean self-review
+      expect(agentDispatch.dispatchedConfigs.length).toBe(2);
+      expect(agentDispatch.dispatchedConfigs[1]?.taskId).toBe(`${T1_ID}-reflection`);
+    });
+
+    it("F-full with concerns: full reflection path dispatched", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      // Agent result with concerns → triggers full reflection
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(
+          new AgentResultBuilder()
+            .withTaskId(T1_ID)
+            .asDoneWithConcerns([
+              { area: "quality", description: "Missing tests", severity: "warning" },
+            ])
+            .build(),
+        ),
+      );
+
+      // Reflection dispatch will return a result (default OK from InMemory)
+      // The reflection taskId will be T1_ID-reflection — use it as key for mock
+      agentDispatch.givenResult(
+        `${T1_ID}-reflection`,
+        ok(
+          new AgentResultBuilder()
+            .withTaskId(T1_ID)
+            .asDone()
+            .withOutput(
+              '<!-- TFF_REFLECTION_REPORT -->\n{"passed": true, "issues": []}\n<!-- /TFF_REFLECTION_REPORT -->',
+            )
+            .build(),
+        ),
+      );
+
+      const result = await useCase.execute(makeInput({ complexity: "F-full" }));
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.completedTasks).toContain(T1_ID);
+
+      // 2 dispatches: original + reflection
+      expect(agentDispatch.dispatchedConfigs.length).toBe(2);
+      expect(agentDispatch.dispatchedConfigs[1]?.taskId).toBe(`${T1_ID}-reflection`);
+    });
+
+    it("reflection blocker: task enters failed list", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      // Agent result with failed dimension → triggers full reflection
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(
+          new AgentResultBuilder()
+            .withTaskId(T1_ID)
+            .asDoneWithConcerns([
+              { area: "quality", description: "Issue", severity: "warning" },
+            ])
+            .build(),
+        ),
+      );
+
+      // Reflection finds a blocker
+      agentDispatch.givenResult(
+        `${T1_ID}-reflection`,
+        ok(
+          new AgentResultBuilder()
+            .withTaskId(T1_ID)
+            .asDone()
+            .withOutput(
+              '<!-- TFF_REFLECTION_REPORT -->\n{"passed": false, "issues": [{"severity": "blocker", "description": "AC not met"}]}\n<!-- /TFF_REFLECTION_REPORT -->',
+            )
+            .build(),
+        ),
+      );
+
+      const result = await useCase.execute(makeInput({ complexity: "F-full" }));
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      // Task recovers via retry pass (re-dispatch succeeds without reflection check)
+      expect(result.data.completedTasks).toContain(T1_ID);
+
+      // Journal should show reflection with triggeredRetry=true
+      const journalResult = await journalRepo.readAll(SLICE_ID);
+      expect(journalResult.ok).toBe(true);
+      if (!journalResult.ok) return;
+      const reflectionEntries = journalResult.data.filter((e) => e.type === "reflection");
+      expect(reflectionEntries.length).toBe(1);
+      const entry = reflectionEntries[0];
+      if (entry?.type !== "reflection") return;
+      expect(entry.triggeredRetry).toBe(true);
+      expect(entry.passed).toBe(false);
+    });
+
+    it("reflection parse failure: warning, task proceeds", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      // Agent result with concerns → triggers full reflection
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(
+          new AgentResultBuilder()
+            .withTaskId(T1_ID)
+            .asDoneWithConcerns([
+              { area: "quality", description: "Issue", severity: "warning" },
+            ])
+            .build(),
+        ),
+      );
+
+      // Reflection output has no report tag → parse failure → warning
+      agentDispatch.givenResult(
+        `${T1_ID}-reflection`,
+        ok(
+          new AgentResultBuilder()
+            .withTaskId(T1_ID)
+            .asDone()
+            .withOutput("No report here, just some text")
+            .build(),
+        ),
+      );
+
+      const result = await useCase.execute(makeInput({ complexity: "F-full" }));
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      // Task should complete (parse failure is a warning, not a blocker)
+      expect(result.data.completedTasks).toContain(T1_ID);
+
+      // Journal should show reflection with passed=true and warning issue
+      const journalResult = await journalRepo.readAll(SLICE_ID);
+      expect(journalResult.ok).toBe(true);
+      if (!journalResult.ok) return;
+      const reflectionEntries = journalResult.data.filter((e) => e.type === "reflection");
+      expect(reflectionEntries.length).toBe(1);
+      const entry = reflectionEntries[0];
+      if (entry?.type !== "reflection") return;
+      expect(entry.passed).toBe(true);
+      expect(entry.triggeredRetry).toBe(false);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Retry/downshift pass (T13)
+  // -----------------------------------------------------------------------
+  describe("retry/downshift pass", () => {
+    it("retries failed task with same model — checkpoint + restore + re-dispatch", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      // First dispatch: BLOCKED (fails), retry dispatch: DONE (succeeds)
+      let dispatchCount = 0;
+      agentDispatch.dispatch = async (
+        config: AgentDispatchConfig,
+      ): Promise<Result<AgentResult, AgentDispatchError>> => {
+        dispatchCount++;
+        if (dispatchCount === 1) {
+          // First dispatch returns BLOCKED
+          return ok(
+            new AgentResultBuilder()
+              .withTaskId(config.taskId)
+              .asBlocked("Missing dep")
+              .build(),
+          );
+        }
+        // Retry dispatch returns DONE
+        return ok(
+          new AgentResultBuilder()
+            .withTaskId(config.taskId)
+            .asDone()
+            .build(),
+        );
+      };
+
+      const result = await useCase.execute(makeInput());
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      // Task recovers via retry
+      expect(result.data.completedTasks).toContain(T1_ID);
+      // Checkpoint saved, worktree restored before retry
+      expect(mockGitPort.restoreWorktreeCalls.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("downshifts model when retry count exceeded — journals model-downshift", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      // Use a policy with retryCountPerProfile=0 to trigger downshift on attempt 1
+      const downshiftPolicy = new DefaultRetryPolicy(5, 3, ["quality", "balanced", "budget"], 0);
+      useCase = new ExecuteSliceUseCase({
+        taskRepository: taskRepo,
+        waveDetection,
+        checkpointRepository: checkpointRepo,
+        agentDispatch,
+        worktree: worktreeAdapter,
+        eventBus,
+        journalRepository: journalRepo,
+        metricsRepository: metricsRepo,
+        dateProvider,
+        logger,
+        templateContent: TEMPLATE_CONTENT,
+        guardrail: guardrailAdapter,
+        gitPort: mockGitPort,
+        overseer: overseerAdapter,
+        retryPolicy: downshiftPolicy,
+        overseerConfig: OVERSEER_CONFIG,
+        preDispatchGuardrail: preDispatchAdapter,
+        modelResolver: (profile) => ({
+          provider: "anthropic",
+          modelId: profile === "budget" ? "claude-haiku-3" : "claude-sonnet-4-6",
+        }),
+        checkpointBeforeRetry: true,
+      });
+
+      // First dispatch: BLOCKED (wave), retry attempt=0: BLOCKED,
+      // attempt=1 > retryCountPerProfile=0 → downshift to "budget",
+      // retry attempt=0 with budget model: DONE
+      let dispatchCount = 0;
+      agentDispatch.dispatch = async (
+        config: AgentDispatchConfig,
+      ): Promise<Result<AgentResult, AgentDispatchError>> => {
+        dispatchCount++;
+        if (dispatchCount <= 2) {
+          return ok(
+            new AgentResultBuilder()
+              .withTaskId(config.taskId)
+              .asBlocked("Cannot complete")
+              .build(),
+          );
+        }
+        // Third dispatch (after downshift): succeeds
+        return ok(
+          new AgentResultBuilder()
+            .withTaskId(config.taskId)
+            .asDone()
+            .build(),
+        );
+      };
+
+      const result = await useCase.execute(makeInput());
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.completedTasks).toContain(T1_ID);
+
+      // Journal should contain model-downshift entry
+      const journalResult = await journalRepo.readAll(SLICE_ID);
+      expect(journalResult.ok).toBe(true);
+      if (!journalResult.ok) return;
+      const downshiftEntries = journalResult.data.filter((e) => e.type === "model-downshift");
+      expect(downshiftEntries.length).toBeGreaterThanOrEqual(1);
+      const ds = downshiftEntries[0];
+      if (ds?.type !== "model-downshift") return;
+      expect(ds.fromProfile).toBe("balanced");
+      expect(ds.toProfile).toBe("budget");
+    });
+
+    it("escalates when retry chain exhausted — journals task-escalated", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      // Use a policy that immediately escalates: no retries, empty chain
+      const escalatePolicy = new DefaultRetryPolicy(0, 3, [], -1);
+      useCase = new ExecuteSliceUseCase({
+        taskRepository: taskRepo,
+        waveDetection,
+        checkpointRepository: checkpointRepo,
+        agentDispatch,
+        worktree: worktreeAdapter,
+        eventBus,
+        journalRepository: journalRepo,
+        metricsRepository: metricsRepo,
+        dateProvider,
+        logger,
+        templateContent: TEMPLATE_CONTENT,
+        guardrail: guardrailAdapter,
+        gitPort: mockGitPort,
+        overseer: overseerAdapter,
+        retryPolicy: escalatePolicy,
+        overseerConfig: OVERSEER_CONFIG,
+        preDispatchGuardrail: preDispatchAdapter,
+        modelResolver: () => ({ provider: "anthropic", modelId: "claude-sonnet-4-6" }),
+        checkpointBeforeRetry: true,
+      });
+
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(new AgentResultBuilder().withTaskId(T1_ID).asBlocked("Cannot complete").build()),
+      );
+
+      const result = await useCase.execute(makeInput());
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.failedTasks).toContain(T1_ID);
+      expect(result.data.aborted).toBe(true);
+
+      // Journal should contain task-escalated entry
+      const journalResult = await journalRepo.readAll(SLICE_ID);
+      expect(journalResult.ok).toBe(true);
+      if (!journalResult.ok) return;
+      const escalatedEntries = journalResult.data.filter((e) => e.type === "task-escalated");
+      expect(escalatedEntries.length).toBe(1);
+      const esc = escalatedEntries[0];
+      if (esc?.type !== "task-escalated") return;
+      expect(esc.taskId).toBe(T1_ID);
+      expect(esc.reason).toBe("Exhausted retry chain");
     });
   });
 });

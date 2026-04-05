@@ -4,9 +4,13 @@ import {
   CheckpointSavedEntrySchema,
   FileWrittenEntrySchema,
   JournalEntrySchema,
+  ModelDownshiftEntrySchema,
   OverseerInterventionEntrySchema,
   PhaseChangedEntrySchema,
+  PreDispatchBlockedEntrySchema,
+  ReflectionEntrySchema,
   TaskCompletedEntrySchema,
+  TaskEscalatedEntrySchema,
   TaskFailedEntrySchema,
   TaskStartedEntrySchema,
   ToolExecutionEntrySchema,
@@ -450,6 +454,70 @@ describe("JournalEntrySchema", () => {
     });
     expect(entry.type).toBe("overseer-intervention");
   });
+
+  it("routes reflection correctly", () => {
+    const entry = JournalEntrySchema.parse({
+      ...baseFields,
+      type: "reflection",
+      taskId: crypto.randomUUID(),
+      waveIndex: 0,
+      tier: "full",
+      passed: false,
+      issues: [{ severity: "blocker", description: "Type error" }],
+      triggeredRetry: true,
+    });
+    expect(entry.type).toBe("reflection");
+  });
+
+  it("routes model-downshift correctly", () => {
+    const entry = JournalEntrySchema.parse({
+      ...baseFields,
+      type: "model-downshift",
+      taskId: crypto.randomUUID(),
+      waveIndex: 0,
+      fromProfile: "opus",
+      toProfile: "sonnet",
+      reason: "Budget limit",
+      attempt: 1,
+    });
+    expect(entry.type).toBe("model-downshift");
+  });
+
+  it("routes task-escalated correctly", () => {
+    const entry = JournalEntrySchema.parse({
+      ...baseFields,
+      type: "task-escalated",
+      taskId: crypto.randomUUID(),
+      waveIndex: 0,
+      reason: "All profiles exhausted",
+      totalAttempts: 3,
+      profilesAttempted: ["opus", "sonnet"],
+    });
+    expect(entry.type).toBe("task-escalated");
+  });
+
+  it("routes pre-dispatch-blocked correctly", () => {
+    const entry = JournalEntrySchema.parse({
+      ...baseFields,
+      type: "pre-dispatch-blocked",
+      taskId: crypto.randomUUID(),
+      waveIndex: 0,
+      ruleId: "scope-check",
+      severity: "blocker",
+      message: "Out of scope",
+    });
+    expect(entry.type).toBe("pre-dispatch-blocked");
+  });
+
+  it("accepts all 16 entry types in the union", () => {
+    const types = [
+      "task-started", "task-completed", "task-failed", "file-written",
+      "checkpoint-saved", "phase-changed", "artifact-written", "guardrail-violation",
+      "overseer-intervention", "execution-lifecycle", "tool-execution", "turn-boundary",
+      "reflection", "model-downshift", "task-escalated", "pre-dispatch-blocked",
+    ];
+    expect(types).toHaveLength(16);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -563,5 +631,197 @@ describe("TurnBoundaryEntrySchema", () => {
 
   it("rejects negative turnIndex", () => {
     expect(() => TurnBoundaryEntrySchema.parse({ ...valid, turnIndex: -1 })).toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ReflectionEntrySchema
+// ---------------------------------------------------------------------------
+describe("ReflectionEntrySchema", () => {
+  const valid = {
+    ...baseFields,
+    type: "reflection" as const,
+    taskId: crypto.randomUUID(),
+    waveIndex: 0,
+    tier: "fast" as const,
+    passed: true,
+    issues: [],
+    triggeredRetry: false,
+  };
+
+  it("parses a valid reflection entry", () => {
+    const result = ReflectionEntrySchema.parse(valid);
+    expect(result.type).toBe("reflection");
+    expect(result.tier).toBe("fast");
+    expect(result.passed).toBe(true);
+    expect(result.issues).toEqual([]);
+    expect(result.triggeredRetry).toBe(false);
+  });
+
+  it("parses with issues array", () => {
+    const result = ReflectionEntrySchema.parse({
+      ...valid,
+      passed: false,
+      issues: [
+        { severity: "blocker", description: "Missing import", filePath: "src/foo.ts" },
+        { severity: "warning", description: "Unused variable" },
+      ],
+      triggeredRetry: true,
+    });
+    expect(result.issues).toHaveLength(2);
+    expect(result.issues[0].severity).toBe("blocker");
+    expect(result.issues[0].filePath).toBe("src/foo.ts");
+    expect(result.issues[1].filePath).toBeUndefined();
+  });
+
+  it("defaults issues to empty array when omitted", () => {
+    const { issues: _, ...noIssues } = valid;
+    const result = ReflectionEntrySchema.parse(noIssues);
+    expect(result.issues).toEqual([]);
+  });
+
+  it("rejects invalid tier value", () => {
+    expect(() => ReflectionEntrySchema.parse({ ...valid, tier: "slow" })).toThrow();
+  });
+
+  it("rejects empty issue description", () => {
+    expect(() =>
+      ReflectionEntrySchema.parse({
+        ...valid,
+        issues: [{ severity: "blocker", description: "" }],
+      }),
+    ).toThrow();
+  });
+
+  it("rejects wrong type literal", () => {
+    expect(() => ReflectionEntrySchema.parse({ ...valid, type: "task-started" })).toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ModelDownshiftEntrySchema
+// ---------------------------------------------------------------------------
+describe("ModelDownshiftEntrySchema", () => {
+  const valid = {
+    ...baseFields,
+    type: "model-downshift" as const,
+    taskId: crypto.randomUUID(),
+    waveIndex: 1,
+    fromProfile: "opus",
+    toProfile: "sonnet",
+    reason: "Budget exceeded threshold",
+    attempt: 2,
+  };
+
+  it("parses a valid model-downshift entry", () => {
+    const result = ModelDownshiftEntrySchema.parse(valid);
+    expect(result.type).toBe("model-downshift");
+    expect(result.fromProfile).toBe("opus");
+    expect(result.toProfile).toBe("sonnet");
+    expect(result.attempt).toBe(2);
+  });
+
+  it("rejects empty fromProfile", () => {
+    expect(() => ModelDownshiftEntrySchema.parse({ ...valid, fromProfile: "" })).toThrow();
+  });
+
+  it("rejects empty toProfile", () => {
+    expect(() => ModelDownshiftEntrySchema.parse({ ...valid, toProfile: "" })).toThrow();
+  });
+
+  it("rejects empty reason", () => {
+    expect(() => ModelDownshiftEntrySchema.parse({ ...valid, reason: "" })).toThrow();
+  });
+
+  it("rejects negative attempt", () => {
+    expect(() => ModelDownshiftEntrySchema.parse({ ...valid, attempt: -1 })).toThrow();
+  });
+
+  it("rejects wrong type literal", () => {
+    expect(() => ModelDownshiftEntrySchema.parse({ ...valid, type: "task-failed" })).toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TaskEscalatedEntrySchema
+// ---------------------------------------------------------------------------
+describe("TaskEscalatedEntrySchema", () => {
+  const valid = {
+    ...baseFields,
+    type: "task-escalated" as const,
+    taskId: crypto.randomUUID(),
+    waveIndex: 0,
+    reason: "All model profiles exhausted",
+    totalAttempts: 3,
+    profilesAttempted: ["opus", "sonnet", "haiku"],
+  };
+
+  it("parses a valid task-escalated entry", () => {
+    const result = TaskEscalatedEntrySchema.parse(valid);
+    expect(result.type).toBe("task-escalated");
+    expect(result.totalAttempts).toBe(3);
+    expect(result.profilesAttempted).toEqual(["opus", "sonnet", "haiku"]);
+  });
+
+  it("accepts empty profilesAttempted array", () => {
+    const result = TaskEscalatedEntrySchema.parse({ ...valid, profilesAttempted: [] });
+    expect(result.profilesAttempted).toEqual([]);
+  });
+
+  it("rejects empty reason", () => {
+    expect(() => TaskEscalatedEntrySchema.parse({ ...valid, reason: "" })).toThrow();
+  });
+
+  it("rejects negative totalAttempts", () => {
+    expect(() => TaskEscalatedEntrySchema.parse({ ...valid, totalAttempts: -1 })).toThrow();
+  });
+
+  it("rejects wrong type literal", () => {
+    expect(() => TaskEscalatedEntrySchema.parse({ ...valid, type: "task-completed" })).toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PreDispatchBlockedEntrySchema
+// ---------------------------------------------------------------------------
+describe("PreDispatchBlockedEntrySchema", () => {
+  const valid = {
+    ...baseFields,
+    type: "pre-dispatch-blocked" as const,
+    taskId: crypto.randomUUID(),
+    waveIndex: 0,
+    ruleId: "scope-containment",
+    severity: "blocker" as const,
+    message: "Task writes outside allowed paths",
+  };
+
+  it("parses a valid pre-dispatch-blocked entry", () => {
+    const result = PreDispatchBlockedEntrySchema.parse(valid);
+    expect(result.type).toBe("pre-dispatch-blocked");
+    expect(result.ruleId).toBe("scope-containment");
+    expect(result.severity).toBe("blocker");
+  });
+
+  it("accepts severity 'warning'", () => {
+    const result = PreDispatchBlockedEntrySchema.parse({ ...valid, severity: "warning" });
+    expect(result.severity).toBe("warning");
+  });
+
+  it("rejects empty ruleId", () => {
+    expect(() => PreDispatchBlockedEntrySchema.parse({ ...valid, ruleId: "" })).toThrow();
+  });
+
+  it("rejects empty message", () => {
+    expect(() => PreDispatchBlockedEntrySchema.parse({ ...valid, message: "" })).toThrow();
+  });
+
+  it("rejects invalid severity", () => {
+    expect(() => PreDispatchBlockedEntrySchema.parse({ ...valid, severity: "info" })).toThrow();
+  });
+
+  it("rejects wrong type literal", () => {
+    expect(() =>
+      PreDispatchBlockedEntrySchema.parse({ ...valid, type: "phase-changed" }),
+    ).toThrow();
   });
 });

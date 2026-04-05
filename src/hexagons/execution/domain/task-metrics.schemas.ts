@@ -23,6 +23,9 @@ export const TaskMetricsSchema = z.object({
   retries: z.number().int().nonnegative().default(0),
   downshifted: z.boolean().default(false),
   reflectionPassed: z.boolean().optional(),
+  reflectionTier: z.enum(["fast", "full", "skipped"]).default("skipped"),
+  finalProfile: z.string().optional(),
+  totalAttempts: z.number().int().nonnegative().optional(),
   timestamp: TimestampSchema,
 });
 export type TaskMetrics = z.infer<typeof TaskMetricsSchema>;
