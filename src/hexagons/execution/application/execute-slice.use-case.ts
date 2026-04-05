@@ -27,9 +27,11 @@ import { TaskExecutionCompletedEvent } from "../domain/events/task-execution-com
 import type { GuardrailValidationReport, GuardrailViolation } from "../domain/guardrail.schemas";
 import type {
   GuardrailViolationEntry,
+  ModelDownshiftEntry,
   OverseerInterventionEntry,
   PreDispatchBlockedEntry,
   ReflectionEntry,
+  TaskEscalatedEntry,
 } from "../domain/journal-entry.schemas";
 import type { ReflectionResult } from "../domain/reflection.schemas";
 import type { OverseerConfig, OverseerVerdict } from "../domain/overseer.schemas";
@@ -76,6 +78,7 @@ interface ExecuteSliceUseCaseDeps {
   readonly retryPolicy: RetryPolicy;
   readonly overseerConfig: OverseerConfig;
   readonly preDispatchGuardrail: PreDispatchGuardrailPort;
+  readonly modelResolver: (profileName: string) => { provider: string; modelId: string };
 }
 
 export class ExecuteSliceUseCase {
@@ -564,9 +567,29 @@ export class ExecuteSliceUseCase {
         }
       }
 
-      // 6g. Collect failures (no longer fail-fast; failures enter retry pass)
-      if (waveFailedTasks.length > 0) {
-        failedTasks.push(...waveFailedTasks);
+      // 6g. Post-wave retry pass (sequential)
+      // Pre-dispatch blocked tasks are permanent failures — skip retry
+      const retriableFailures = waveFailedTasks.filter((id) => !preDispatchBlocked.has(id));
+      const permanentFailures = waveFailedTasks.filter((id) => preDispatchBlocked.has(id));
+      failedTasks.push(...permanentFailures);
+
+      if (retriableFailures.length > 0) {
+        const retryResults = await this.runRetryPass(
+          retriableFailures,
+          taskMap,
+          input,
+          checkpoint,
+          waveIndex,
+          promptBuilder,
+        );
+        // Move succeeded retries to completedTasks, escalated to failedTasks
+        completedTasks.push(...retryResults.succeeded);
+        failedTasks.push(...retryResults.escalated);
+
+        // If all retries failed, set aborted
+        if (retryResults.escalated.length > 0 && retryResults.succeeded.length === 0) {
+          aborted = true;
+        }
       }
 
       // 6h. Advance wave
@@ -706,5 +729,105 @@ export class ExecuteSliceUseCase {
         reflectedAt: new Date().toISOString(),
       };
     }
+  }
+
+  private async runRetryPass(
+    failedTaskIds: string[],
+    taskMap: Map<string, Task>,
+    input: ExecuteSliceInput,
+    checkpoint: Checkpoint,
+    waveIndex: number,
+    promptBuilder: PromptBuilder,
+  ): Promise<{ succeeded: string[]; escalated: string[] }> {
+    const succeeded: string[] = [];
+    const escalated: string[] = [];
+
+    for (const taskId of failedTaskIds) {
+      const task = taskMap.get(taskId);
+      if (!task) {
+        escalated.push(taskId);
+        continue;
+      }
+
+      let currentProfile: string = input.modelProfile;
+      const profilesAttempted: string[] = [currentProfile];
+      let attempt = 0;
+
+      while (true) {
+        const resolution = this.deps.retryPolicy.resolveModel(taskId, currentProfile, attempt);
+
+        if (resolution.action === "escalate") {
+          const entry: Omit<TaskEscalatedEntry, "seq"> = {
+            type: "task-escalated",
+            sliceId: input.sliceId,
+            timestamp: this.deps.dateProvider.now(),
+            taskId,
+            waveIndex,
+            reason: "Exhausted retry chain",
+            totalAttempts: attempt,
+            profilesAttempted,
+          };
+          await this.deps.journalRepository.append(input.sliceId, entry);
+          escalated.push(taskId);
+          break;
+        }
+
+        if (resolution.action === "downshift") {
+          const entry: Omit<ModelDownshiftEntry, "seq"> = {
+            type: "model-downshift",
+            sliceId: input.sliceId,
+            timestamp: this.deps.dateProvider.now(),
+            taskId,
+            waveIndex,
+            fromProfile: currentProfile,
+            toProfile: resolution.profile,
+            reason: "Task failed, downshifting model",
+            attempt,
+          };
+          await this.deps.journalRepository.append(input.sliceId, entry);
+          currentProfile = resolution.profile;
+          if (!profilesAttempted.includes(currentProfile)) {
+            profilesAttempted.push(currentProfile);
+          }
+          attempt = 0;
+          continue;
+        }
+
+        // action === "retry"
+        // Checkpoint before retry
+        await this.deps.checkpointRepository.save(checkpoint);
+
+        // Restore worktree (safe: sequential, no sibling tasks running)
+        await this.deps.gitPort.restoreWorktree(input.workingDirectory);
+
+        // Resolve model for this profile
+        const resolvedModel = this.deps.modelResolver(currentProfile);
+
+        // Build new config with the resolved model
+        const config = promptBuilder.build({
+          id: task.id,
+          label: task.label,
+          title: task.title,
+          description: task.description,
+          acceptanceCriteria: task.acceptanceCriteria,
+          filePaths: [...task.filePaths],
+        });
+        const retryConfig = { ...config, model: resolvedModel };
+
+        // Re-dispatch
+        const result = await this.executeTaskWithOverseer(task, retryConfig, input);
+
+        if (result.ok && isSuccessfulStatus(result.data.status)) {
+          succeeded.push(taskId);
+          checkpoint.recordTaskComplete(taskId, this.deps.dateProvider.now());
+          await this.deps.checkpointRepository.save(checkpoint);
+          break;
+        }
+
+        attempt++;
+      }
+    }
+
+    return { succeeded, escalated };
   }
 }

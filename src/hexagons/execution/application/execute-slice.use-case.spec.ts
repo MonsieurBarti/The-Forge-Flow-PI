@@ -160,6 +160,7 @@ describe("ExecuteSliceUseCase", () => {
       retryPolicy,
       overseerConfig: OVERSEER_CONFIG,
       preDispatchGuardrail: preDispatchAdapter,
+      modelResolver: () => ({ provider: "anthropic", modelId: "claude-sonnet-4-6" }),
     });
   });
 
@@ -654,7 +655,7 @@ describe("ExecuteSliceUseCase", () => {
   // Guardrail validation
   // -------------------------------------------------------------------------
   describe("guardrail validation", () => {
-    it("collects guardrail blocker as failed task without aborting", async () => {
+    it("journals guardrail blocker then recovers via retry pass", async () => {
       const t1 = makeTask(T1_ID, "T01");
       taskRepo.seed(t1);
 
@@ -681,7 +682,8 @@ describe("ExecuteSliceUseCase", () => {
 
       expect(result.ok).toBe(true);
       if (!result.ok) return;
-      expect(result.data.failedTasks).toContain(T1_ID);
+      // Task retried successfully (retry pass re-dispatches)
+      expect(result.data.completedTasks).toContain(T1_ID);
     });
 
     it("proceeds with warnings attached as concerns", async () => {
@@ -744,7 +746,8 @@ describe("ExecuteSliceUseCase", () => {
       expect(guardrailAdapter.wasValidated()).toBe(true);
       expect(result.ok).toBe(true);
       if (!result.ok) return;
-      expect(result.data.failedTasks).toContain(T1_ID);
+      // Task retried successfully after guardrail block
+      expect(result.data.completedTasks).toContain(T1_ID);
     });
 
     it("journals guardrail-violation entries on block", async () => {
@@ -837,6 +840,7 @@ describe("ExecuteSliceUseCase", () => {
         retryPolicy,
         overseerConfig: disabledConfig,
         preDispatchGuardrail: preDispatchAdapter,
+        modelResolver: () => ({ provider: "anthropic", modelId: "claude-sonnet-4-6" }),
       });
 
       const t1 = makeTask(T1_ID, "T01");
@@ -992,8 +996,8 @@ describe("ExecuteSliceUseCase", () => {
     });
 
     it("escalates immediately when retry policy denies retry (AC2)", async () => {
-      // maxRetries=0 → immediate escalation
-      const noRetryPolicy = new DefaultRetryPolicy(0, 3);
+      // maxRetries=0, empty downshift chain, retryCountPerProfile=-1 → immediate escalation
+      const noRetryPolicy = new DefaultRetryPolicy(0, 3, [], -1);
       useCase = new ExecuteSliceUseCase({
         taskRepository: taskRepo,
         waveDetection,
@@ -1012,6 +1016,7 @@ describe("ExecuteSliceUseCase", () => {
         retryPolicy: noRetryPolicy,
         overseerConfig: OVERSEER_CONFIG,
         preDispatchGuardrail: preDispatchAdapter,
+        modelResolver: () => ({ provider: "anthropic", modelId: "claude-sonnet-4-6" }),
       });
 
       const t1 = makeTask(T1_ID, "T01");
@@ -1376,7 +1381,8 @@ describe("ExecuteSliceUseCase", () => {
 
       expect(result.ok).toBe(true);
       if (!result.ok) return;
-      expect(result.data.failedTasks).toContain(T1_ID);
+      // Task recovers via retry pass (re-dispatch succeeds without reflection check)
+      expect(result.data.completedTasks).toContain(T1_ID);
 
       // Journal should show reflection with triggeredRetry=true
       const journalResult = await journalRepo.readAll(SLICE_ID);
@@ -1436,6 +1442,173 @@ describe("ExecuteSliceUseCase", () => {
       if (entry?.type !== "reflection") return;
       expect(entry.passed).toBe(true);
       expect(entry.triggeredRetry).toBe(false);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Retry/downshift pass (T13)
+  // -----------------------------------------------------------------------
+  describe("retry/downshift pass", () => {
+    it("retries failed task with same model — checkpoint + restore + re-dispatch", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      // First dispatch: BLOCKED (fails), retry dispatch: DONE (succeeds)
+      let dispatchCount = 0;
+      agentDispatch.dispatch = async (
+        config: AgentDispatchConfig,
+      ): Promise<Result<AgentResult, AgentDispatchError>> => {
+        dispatchCount++;
+        if (dispatchCount === 1) {
+          // First dispatch returns BLOCKED
+          return ok(
+            new AgentResultBuilder()
+              .withTaskId(config.taskId)
+              .asBlocked("Missing dep")
+              .build(),
+          );
+        }
+        // Retry dispatch returns DONE
+        return ok(
+          new AgentResultBuilder()
+            .withTaskId(config.taskId)
+            .asDone()
+            .build(),
+        );
+      };
+
+      const result = await useCase.execute(makeInput());
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      // Task recovers via retry
+      expect(result.data.completedTasks).toContain(T1_ID);
+      // Checkpoint saved, worktree restored before retry
+      expect(mockGitPort.restoreWorktreeCalls.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("downshifts model when retry count exceeded — journals model-downshift", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      // Use a policy with retryCountPerProfile=0 to trigger downshift on attempt 1
+      const downshiftPolicy = new DefaultRetryPolicy(5, 3, ["quality", "balanced", "budget"], 0);
+      useCase = new ExecuteSliceUseCase({
+        taskRepository: taskRepo,
+        waveDetection,
+        checkpointRepository: checkpointRepo,
+        agentDispatch,
+        worktree: worktreeAdapter,
+        eventBus,
+        journalRepository: journalRepo,
+        metricsRepository: metricsRepo,
+        dateProvider,
+        logger,
+        templateContent: TEMPLATE_CONTENT,
+        guardrail: guardrailAdapter,
+        gitPort: mockGitPort,
+        overseer: overseerAdapter,
+        retryPolicy: downshiftPolicy,
+        overseerConfig: OVERSEER_CONFIG,
+        preDispatchGuardrail: preDispatchAdapter,
+        modelResolver: (profile) => ({
+          provider: "anthropic",
+          modelId: profile === "budget" ? "claude-haiku-3" : "claude-sonnet-4-6",
+        }),
+      });
+
+      // First dispatch: BLOCKED (wave), retry attempt=0: BLOCKED,
+      // attempt=1 > retryCountPerProfile=0 → downshift to "budget",
+      // retry attempt=0 with budget model: DONE
+      let dispatchCount = 0;
+      agentDispatch.dispatch = async (
+        config: AgentDispatchConfig,
+      ): Promise<Result<AgentResult, AgentDispatchError>> => {
+        dispatchCount++;
+        if (dispatchCount <= 2) {
+          return ok(
+            new AgentResultBuilder()
+              .withTaskId(config.taskId)
+              .asBlocked("Cannot complete")
+              .build(),
+          );
+        }
+        // Third dispatch (after downshift): succeeds
+        return ok(
+          new AgentResultBuilder()
+            .withTaskId(config.taskId)
+            .asDone()
+            .build(),
+        );
+      };
+
+      const result = await useCase.execute(makeInput());
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.completedTasks).toContain(T1_ID);
+
+      // Journal should contain model-downshift entry
+      const journalResult = await journalRepo.readAll(SLICE_ID);
+      expect(journalResult.ok).toBe(true);
+      if (!journalResult.ok) return;
+      const downshiftEntries = journalResult.data.filter((e) => e.type === "model-downshift");
+      expect(downshiftEntries.length).toBeGreaterThanOrEqual(1);
+      const ds = downshiftEntries[0];
+      if (ds?.type !== "model-downshift") return;
+      expect(ds.fromProfile).toBe("balanced");
+      expect(ds.toProfile).toBe("budget");
+    });
+
+    it("escalates when retry chain exhausted — journals task-escalated", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      // Use a policy that immediately escalates: no retries, empty chain
+      const escalatePolicy = new DefaultRetryPolicy(0, 3, [], -1);
+      useCase = new ExecuteSliceUseCase({
+        taskRepository: taskRepo,
+        waveDetection,
+        checkpointRepository: checkpointRepo,
+        agentDispatch,
+        worktree: worktreeAdapter,
+        eventBus,
+        journalRepository: journalRepo,
+        metricsRepository: metricsRepo,
+        dateProvider,
+        logger,
+        templateContent: TEMPLATE_CONTENT,
+        guardrail: guardrailAdapter,
+        gitPort: mockGitPort,
+        overseer: overseerAdapter,
+        retryPolicy: escalatePolicy,
+        overseerConfig: OVERSEER_CONFIG,
+        preDispatchGuardrail: preDispatchAdapter,
+        modelResolver: () => ({ provider: "anthropic", modelId: "claude-sonnet-4-6" }),
+      });
+
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(new AgentResultBuilder().withTaskId(T1_ID).asBlocked("Cannot complete").build()),
+      );
+
+      const result = await useCase.execute(makeInput());
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.failedTasks).toContain(T1_ID);
+      expect(result.data.aborted).toBe(true);
+
+      // Journal should contain task-escalated entry
+      const journalResult = await journalRepo.readAll(SLICE_ID);
+      expect(journalResult.ok).toBe(true);
+      if (!journalResult.ok) return;
+      const escalatedEntries = journalResult.data.filter((e) => e.type === "task-escalated");
+      expect(escalatedEntries.length).toBe(1);
+      const esc = escalatedEntries[0];
+      if (esc?.type !== "task-escalated") return;
+      expect(esc.taskId).toBe(T1_ID);
+      expect(esc.reason).toBe("Exhausted retry chain");
     });
   });
 });
