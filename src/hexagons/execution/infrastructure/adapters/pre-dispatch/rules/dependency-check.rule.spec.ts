@@ -64,9 +64,7 @@ describe("DependencyCheckRule", () => {
     });
 
     it("returns empty for empty upstreamTasks array", async () => {
-      const violations = await rule.evaluate(
-        makeContext({ upstreamTasks: [] }),
-      );
+      const violations = await rule.evaluate(makeContext({ upstreamTasks: [] }));
       expect(violations).toEqual([]);
     });
   });

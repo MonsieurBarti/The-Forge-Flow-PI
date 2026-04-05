@@ -1,13 +1,13 @@
 import { ok, type PersistenceError, type Result } from "@kernel";
 import type Database from "better-sqlite3";
 import { z } from "zod";
+import { CompletionRecord } from "../../../domain/aggregates/completion-record.aggregate";
+import { CompletionRecordRepositoryPort } from "../../../domain/ports/completion-record-repository.port";
 import {
   AuditReportSchema,
   CompletionOutcomeSchema,
   type CompletionRecordProps,
 } from "../../../domain/schemas/completion.schemas";
-import { CompletionRecord } from "../../../domain/aggregates/completion-record.aggregate";
-import { CompletionRecordRepositoryPort } from "../../../domain/ports/completion-record-repository.port";
 
 interface CompletionRecordRow {
   id: string;
@@ -120,9 +120,7 @@ export class SqliteCompletionRecordRepository extends CompletionRecordRepository
   }
 
   async findAll(): Promise<Result<CompletionRecord[], PersistenceError>> {
-    const rows = this.db
-      .prepare<[], CompletionRecordRow>("SELECT * FROM completion_records")
-      .all();
+    const rows = this.db.prepare<[], CompletionRecordRow>("SELECT * FROM completion_records").all();
     return ok(
       rows.map((row) => {
         const auditReports = z.array(AuditReportSchema).parse(JSON.parse(row.audit_reports));

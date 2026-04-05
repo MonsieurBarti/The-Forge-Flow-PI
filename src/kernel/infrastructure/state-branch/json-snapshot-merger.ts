@@ -12,32 +12,16 @@ export interface Snapshot {
   completionRecords?: SnapshotEntity[];
 }
 
-export function mergeSnapshots(
-  parent: Snapshot,
-  child: Snapshot,
-  sliceId: string,
-): Snapshot {
+export function mergeSnapshots(parent: Snapshot, child: Snapshot, sliceId: string): Snapshot {
   return {
     // project: parent always wins
     project: parent.project,
     // milestones: parent always wins
-    milestones: mergeById(
-      parent.milestones ?? [],
-      child.milestones ?? [],
-      () => false,
-    ),
+    milestones: mergeById(parent.milestones ?? [], child.milestones ?? [], () => false),
     // slices: child wins only for the owned slice
-    slices: mergeById(
-      parent.slices ?? [],
-      child.slices ?? [],
-      (entity) => entity.id === sliceId,
-    ),
+    slices: mergeById(parent.slices ?? [], child.slices ?? [], (entity) => entity.id === sliceId),
     // tasks: child wins only for tasks belonging to the owned slice
-    tasks: mergeById(
-      parent.tasks ?? [],
-      child.tasks ?? [],
-      (entity) => entity.sliceId === sliceId,
-    ),
+    tasks: mergeById(parent.tasks ?? [], child.tasks ?? [], (entity) => entity.sliceId === sliceId),
     // shipRecords: child wins for records matching owned slice
     shipRecords: mergeById(
       parent.shipRecords ?? [],

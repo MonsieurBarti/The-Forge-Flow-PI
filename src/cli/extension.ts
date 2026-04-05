@@ -4,57 +4,60 @@ import { join } from "node:path";
 import { ExecuteSliceUseCase } from "@hexagons/execution/application/execute-slice.use-case";
 import { GetSliceExecutorsUseCase } from "@hexagons/execution/application/get-slice-executors.use-case";
 import { ReplayJournalUseCase } from "@hexagons/execution/application/replay-journal.use-case";
-import { GitWorktreeAdapter } from "@kernel/infrastructure/worktree/git-worktree.adapter";
-import { JsonlJournalRepository } from "@hexagons/execution/infrastructure/repositories/journal/jsonl-journal.repository";
-import { MarkdownCheckpointRepository } from "@hexagons/execution/infrastructure/repositories/checkpoint/markdown-checkpoint.repository";
-import { JsonlMetricsRepository } from "@hexagons/execution/infrastructure/repositories/metrics/jsonl-metrics.repository";
-import { ComposableGuardrailAdapter } from "@hexagons/execution/infrastructure/adapters/guardrails/composable-guardrail.adapter";
-import { ComposableOverseerAdapter } from "@hexagons/execution/infrastructure/adapters/overseer/composable-overseer.adapter";
-import { ComposablePreDispatchAdapter } from "@hexagons/execution/infrastructure/adapters/pre-dispatch/composable-pre-dispatch.adapter";
-import { DefaultRetryPolicy } from "@hexagons/execution/infrastructure/policies/default-retry-policy";
-import { TimeoutStrategy } from "@hexagons/execution/infrastructure/policies/timeout-strategy";
 import { OverseerConfigSchema } from "@hexagons/execution/domain/overseer.schemas";
-import { DangerousCommandRule } from "@hexagons/execution/infrastructure/adapters/guardrails/rules/dangerous-command.rule";
+import { PiAgentDispatchAdapter } from "@hexagons/execution/infrastructure/adapters/agent-dispatch/pi-agent-dispatch.adapter";
+import { MarkdownExecutionSessionAdapter } from "@hexagons/execution/infrastructure/adapters/execution-session/markdown-execution-session.adapter";
+import { ComposableGuardrailAdapter } from "@hexagons/execution/infrastructure/adapters/guardrails/composable-guardrail.adapter";
 import { CredentialExposureRule } from "@hexagons/execution/infrastructure/adapters/guardrails/rules/credential-exposure.rule";
+import { DangerousCommandRule } from "@hexagons/execution/infrastructure/adapters/guardrails/rules/dangerous-command.rule";
 import { DestructiveGitRule } from "@hexagons/execution/infrastructure/adapters/guardrails/rules/destructive-git.rule";
 import { FileScopeRule } from "@hexagons/execution/infrastructure/adapters/guardrails/rules/file-scope.rule";
 import { SuspiciousContentRule } from "@hexagons/execution/infrastructure/adapters/guardrails/rules/suspicious-content.rule";
-import { ScopeContainmentRule } from "@hexagons/execution/infrastructure/adapters/pre-dispatch/rules/scope-containment.rule";
-import { DependencyCheckRule } from "@hexagons/execution/infrastructure/adapters/pre-dispatch/rules/dependency-check.rule";
-import { ToolPolicyRule } from "@hexagons/execution/infrastructure/adapters/pre-dispatch/rules/tool-policy.rule";
-import { WorktreeStateRule, type WorktreeStateGitOps } from "@hexagons/execution/infrastructure/adapters/pre-dispatch/rules/worktree-state.rule";
-import { BudgetCheckRule } from "@hexagons/execution/infrastructure/adapters/pre-dispatch/rules/budget-check.rule";
-import { MarkdownExecutionSessionAdapter } from "@hexagons/execution/infrastructure/adapters/execution-session/markdown-execution-session.adapter";
-import { registerExecutionExtension } from "@hexagons/execution/infrastructure/pi/execution.extension";
-import { PiAgentDispatchAdapter } from "@hexagons/execution/infrastructure/adapters/agent-dispatch/pi-agent-dispatch.adapter";
+import { ComposableOverseerAdapter } from "@hexagons/execution/infrastructure/adapters/overseer/composable-overseer.adapter";
 import { ProcessSignalPauseAdapter } from "@hexagons/execution/infrastructure/adapters/pause-signal/process-signal-pause.adapter";
+import { ComposablePreDispatchAdapter } from "@hexagons/execution/infrastructure/adapters/pre-dispatch/composable-pre-dispatch.adapter";
+import { BudgetCheckRule } from "@hexagons/execution/infrastructure/adapters/pre-dispatch/rules/budget-check.rule";
+import { DependencyCheckRule } from "@hexagons/execution/infrastructure/adapters/pre-dispatch/rules/dependency-check.rule";
+import { ScopeContainmentRule } from "@hexagons/execution/infrastructure/adapters/pre-dispatch/rules/scope-containment.rule";
+import { ToolPolicyRule } from "@hexagons/execution/infrastructure/adapters/pre-dispatch/rules/tool-policy.rule";
+import {
+  type WorktreeStateGitOps,
+  WorktreeStateRule,
+} from "@hexagons/execution/infrastructure/adapters/pre-dispatch/rules/worktree-state.rule";
+import { registerExecutionExtension } from "@hexagons/execution/infrastructure/pi/execution.extension";
+import { DefaultRetryPolicy } from "@hexagons/execution/infrastructure/policies/default-retry-policy";
+import { TimeoutStrategy } from "@hexagons/execution/infrastructure/policies/timeout-strategy";
+import { MarkdownCheckpointRepository } from "@hexagons/execution/infrastructure/repositories/checkpoint/markdown-checkpoint.repository";
+import { JsonlJournalRepository } from "@hexagons/execution/infrastructure/repositories/journal/jsonl-journal.repository";
+import { JsonlMetricsRepository } from "@hexagons/execution/infrastructure/repositories/metrics/jsonl-metrics.repository";
 import { SqliteMilestoneRepository } from "@hexagons/milestone/infrastructure/sqlite-milestone.repository";
 import { registerProjectExtension } from "@hexagons/project";
-import { SqliteProjectRepository } from "@hexagons/project/infrastructure/sqlite-project.repository";
 import { NodeProjectFileSystemAdapter } from "@hexagons/project/infrastructure/node-project-filesystem.adapter";
+import { SqliteProjectRepository } from "@hexagons/project/infrastructure/sqlite-project.repository";
 import { CompleteMilestoneUseCase } from "@hexagons/review/application/complete-milestone.use-case";
 import { ConductReviewUseCase } from "@hexagons/review/application/conduct-review.use-case";
 import { ReviewPromptBuilder } from "@hexagons/review/application/review-prompt-builder";
 import { ShipSliceUseCase } from "@hexagons/review/application/ship-slice.use-case";
 import { VerifyAcceptanceCriteriaUseCase } from "@hexagons/review/application/verify-acceptance-criteria.use-case";
+import { ExecutorQueryError } from "@hexagons/review/domain/errors/executor-query.error";
 import { CritiqueReflectionService } from "@hexagons/review/domain/services/critique-reflection.service";
 import { FreshReviewerService } from "@hexagons/review/domain/services/fresh-reviewer.service";
-import { BeadSliceSpecAdapter } from "@hexagons/review/infrastructure/adapters/slice-spec/bead-slice-spec.adapter";
-import { CachedExecutorQueryAdapter } from "@hexagons/review/infrastructure/adapters/executor-query/cached-executor-query.adapter";
-import { ExecutorQueryError } from "@hexagons/review/domain/errors/executor-query.error";
-import { GitChangedFilesAdapter } from "@hexagons/review/infrastructure/adapters/changed-files/git-changed-files.adapter";
-import { SqliteReviewRepository } from "@hexagons/review/infrastructure/repositories/review/sqlite-review.repository";
-import { SqliteVerificationRepository } from "@hexagons/review/infrastructure/repositories/verification/sqlite-verification.repository";
-import { MilestoneQueryAdapter } from "@hexagons/review/infrastructure/adapters/milestone/milestone-query.adapter";
-import { MilestoneTransitionAdapter } from "@hexagons/review/infrastructure/adapters/milestone/milestone-transition.adapter";
 import { PiAuditAdapter } from "@hexagons/review/infrastructure/adapters/audit/pi-audit.adapter";
+import { GitChangedFilesAdapter } from "@hexagons/review/infrastructure/adapters/changed-files/git-changed-files.adapter";
+import { CachedExecutorQueryAdapter } from "@hexagons/review/infrastructure/adapters/executor-query/cached-executor-query.adapter";
 import { PiFixerAdapter } from "@hexagons/review/infrastructure/adapters/fixer/pi-fixer.adapter";
 import { PiMergeGateAdapter } from "@hexagons/review/infrastructure/adapters/merge-gate/pi-merge-gate.adapter";
+import { MilestoneQueryAdapter } from "@hexagons/review/infrastructure/adapters/milestone/milestone-query.adapter";
+import { MilestoneTransitionAdapter } from "@hexagons/review/infrastructure/adapters/milestone/milestone-transition.adapter";
 import { PlannotatorReviewUIAdapter } from "@hexagons/review/infrastructure/adapters/review-ui/plannotator-review-ui.adapter";
-import { SqliteCompletionRecordRepository } from "@hexagons/review/infrastructure/repositories/completion-record/sqlite-completion-record.repository";
-import { SqliteShipRecordRepository } from "@hexagons/review/infrastructure/repositories/ship-record/sqlite-ship-record.repository";
 import { TerminalReviewUIAdapter } from "@hexagons/review/infrastructure/adapters/review-ui/terminal-review-ui.adapter";
+import { BeadSliceSpecAdapter } from "@hexagons/review/infrastructure/adapters/slice-spec/bead-slice-spec.adapter";
+import { SqliteCompletionRecordRepository } from "@hexagons/review/infrastructure/repositories/completion-record/sqlite-completion-record.repository";
+import { SqliteReviewRepository } from "@hexagons/review/infrastructure/repositories/review/sqlite-review.repository";
+import { SqliteShipRecordRepository } from "@hexagons/review/infrastructure/repositories/ship-record/sqlite-ship-record.repository";
+import { SqliteVerificationRepository } from "@hexagons/review/infrastructure/repositories/verification/sqlite-verification.repository";
 import { HOTKEYS_DEFAULTS, MergeSettingsUseCase } from "@hexagons/settings";
+import { AlwaysUnderBudgetAdapter } from "@hexagons/settings/infrastructure/always-under-budget.adapter";
 import { SqliteSliceRepository } from "@hexagons/slice/infrastructure/sqlite-slice.repository";
 import { WorkflowSliceTransitionAdapter } from "@hexagons/slice/infrastructure/workflow-slice-transition.adapter";
 import { CreateTasksUseCase } from "@hexagons/task/application/create-tasks.use-case";
@@ -63,14 +66,11 @@ import { SqliteTaskRepository } from "@hexagons/task/infrastructure/sqlite-task.
 import {
   DefaultContextStagingAdapter,
   JsonlWorkflowJournalRepository,
+  registerWorkflowExtension,
   SettingsModelProfileResolver,
   SqliteWorkflowSessionRepository,
-  registerWorkflowExtension,
 } from "@hexagons/workflow";
 import { NodeArtifactFileAdapter } from "@hexagons/workflow/infrastructure/node-artifact-file.adapter";
-import { AlwaysUnderBudgetAdapter } from "@hexagons/settings/infrastructure/always-under-budget.adapter";
-import { OverlayDataAdapter } from "./infrastructure/overlay-data.adapter";
-import { registerOverlayExtension } from "./overlay.extension";
 import type { ExtensionAPI } from "@infrastructure/pi";
 import type { Result } from "@kernel";
 import {
@@ -89,25 +89,28 @@ import {
 } from "@kernel";
 import { GhCliAdapter } from "@kernel/infrastructure/gh-cli.adapter";
 import { GitHookAdapter } from "@kernel/infrastructure/git-hook/git-hook.adapter";
+import { AdvisoryLock } from "@kernel/infrastructure/state-branch/advisory-lock";
 import { GitStateBranchOpsAdapter } from "@kernel/infrastructure/state-branch/git-state-branch-ops.adapter";
 import { GitStateSyncAdapter } from "@kernel/infrastructure/state-branch/git-state-sync.adapter";
-import { AdvisoryLock } from "@kernel/infrastructure/state-branch/advisory-lock";
 import { StateBranchCreationHandler } from "@kernel/infrastructure/state-branch/state-branch-creation.handler";
-import { BackupService } from "@kernel/services/backup-service";
-import { RestoreStateUseCase } from "@kernel/services/restore-state.use-case";
-import { HealthCheckService } from "@kernel/services/health-check.service";
-import { StateGuard } from "@kernel/services/state-guard";
-import { ForceSyncUseCase } from "@kernel/services/force-sync.use-case";
-import { StateRecoveryAdapter } from "@kernel/infrastructure/state-recovery/state-recovery.adapter";
 import { CrashRecoveryStrategy } from "@kernel/infrastructure/state-recovery/crash-recovery.strategy";
+import { FreshCloneStrategy } from "@kernel/infrastructure/state-recovery/fresh-clone.strategy";
 import { MismatchRecoveryStrategy } from "@kernel/infrastructure/state-recovery/mismatch-recovery.strategy";
 import { RenameRecoveryStrategy } from "@kernel/infrastructure/state-recovery/rename-recovery.strategy";
-import { FreshCloneStrategy } from "@kernel/infrastructure/state-recovery/fresh-clone.strategy";
-import type { RecoveryType } from "@kernel/schemas/recovery.schemas";
+import { StateRecoveryAdapter } from "@kernel/infrastructure/state-recovery/state-recovery.adapter";
+import { GitWorktreeAdapter } from "@kernel/infrastructure/worktree/git-worktree.adapter";
 import type { RecoveryStrategy } from "@kernel/ports/recovery-strategy";
+import type { RecoveryType } from "@kernel/schemas/recovery.schemas";
+import { BackupService } from "@kernel/services/backup-service";
+import { ForceSyncUseCase } from "@kernel/services/force-sync.use-case";
+import { HealthCheckService } from "@kernel/services/health-check.service";
+import { RestoreStateUseCase } from "@kernel/services/restore-state.use-case";
 import { StateExporter } from "@kernel/services/state-exporter";
+import { StateGuard } from "@kernel/services/state-guard";
 import { StateImporter } from "@kernel/services/state-importer";
 import Database from "better-sqlite3";
+import { OverlayDataAdapter } from "./infrastructure/overlay-data.adapter";
+import { registerOverlayExtension } from "./overlay.extension";
 
 function detectPlannotator(): string | undefined {
   try {
@@ -188,15 +191,12 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
 
   // --- Execution extension ---
   const journalRepo = new JsonlJournalRepository(join(rootTffDir, "journal"));
-  const checkpointRepo = new MarkdownCheckpointRepository(
-    options.projectRoot,
-    async (sliceId) => {
-      if (await worktreeAdapter.exists(sliceId)) {
-        return { ok: true as const, data: join(".tff", "worktrees", sliceId) };
-      }
-      return err(new PersistenceError(`No worktree for slice: ${sliceId}`));
-    },
-  );
+  const checkpointRepo = new MarkdownCheckpointRepository(options.projectRoot, async (sliceId) => {
+    if (await worktreeAdapter.exists(sliceId)) {
+      return { ok: true as const, data: join(".tff", "worktrees", sliceId) };
+    }
+    return err(new PersistenceError(`No worktree for slice: ${sliceId}`));
+  });
   const resolveSlicePath = async (sliceId: string): Promise<Result<string, PersistenceError>> => {
     if (await worktreeAdapter.exists(sliceId)) {
       return { ok: true as const, data: join(".tff", "worktrees", sliceId) };
@@ -210,7 +210,13 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const metricsRepo = new JsonlMetricsRepository(join(rootTffDir, "metrics.jsonl"));
   const overseerConfig = OverseerConfigSchema.parse({});
   const guardrail = new ComposableGuardrailAdapter(
-    [new DangerousCommandRule(), new CredentialExposureRule(), new DestructiveGitRule(), new FileScopeRule(), new SuspiciousContentRule()],
+    [
+      new DangerousCommandRule(),
+      new CredentialExposureRule(),
+      new DestructiveGitRule(),
+      new FileScopeRule(),
+      new SuspiciousContentRule(),
+    ],
     new Map(),
     gitPort,
   );
@@ -224,10 +230,16 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     },
   };
   const preDispatchGuardrail = new ComposablePreDispatchAdapter([
-    new ScopeContainmentRule(), new DependencyCheckRule(), new ToolPolicyRule(),
-    new WorktreeStateRule(worktreeStateGitOps), new BudgetCheckRule(),
+    new ScopeContainmentRule(),
+    new DependencyCheckRule(),
+    new ToolPolicyRule(),
+    new WorktreeStateRule(worktreeStateGitOps),
+    new BudgetCheckRule(),
   ]);
-  const executeProtocol = readFileSync(join(options.projectRoot, "src/resources/protocols/execute.md"), "utf-8");
+  const executeProtocol = readFileSync(
+    join(options.projectRoot, "src/resources/protocols/execute.md"),
+    "utf-8",
+  );
 
   const executeSlice = new ExecuteSliceUseCase({
     taskRepository: taskRepo,
@@ -265,13 +277,12 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   // --- Review pipeline wiring ---
   const reviewRepository = new SqliteReviewRepository(stateDb);
   const getSliceExecutors = new GetSliceExecutorsUseCase(checkpointRepo);
-  const executorQueryAdapter = new CachedExecutorQueryAdapter(
-    async (sliceId) => {
-      const result = await getSliceExecutors.execute(sliceId);
-      if (!result.ok) return { ok: false as const, error: new ExecutorQueryError(result.error.message) };
-      return result;
-    },
-  );
+  const executorQueryAdapter = new CachedExecutorQueryAdapter(async (sliceId) => {
+    const result = await getSliceExecutors.execute(sliceId);
+    if (!result.ok)
+      return { ok: false as const, error: new ExecutorQueryError(result.error.message) };
+    return result;
+  });
   const freshReviewerService = new FreshReviewerService(executorQueryAdapter);
   const critiqueReflectionService = new CritiqueReflectionService();
   const reviewPromptBuilder = new ReviewPromptBuilder(templateLoader);
@@ -473,12 +484,26 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   });
 
   const strategies = new Map<RecoveryType, RecoveryStrategy>([
-    ['crash', new CrashRecoveryStrategy(backupService, stateBranchOps, restoreUseCase)],
-    ['mismatch', new MismatchRecoveryStrategy(restoreUseCase)],
-    ['rename', new RenameRecoveryStrategy(stateBranchOps)],
-    ['fresh-clone', new FreshCloneStrategy(backupService, stateBranchOps, restoreUseCase, healthCheckService, options.projectRoot)],
+    ["crash", new CrashRecoveryStrategy(backupService, stateBranchOps, restoreUseCase)],
+    ["mismatch", new MismatchRecoveryStrategy(restoreUseCase)],
+    ["rename", new RenameRecoveryStrategy(stateBranchOps)],
+    [
+      "fresh-clone",
+      new FreshCloneStrategy(
+        backupService,
+        stateBranchOps,
+        restoreUseCase,
+        healthCheckService,
+        options.projectRoot,
+      ),
+    ],
   ]);
-  const stateRecoveryAdapter = new StateRecoveryAdapter(strategies, gitPort, stateBranchOps, options.projectRoot);
+  const stateRecoveryAdapter = new StateRecoveryAdapter(
+    strategies,
+    gitPort,
+    stateBranchOps,
+    options.projectRoot,
+  );
   const stateGuard = new StateGuard(stateRecoveryAdapter, healthCheckService, logger);
 
   const forceSyncUseCase = new ForceSyncUseCase(gitStateSyncAdapter, restoreUseCase, gitPort);
@@ -504,8 +529,12 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   });
 
   const settingsResolver = new SettingsModelProfileResolver(new MergeSettingsUseCase());
-  const contextStaging = new DefaultContextStagingAdapter({ modelProfileResolver: settingsResolver });
-  const workflowJournal = new JsonlWorkflowJournalRepository(join(rootTffDir, "workflow-journal.jsonl"));
+  const contextStaging = new DefaultContextStagingAdapter({
+    modelProfileResolver: settingsResolver,
+  });
+  const workflowJournal = new JsonlWorkflowJournalRepository(
+    join(rootTffDir, "workflow-journal.jsonl"),
+  );
 
   registerWorkflowExtension(api, {
     projectRepo,
@@ -539,14 +568,18 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
       const isPull = args.trim() === "--pull";
       if (isPull) {
         const pullResult = await forceSyncUseCase.pull(rootTffDir);
-        api.sendUserMessage(pullResult.ok
-          ? `Pulled state from state branch (${pullResult.data.filesRestored} files restored)`
-          : `Pull failed: ${pullResult.error.message}`);
+        api.sendUserMessage(
+          pullResult.ok
+            ? `Pulled state from state branch (${pullResult.data.filesRestored} files restored)`
+            : `Pull failed: ${pullResult.error.message}`,
+        );
       } else {
         const pushResult = await forceSyncUseCase.push(rootTffDir);
-        api.sendUserMessage(pushResult.ok
-          ? "State pushed to state branch"
-          : `Push failed: ${pushResult.error.message}`);
+        api.sendUserMessage(
+          pushResult.ok
+            ? "State pushed to state branch"
+            : `Push failed: ${pushResult.error.message}`,
+        );
       }
     },
   });

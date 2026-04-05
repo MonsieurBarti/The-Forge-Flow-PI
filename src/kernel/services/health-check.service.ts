@@ -1,10 +1,10 @@
+import { appendFileSync, existsSync, readFileSync, unlinkSync } from "node:fs";
+import { join } from "node:path";
+import type { GitPort } from "@kernel/ports/git.port";
 import type { GitHookPort } from "@kernel/ports/git-hook.port";
 import type { StateBranchOpsPort } from "@kernel/ports/state-branch-ops.port";
-import type { GitPort } from "@kernel/ports/git.port";
 import type { Result } from "@kernel/result";
-import { ok, err } from "@kernel/result";
-import { existsSync, readFileSync, readdirSync, unlinkSync, appendFileSync } from "node:fs";
-import { join } from "node:path";
+import { err, ok } from "@kernel/result";
 
 export interface HealthCheckDeps {
   gitHookPort: GitHookPort;
@@ -47,7 +47,7 @@ export class HealthCheckService {
     if (!lines.some((l) => l.trim() === ".tff.backup.*")) missing.push(".tff.backup.*");
 
     if (missing.length > 0) {
-      const suffix = (content.endsWith("\n") ? "" : "\n") + missing.join("\n") + "\n";
+      const suffix = `${(content.endsWith("\n") ? "" : "\n") + missing.join("\n")}\n`;
       appendFileSync(gitignorePath, suffix);
       return ok(`.gitignore: added ${missing.join(", ")}`);
     }
@@ -92,9 +92,7 @@ export class HealthCheckService {
     const stateBranch = `tff-state/${branchResult.data}`;
     const existsResult = await this.deps.stateBranchOps.branchExists(stateBranch);
     if (existsResult.ok && existsResult.data) {
-      return ok([
-        `State branch ${stateBranch} exists but no branch-meta.json — restore needed`,
-      ]);
+      return ok([`State branch ${stateBranch} exists but no branch-meta.json — restore needed`]);
     }
 
     return ok([]);

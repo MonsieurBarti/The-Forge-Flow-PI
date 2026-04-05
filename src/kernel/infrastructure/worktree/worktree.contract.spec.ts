@@ -1,10 +1,10 @@
-import { mkdirSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { isOk } from "@kernel/result";
 import type { BranchMeta } from "@kernel/infrastructure/state-branch/state-snapshot.schemas";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type { WorktreePort } from "@kernel/ports/worktree.port";
+import { isOk } from "@kernel/result";
+import { beforeEach, describe, expect, it } from "vitest";
 
 export function runWorktreeContractTests(
   name: string,
@@ -100,7 +100,10 @@ export function runWorktreeContractTests(
       await adapter.create("M04-S04", "milestone/M04");
       // Create a real source dir with a settings.yaml for the copy
       const sourceDir = mkdtempSync(join(tmpdir(), "tff-init-ws-"));
-      writeFileSync(join(sourceDir, "settings.yaml"), "model-profiles:\n  quality:\n    model: opus\n");
+      writeFileSync(
+        join(sourceDir, "settings.yaml"),
+        "model-profiles:\n  quality:\n    model: opus\n",
+      );
       mkdirSync(join(sourceDir, "milestones"), { recursive: true });
 
       const meta: BranchMeta = {

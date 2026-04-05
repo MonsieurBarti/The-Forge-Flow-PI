@@ -1,5 +1,5 @@
-import { type ExecFileException } from "node:child_process";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import type { ExecFileException } from "node:child_process";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("node:child_process", async (importOriginal) => {
   const original = await importOriginal<typeof import("node:child_process")>();
@@ -27,7 +27,7 @@ vi.mock("node:crypto", async (importOriginal) => {
 });
 
 import { execFile } from "node:child_process";
-import { writeFile, mkdir } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { GitStateBranchOpsAdapter } from "./git-state-branch-ops.adapter";
 
 const mockExecFile = execFile as unknown as ReturnType<typeof vi.fn>;
@@ -36,7 +36,12 @@ const mockMkdir = mkdir as unknown as ReturnType<typeof vi.fn>;
 
 function mockSuccess(stdout = ""): void {
   mockExecFile.mockImplementationOnce(
-    (_cmd: string, _args: string[], _opts: unknown, cb: (err: null, stdout: string, stderr: string) => void) => {
+    (
+      _cmd: string,
+      _args: string[],
+      _opts: unknown,
+      cb: (err: null, stdout: string, stderr: string) => void,
+    ) => {
       cb(null, stdout, "");
     },
   );
@@ -46,7 +51,12 @@ function mockFailure(stderr: string, code = 1): void {
   const error = new Error("Command failed") as ExecFileException;
   error.code = code as unknown as string;
   mockExecFile.mockImplementationOnce(
-    (_cmd: string, _args: string[], _opts: unknown, cb: (err: ExecFileException, stdout: string, stderr: string) => void) => {
+    (
+      _cmd: string,
+      _args: string[],
+      _opts: unknown,
+      cb: (err: ExecFileException, stdout: string, stderr: string) => void,
+    ) => {
       cb(error, "", stderr);
     },
   );
@@ -209,7 +219,10 @@ describe("GitStateBranchOpsAdapter", () => {
       expect(calls[0][1]).toContain("add");
 
       const addCall = calls.find(
-        (c: unknown[]) => Array.isArray(c[1]) && (c[1] as string[]).includes("add") && (c[1] as string[]).includes("-A"),
+        (c: unknown[]) =>
+          Array.isArray(c[1]) &&
+          (c[1] as string[]).includes("add") &&
+          (c[1] as string[]).includes("-A"),
       );
       expect(addCall).toBeDefined();
 

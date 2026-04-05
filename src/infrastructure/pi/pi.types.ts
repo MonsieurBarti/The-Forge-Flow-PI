@@ -5,6 +5,14 @@
  * resolves to real SDK types at compilation. No hand-written replicas.
  */
 
+// AI types from pi-ai
+export type {
+  Api,
+  KnownProvider,
+  Model,
+  Provider,
+  Usage,
+} from "@mariozechner/pi-ai";
 // Extension types from pi-coding-agent (originally from pi-agent-core)
 export type {
   AgentToolResult,
@@ -14,15 +22,6 @@ export type {
   RegisteredCommand,
   ToolDefinition,
 } from "@mariozechner/pi-coding-agent";
-
-// AI types from pi-ai
-export type {
-  Api,
-  KnownProvider,
-  Model,
-  Provider,
-  Usage,
-} from "@mariozechner/pi-ai";
 
 // Convenience alias — pi-coding-agent's registerCommand accepts this shape
 export type RegisterCommandOptions = Omit<

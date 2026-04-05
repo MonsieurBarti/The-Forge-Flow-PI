@@ -1,19 +1,19 @@
+import { MilestoneBuilder } from "@hexagons/milestone/domain/milestone.builder";
+import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/in-memory-milestone.repository";
+import { ProjectBuilder } from "@hexagons/project/domain/project.builder";
+import { InMemoryProjectRepository } from "@hexagons/project/infrastructure/in-memory-project.repository";
+import { Verification } from "@hexagons/review/domain/aggregates/verification.aggregate";
+import { ReviewBuilder } from "@hexagons/review/domain/builders/review.builder";
 import { InMemoryCompletionRecordRepository } from "@hexagons/review/infrastructure/repositories/completion-record/in-memory-completion-record.repository";
 import { InMemoryReviewRepository } from "@hexagons/review/infrastructure/repositories/review/in-memory-review.repository";
 import { InMemoryShipRecordRepository } from "@hexagons/review/infrastructure/repositories/ship-record/in-memory-ship-record.repository";
 import { InMemoryVerificationRepository } from "@hexagons/review/infrastructure/repositories/verification/in-memory-verification.repository";
-import { ReviewBuilder } from "@hexagons/review/domain/builders/review.builder";
-import { Verification } from "@hexagons/review/domain/aggregates/verification.aggregate";
-import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/in-memory-milestone.repository";
-import { InMemoryProjectRepository } from "@hexagons/project/infrastructure/in-memory-project.repository";
-import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
-import { InMemoryTaskRepository } from "@hexagons/task/infrastructure/in-memory-task.repository";
-import { InMemoryWorkflowSessionRepository } from "@hexagons/workflow/infrastructure/in-memory-workflow-session.repository";
-import { WorkflowSessionBuilder } from "@hexagons/workflow/domain/workflow-session.builder";
-import { MilestoneBuilder } from "@hexagons/milestone/domain/milestone.builder";
-import { ProjectBuilder } from "@hexagons/project/domain/project.builder";
 import { SliceBuilder } from "@hexagons/slice/domain/slice.builder";
+import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
 import { TaskBuilder } from "@hexagons/task/domain/task.builder";
+import { InMemoryTaskRepository } from "@hexagons/task/infrastructure/in-memory-task.repository";
+import { WorkflowSessionBuilder } from "@hexagons/workflow/domain/workflow-session.builder";
+import { InMemoryWorkflowSessionRepository } from "@hexagons/workflow/infrastructure/in-memory-workflow-session.repository";
 import { SCHEMA_VERSION } from "@kernel/infrastructure/state-branch/state-snapshot.schemas";
 import { describe, expect, it } from "vitest";
 import { StateExporter } from "./state-exporter";
@@ -47,8 +47,12 @@ describe("StateImporter", () => {
       version: SCHEMA_VERSION,
       exportedAt: new Date().toISOString(),
       project: new ProjectBuilder().withId(pId).buildProps(),
-      milestones: [new MilestoneBuilder().withId(mId).withProjectId(pId).withLabel("M01").buildProps()],
-      slices: [new SliceBuilder().withId(sId).withMilestoneId(mId).withLabel("M01-S01").buildProps()],
+      milestones: [
+        new MilestoneBuilder().withId(mId).withProjectId(pId).withLabel("M01").buildProps(),
+      ],
+      slices: [
+        new SliceBuilder().withId(sId).withMilestoneId(mId).withLabel("M01-S01").buildProps(),
+      ],
       tasks: [new TaskBuilder().withId(tId).withSliceId(sId).withLabel("T01").buildProps()],
       shipRecords: [],
       completionRecords: [],

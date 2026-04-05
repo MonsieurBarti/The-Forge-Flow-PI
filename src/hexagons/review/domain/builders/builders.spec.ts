@@ -1,8 +1,8 @@
 import { faker } from "@faker-js/faker";
 import { describe, expect, it } from "vitest";
+import { FindingPropsSchema, ReviewPropsSchema } from "../schemas/review.schemas";
 import { FindingBuilder } from "./finding.builder";
 import { ReviewBuilder } from "./review.builder";
-import { FindingPropsSchema, ReviewPropsSchema } from "../schemas/review.schemas";
 
 describe("FindingBuilder", () => {
   it("produces schema-conformant data (AC18)", () => {

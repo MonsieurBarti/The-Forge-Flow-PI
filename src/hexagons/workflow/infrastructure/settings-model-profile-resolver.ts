@@ -1,5 +1,5 @@
-import type { ComplexityTier, ModelProfileName } from "@kernel";
 import type { MergeSettingsUseCase } from "@hexagons/settings";
+import type { ComplexityTier, ModelProfileName } from "@kernel";
 import { ModelProfileResolverPort } from "../domain/ports/model-profile-resolver.port";
 import type { WorkflowPhase } from "../domain/workflow-session.schemas";
 

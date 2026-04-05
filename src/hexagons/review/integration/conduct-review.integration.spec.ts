@@ -18,17 +18,17 @@ import type { Result } from "@kernel/result";
 import { describe, expect, it } from "vitest";
 import { ConductReviewUseCase } from "../application/conduct-review.use-case";
 import { ReviewPromptBuilder } from "../application/review-prompt-builder";
-import type { ConductReviewRequest } from "../domain/schemas/conduct-review.schemas";
 import { ReviewPipelineCompletedEvent } from "../domain/events/review-pipeline-completed.event";
 import { ChangedFilesPort } from "../domain/ports/changed-files.port";
 import { ExecutorQueryPort } from "../domain/ports/executor-query.port";
 import type { FixerPort } from "../domain/ports/fixer.port";
 import { type SliceSpec, SliceSpecPort } from "../domain/ports/slice-spec.port";
+import type { ConductReviewRequest } from "../domain/schemas/conduct-review.schemas";
 import type { FindingProps } from "../domain/schemas/review.schemas";
 import { CritiqueReflectionService } from "../domain/services/critique-reflection.service";
 import { FreshReviewerService } from "../domain/services/fresh-reviewer.service";
-import { InMemoryReviewRepository } from "../infrastructure/repositories/review/in-memory-review.repository";
 import { StubFixerAdapter } from "../infrastructure/adapters/fixer/stub-fixer.adapter";
+import { InMemoryReviewRepository } from "../infrastructure/repositories/review/in-memory-review.repository";
 
 // ---------------------------------------------------------------------------
 // Constants

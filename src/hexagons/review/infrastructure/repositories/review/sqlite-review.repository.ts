@@ -1,8 +1,7 @@
 import { type Id, ok, type PersistenceError, type Result } from "@kernel";
 import type Database from "better-sqlite3";
-
-import { ReviewRepositoryPort } from "../../../domain/ports/review-repository.port";
 import { Review } from "../../../domain/aggregates/review.aggregate";
+import { ReviewRepositoryPort } from "../../../domain/ports/review-repository.port";
 import {
   type FindingProps,
   type ReviewProps,
@@ -61,9 +60,7 @@ export class SqliteReviewRepository extends ReviewRepositoryPort {
   }
 
   async findById(id: Id): Promise<Result<Review | null, PersistenceError>> {
-    const row = this.db
-      .prepare<[string], ReviewRow>("SELECT * FROM reviews WHERE id = ?")
-      .get(id);
+    const row = this.db.prepare<[string], ReviewRow>("SELECT * FROM reviews WHERE id = ?").get(id);
     if (!row) return ok(null);
     return ok(Review.reconstitute(this.toProps(row)));
   }

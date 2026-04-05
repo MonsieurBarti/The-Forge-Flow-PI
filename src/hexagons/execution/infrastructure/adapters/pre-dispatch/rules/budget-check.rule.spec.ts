@@ -21,10 +21,12 @@ describe("BudgetCheckRule", () => {
   const rule = new BudgetCheckRule();
 
   it("returns warning when budgetRemaining < budgetEstimated", async () => {
-    const violations = await rule.evaluate(makeContext({
-      budgetRemaining: 5,
-      budgetEstimated: 10,
-    }));
+    const violations = await rule.evaluate(
+      makeContext({
+        budgetRemaining: 5,
+        budgetEstimated: 10,
+      }),
+    );
     expect(violations).toHaveLength(1);
     expect(violations[0].ruleId).toBe("budget-check");
     expect(violations[0].severity).toBe("warning");
@@ -33,26 +35,32 @@ describe("BudgetCheckRule", () => {
   });
 
   it("returns empty when budgetRemaining >= budgetEstimated", async () => {
-    const violations = await rule.evaluate(makeContext({
-      budgetRemaining: 10,
-      budgetEstimated: 5,
-    }));
+    const violations = await rule.evaluate(
+      makeContext({
+        budgetRemaining: 10,
+        budgetEstimated: 5,
+      }),
+    );
     expect(violations).toEqual([]);
   });
 
   it("returns empty when budgetRemaining is undefined", async () => {
-    const violations = await rule.evaluate(makeContext({
-      budgetRemaining: undefined,
-      budgetEstimated: 10,
-    }));
+    const violations = await rule.evaluate(
+      makeContext({
+        budgetRemaining: undefined,
+        budgetEstimated: 10,
+      }),
+    );
     expect(violations).toEqual([]);
   });
 
   it("returns empty when budgetEstimated is undefined", async () => {
-    const violations = await rule.evaluate(makeContext({
-      budgetRemaining: 10,
-      budgetEstimated: undefined,
-    }));
+    const violations = await rule.evaluate(
+      makeContext({
+        budgetRemaining: 10,
+        budgetEstimated: undefined,
+      }),
+    );
     expect(violations).toEqual([]);
   });
 });

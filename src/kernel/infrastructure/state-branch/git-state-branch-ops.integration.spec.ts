@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { execFileSync } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { GitStateBranchOpsAdapter } from "./git-state-branch-ops.adapter";
 import { isOk } from "@kernel/result";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { GitStateBranchOpsAdapter } from "./git-state-branch-ops.adapter";
 
 let tmpDir: string;
 let adapter: GitStateBranchOpsAdapter;

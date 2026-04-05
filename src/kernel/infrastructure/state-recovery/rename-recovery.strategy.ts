@@ -2,11 +2,15 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { SyncError } from "@kernel/errors";
-import { ok, err, type Result } from "@kernel/result";
-import type { StateBranchOpsPort } from "@kernel/ports/state-branch-ops.port";
 import type { RecoveryStrategy } from "@kernel/ports/recovery-strategy";
-import type { RecoveryScenario, RecoveryReport, RecoveryType } from "@kernel/schemas/recovery.schemas";
+import type { StateBranchOpsPort } from "@kernel/ports/state-branch-ops.port";
+import { err, ok, type Result } from "@kernel/result";
 import type { BranchMeta } from "@kernel/schemas/branch-meta.schemas";
+import type {
+  RecoveryReport,
+  RecoveryScenario,
+  RecoveryType,
+} from "@kernel/schemas/recovery.schemas";
 
 export class RenameRecoveryStrategy implements RecoveryStrategy {
   readonly handles: RecoveryType = "rename";
@@ -25,7 +29,12 @@ export class RenameRecoveryStrategy implements RecoveryStrategy {
 
     const renameResult = await this.stateBranchOps.renameBranch(oldStateBranch, newStateBranch);
     if (!renameResult.ok) {
-      return err(new SyncError("RENAME_FAILED", `Failed to rename state branch: ${renameResult.error.message}`));
+      return err(
+        new SyncError(
+          "RENAME_FAILED",
+          `Failed to rename state branch: ${renameResult.error.message}`,
+        ),
+      );
     }
 
     const updatedMeta: BranchMeta = {

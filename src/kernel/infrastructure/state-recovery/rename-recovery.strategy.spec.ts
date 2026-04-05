@@ -1,13 +1,12 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
 import { GitError, SyncError } from "@kernel/errors";
-import { err, ok, type Result } from "@kernel/result";
 import type { StateBranchOpsPort } from "@kernel/ports/state-branch-ops.port";
-import type { RecoveryScenario } from "@kernel/schemas/recovery.schemas";
+import { err, ok, type Result } from "@kernel/result";
 import type { BranchMeta } from "@kernel/schemas/branch-meta.schemas";
+import type { RecoveryScenario } from "@kernel/schemas/recovery.schemas";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { RenameRecoveryStrategy } from "./rename-recovery.strategy";
 
 // ---------------------------------------------------------------------------
@@ -67,10 +66,16 @@ class StubStateBranchOpsPort implements StateBranchOpsPort {
   branchExists(_branchName: string): Promise<Result<boolean, GitError>> {
     return Promise.resolve(ok(false));
   }
-  syncToStateBranch(_stateBranch: string, _files: Map<string, string>): Promise<Result<string, GitError>> {
+  syncToStateBranch(
+    _stateBranch: string,
+    _files: Map<string, string>,
+  ): Promise<Result<string, GitError>> {
     return Promise.resolve(ok("abc123"));
   }
-  readFromStateBranch(_stateBranch: string, _path: string): Promise<Result<string | null, GitError>> {
+  readFromStateBranch(
+    _stateBranch: string,
+    _path: string,
+  ): Promise<Result<string | null, GitError>> {
     return Promise.resolve(ok(null));
   }
   readAllFromStateBranch(_stateBranch: string): Promise<Result<Map<string, string>, GitError>> {
@@ -107,7 +112,11 @@ describe("RenameRecoveryStrategy", () => {
 
   it("renames state branch, updates branch-meta.json, and returns action='renamed'", async () => {
     // Write branch-meta.json so the strategy can read it
-    writeFileSync(join(tffDir, "branch-meta.json"), JSON.stringify(VALID_BRANCH_META, null, 2), "utf-8");
+    writeFileSync(
+      join(tffDir, "branch-meta.json"),
+      JSON.stringify(VALID_BRANCH_META, null, 2),
+      "utf-8",
+    );
 
     const scenario = makeRenameScenario();
     const result = await strategy.execute(scenario, tffDir);
@@ -127,17 +136,21 @@ describe("RenameRecoveryStrategy", () => {
     });
 
     // branch-meta.json was updated on disk
-    const updated = JSON.parse(readFileSync(join(tffDir, "branch-meta.json"), "utf-8")) as BranchMeta;
+    const updated = JSON.parse(
+      readFileSync(join(tffDir, "branch-meta.json"), "utf-8"),
+    ) as BranchMeta;
     expect(updated.codeBranch).toBe("new-branch");
     expect(updated.stateBranch).toBe("tff-state/new-branch");
   });
 
   it("returns err(SyncError('RENAME_FAILED')) when renameBranch fails", async () => {
-    writeFileSync(join(tffDir, "branch-meta.json"), JSON.stringify(VALID_BRANCH_META, null, 2), "utf-8");
-
-    stateBranchOps.setRenameResult(
-      err(new GitError("GIT_COMMAND_FAILED", "git branch -m failed")),
+    writeFileSync(
+      join(tffDir, "branch-meta.json"),
+      JSON.stringify(VALID_BRANCH_META, null, 2),
+      "utf-8",
     );
+
+    stateBranchOps.setRenameResult(err(new GitError("GIT_COMMAND_FAILED", "git branch -m failed")));
 
     const scenario = makeRenameScenario();
     const result = await strategy.execute(scenario, tffDir);

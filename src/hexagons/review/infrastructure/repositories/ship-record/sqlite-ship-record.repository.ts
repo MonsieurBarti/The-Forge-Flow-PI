@@ -1,9 +1,11 @@
 import { type Id, ok, type PersistenceError, type Result } from "@kernel";
 import type Database from "better-sqlite3";
-
-import { ShipRecordRepositoryPort } from "../../../domain/ports/ship-record-repository.port";
-import { MergeGateDecisionSchema, type ShipRecordProps } from "../../../domain/schemas/ship.schemas";
 import { ShipRecord } from "../../../domain/aggregates/ship-record.aggregate";
+import { ShipRecordRepositoryPort } from "../../../domain/ports/ship-record-repository.port";
+import {
+  MergeGateDecisionSchema,
+  type ShipRecordProps,
+} from "../../../domain/schemas/ship.schemas";
 
 interface ShipRecordRow {
   id: string;
@@ -82,9 +84,7 @@ export class SqliteShipRecordRepository extends ShipRecordRepositoryPort {
   }
 
   async findAll(): Promise<Result<ShipRecord[], PersistenceError>> {
-    const rows = this.db
-      .prepare<[], ShipRecordRow>("SELECT * FROM ship_records")
-      .all();
+    const rows = this.db.prepare<[], ShipRecordRow>("SELECT * FROM ship_records").all();
     return ok(rows.map((row) => ShipRecord.reconstitute(this.toProps(row))));
   }
 

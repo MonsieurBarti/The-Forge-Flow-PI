@@ -12,9 +12,7 @@ export abstract class MilestoneQueryPort {
     milestoneId: string,
   ): Promise<Result<MilestoneSliceStatus[], MilestoneQueryError>>;
 
-  abstract getMilestoneStatus(
-    milestoneId: string,
-  ): Promise<Result<string, MilestoneQueryError>>;
+  abstract getMilestoneStatus(milestoneId: string): Promise<Result<string, MilestoneQueryError>>;
 
   abstract getRequirementsContent(
     milestoneLabel: string,

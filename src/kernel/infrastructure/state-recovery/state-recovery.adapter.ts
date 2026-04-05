@@ -1,19 +1,18 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-
-import { ok, type Result } from "@kernel/result";
 import type { SyncError } from "@kernel/errors";
 import type { GitPort } from "@kernel/ports/git.port";
-import type { StateBranchOpsPort } from "@kernel/ports/state-branch-ops.port";
 import type { RecoveryStrategy } from "@kernel/ports/recovery-strategy";
-import { BranchMetaSchema, type BranchMeta } from "@kernel/schemas/branch-meta.schemas";
-import type { RenameDetectionResult } from "@kernel/schemas/rename-detection.schemas";
-import {
-  type RecoveryScenario,
-  type RecoveryReport,
-  type RecoveryType,
-} from "@kernel/schemas/recovery.schemas";
+import type { StateBranchOpsPort } from "@kernel/ports/state-branch-ops.port";
 import { StateRecoveryPort } from "@kernel/ports/state-recovery.port";
+import { ok, type Result } from "@kernel/result";
+import { type BranchMeta, BranchMetaSchema } from "@kernel/schemas/branch-meta.schemas";
+import type {
+  RecoveryReport,
+  RecoveryScenario,
+  RecoveryType,
+} from "@kernel/schemas/recovery.schemas";
+import type { RenameDetectionResult } from "@kernel/schemas/rename-detection.schemas";
 
 export class StateRecoveryAdapter extends StateRecoveryPort {
   constructor(
@@ -54,9 +53,7 @@ export class StateRecoveryAdapter extends StateRecoveryPort {
     }
 
     // branch-meta.json exists — parse it
-    const branchMeta = BranchMetaSchema.parse(
-      JSON.parse(readFileSync(metaPath, "utf-8")),
-    );
+    const branchMeta = BranchMetaSchema.parse(JSON.parse(readFileSync(metaPath, "utf-8")));
 
     // Priority 4: codeBranch matches currentBranch → healthy
     if (branchMeta.codeBranch === currentBranch) {
@@ -154,8 +151,8 @@ export class StateRecoveryAdapter extends StateRecoveryPort {
     const result = await strategy.execute(scenario, tffDir);
 
     // Chain: if crash recovery degrades to fresh-clone signal, invoke fresh-clone strategy
-    if (result.ok && result.data.action === 'created-fresh' && scenario.type !== 'fresh-clone') {
-      const freshClone = this.strategies.get('fresh-clone');
+    if (result.ok && result.data.action === "created-fresh" && scenario.type !== "fresh-clone") {
+      const freshClone = this.strategies.get("fresh-clone");
       if (freshClone) {
         return freshClone.execute(scenario, tffDir);
       }
@@ -211,14 +208,11 @@ export class StateRecoveryAdapter extends StateRecoveryPort {
     const stateForCurrentResult = await this.stateBranchOps.branchExists(
       `tff-state/${currentBranch}`,
     );
-    const stateForCurrentExists =
-      stateForCurrentResult.ok && stateForCurrentResult.data;
+    const stateForCurrentExists = stateForCurrentResult.ok && stateForCurrentResult.data;
 
     if (oldExistsResult.ok && oldExistsResult.data) {
       // Old branch still exists
-      return stateForCurrentExists
-        ? { kind: "switch" }
-        : { kind: "untracked" };
+      return stateForCurrentExists ? { kind: "switch" } : { kind: "untracked" };
     }
 
     // Old branch gone

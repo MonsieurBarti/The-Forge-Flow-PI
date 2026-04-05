@@ -16,9 +16,10 @@ import {
   AgentDispatchError,
   type AgentDispatchPort,
   type AgentResult,
+  isSuccessfulStatus,
 } from "@kernel/agents";
-import { isSuccessfulStatus } from "@kernel/agents";
 import type { GitPort } from "@kernel/ports/git.port";
+import type { WorktreePort } from "@kernel/ports/worktree.port";
 import { Checkpoint } from "../domain/checkpoint.aggregate";
 import { ExecutionError } from "../domain/errors/execution.error";
 import { OverseerError } from "../domain/errors/overseer.error";
@@ -33,20 +34,19 @@ import type {
   ReflectionEntry,
   TaskEscalatedEntry,
 } from "../domain/journal-entry.schemas";
-import type { ReflectionResult } from "../domain/reflection.schemas";
 import type { OverseerConfig, OverseerVerdict } from "../domain/overseer.schemas";
-import type { PreDispatchGuardrailPort } from "../domain/ports/pre-dispatch-guardrail.port";
 import type { CheckpointRepositoryPort } from "../domain/ports/checkpoint-repository.port";
 import type { JournalRepositoryPort } from "../domain/ports/journal-repository.port";
 import type { MetricsRepositoryPort } from "../domain/ports/metrics-repository.port";
 import type { OutputGuardrailPort } from "../domain/ports/output-guardrail.port";
 import type { OverseerPort } from "../domain/ports/overseer.port";
+import type { PreDispatchGuardrailPort } from "../domain/ports/pre-dispatch-guardrail.port";
 import type { RetryPolicy } from "../domain/ports/retry-policy.port";
-import type { WorktreePort } from "@kernel/ports/worktree.port";
+import type { ReflectionResult } from "../domain/reflection.schemas";
+import { buildReflectionConfig } from "./build-reflection-config";
 import { DomainRouter } from "./domain-router";
 import type { ExecuteSliceInput, ExecuteSliceResult } from "./execute-slice.schemas";
 import { JournalEventHandler } from "./journal-event-handler";
-import { buildReflectionConfig } from "./build-reflection-config";
 import { PromptBuilder } from "./prompt-builder";
 import { RecordTaskMetricsUseCase } from "./record-task-metrics.use-case";
 
@@ -419,7 +419,7 @@ export class ExecuteSliceUseCase {
 
       // 6e-ter. Wave-level guardrail validation
       const waveFailedTasks: string[] = [];
-      let guardrailBlocked = false;
+      let _guardrailBlocked = false;
 
       const guardrailResults = new Map<string, GuardrailValidationReport>();
 
@@ -445,7 +445,7 @@ export class ExecuteSliceUseCase {
       const hasBlockers = [...guardrailResults.values()].some((r) => !r.passed);
 
       if (hasBlockers) {
-        guardrailBlocked = true;
+        _guardrailBlocked = true;
         await this.deps.gitPort.restoreWorktree(input.workingDirectory);
 
         for (const [taskId, report] of guardrailResults) {
@@ -725,9 +725,7 @@ export class ExecuteSliceUseCase {
       return {
         passed: true,
         tier: "full",
-        issues: [
-          { severity: "warning", description: "Failed to parse reflection report JSON" },
-        ],
+        issues: [{ severity: "warning", description: "Failed to parse reflection report JSON" }],
         reflectedAt: this.deps.dateProvider.now().toISOString(),
       };
     }

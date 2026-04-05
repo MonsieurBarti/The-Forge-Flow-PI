@@ -1,18 +1,18 @@
+import type { MilestoneRepositoryPort } from "@hexagons/milestone/domain/ports/milestone-repository.port";
+import type { ProjectRepositoryPort } from "@hexagons/project/domain/ports/project-repository.port";
 import type { CompletionRecordRepositoryPort } from "@hexagons/review/domain/ports/completion-record-repository.port";
 import type { ReviewRepositoryPort } from "@hexagons/review/domain/ports/review-repository.port";
 import type { ShipRecordRepositoryPort } from "@hexagons/review/domain/ports/ship-record-repository.port";
 import type { VerificationRepositoryPort } from "@hexagons/review/domain/ports/verification-repository.port";
-import type { MilestoneRepositoryPort } from "@hexagons/milestone/domain/ports/milestone-repository.port";
-import type { ProjectRepositoryPort } from "@hexagons/project/domain/ports/project-repository.port";
 import type { SliceRepositoryPort } from "@hexagons/slice/domain/ports/slice-repository.port";
 import type { TaskRepositoryPort } from "@hexagons/task/domain/ports/task-repository.port";
 import type { WorkflowSessionRepositoryPort } from "@hexagons/workflow/domain/ports/workflow-session.repository.port";
 import { SyncError } from "@kernel/errors";
-import { err, ok, type Result } from "@kernel/result";
 import {
   SCHEMA_VERSION,
   type StateSnapshot,
 } from "@kernel/infrastructure/state-branch/state-snapshot.schemas";
+import { err, ok, type Result } from "@kernel/result";
 
 export interface StateExporterDeps {
   projectRepo: ProjectRepositoryPort;
@@ -31,11 +31,19 @@ export class StateExporter {
 
   async export(): Promise<Result<StateSnapshot, SyncError>> {
     try {
-      const { projectRepo, milestoneRepo, sliceRepo, taskRepo, shipRecordRepo, completionRecordRepo } = this.deps;
+      const {
+        projectRepo,
+        milestoneRepo,
+        sliceRepo,
+        taskRepo,
+        shipRecordRepo,
+        completionRecordRepo,
+      } = this.deps;
 
       // Project (singleton)
       const projectResult = await projectRepo.findSingleton();
-      if (!projectResult.ok) return err(new SyncError("EXPORT_FAILED", projectResult.error.message));
+      if (!projectResult.ok)
+        return err(new SyncError("EXPORT_FAILED", projectResult.error.message));
       const project = projectResult.data;
 
       // Milestones
@@ -70,7 +78,8 @@ export class StateExporter {
 
       // Completion records
       const completionResult = await completionRecordRepo.findAll();
-      if (!completionResult.ok) return err(new SyncError("EXPORT_FAILED", completionResult.error.message));
+      if (!completionResult.ok)
+        return err(new SyncError("EXPORT_FAILED", completionResult.error.message));
 
       // Workflow sessions
       const wsResult = await this.deps.workflowSessionRepo.findAll();

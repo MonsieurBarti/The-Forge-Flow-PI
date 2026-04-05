@@ -1,26 +1,16 @@
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
+import { SyncError } from "@kernel/errors";
+import type { StateSnapshot } from "@kernel/infrastructure/state-branch/state-snapshot.schemas";
 import type { SyncOptions } from "@kernel/ports/state-sync.port";
 import type { SyncReport } from "@kernel/ports/state-sync.schemas";
-import type { StateSnapshot } from "@kernel/infrastructure/state-branch/state-snapshot.schemas";
-import type { LockAcquirer } from "./restore-state.use-case";
-import { SyncError } from "@kernel/errors";
 import { err, ok, type Result } from "@kernel/result";
-import { computeStateHash } from "./canonical-hash";
+import { afterEach, describe, expect, it } from "vitest";
 import { BackupService } from "./backup-service";
-import {
-  RestoreStateUseCase,
-  type RestoreStateUseCaseDeps,
-} from "./restore-state.use-case";
+import { computeStateHash } from "./canonical-hash";
+import type { LockAcquirer } from "./restore-state.use-case";
+import { RestoreStateUseCase, type RestoreStateUseCaseDeps } from "./restore-state.use-case";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -53,7 +43,10 @@ const MINIMAL_SNAPSHOT: StateSnapshot = {
 };
 
 function makeSnapshot(seed = "a"): StateSnapshot {
-  return { ...MINIMAL_SNAPSHOT, exportedAt: new Date(`2026-0${seed.charCodeAt(0) % 9 + 1}-01T00:00:00.000Z`) };
+  return {
+    ...MINIMAL_SNAPSHOT,
+    exportedAt: new Date(`2026-0${(seed.charCodeAt(0) % 9) + 1}-01T00:00:00.000Z`),
+  };
 }
 
 const SYNC_REPORT_OK: SyncReport = {
@@ -96,9 +89,15 @@ class StubStateSyncPort {
   }
 
   // Unused methods — satisfy abstract class shape if needed
-  async mergeStateBranches(): Promise<Result<void, SyncError>> { return ok(undefined); }
-  async createStateBranch(): Promise<Result<void, SyncError>> { return ok(undefined); }
-  async deleteStateBranch(): Promise<Result<void, SyncError>> { return ok(undefined); }
+  async mergeStateBranches(): Promise<Result<void, SyncError>> {
+    return ok(undefined);
+  }
+  async createStateBranch(): Promise<Result<void, SyncError>> {
+    return ok(undefined);
+  }
+  async deleteStateBranch(): Promise<Result<void, SyncError>> {
+    return ok(undefined);
+  }
 }
 
 class StubStateExporter {
@@ -117,7 +116,9 @@ class StubAdvisoryLock implements LockAcquirer {
     if (this.shouldFail) {
       return err(new SyncError("LOCK_CONTENTION", "Lock held by another process"));
     }
-    const release = () => { this.released = true; };
+    const release = () => {
+      this.released = true;
+    };
     return ok(release);
   }
 }
@@ -132,7 +133,12 @@ function makeDeps(overrides: {
   stateExporter?: StubStateExporter;
   advisoryLock?: StubAdvisoryLock;
   backupService?: BackupService;
-}): { deps: RestoreStateUseCaseDeps; stateSync: StubStateSyncPort; stateExporter: StubStateExporter; advisoryLock: StubAdvisoryLock } {
+}): {
+  deps: RestoreStateUseCaseDeps;
+  stateSync: StubStateSyncPort;
+  stateExporter: StubStateExporter;
+  advisoryLock: StubAdvisoryLock;
+} {
   const stateSync = overrides.stateSync ?? new StubStateSyncPort();
   const stateExporter = overrides.stateExporter ?? new StubStateExporter();
   const advisoryLock = overrides.advisoryLock ?? new StubAdvisoryLock();
@@ -173,7 +179,7 @@ describe("RestoreStateUseCase", () => {
     const tffDir = buildTffDir(root);
 
     const snapshot = makeSnapshot("a");
-    const snapshotHash = computeStateHash(snapshot);
+    const _snapshotHash = computeStateHash(snapshot);
     const differentHash = "different-hash-not-matching";
 
     // Write branch-meta indicating previous branch with a different hash (dirty)
@@ -237,17 +243,20 @@ describe("RestoreStateUseCase", () => {
     const hash = computeStateHash(snapshot);
 
     const metaPath = join(tffDir, "branch-meta.json");
-    writeFileSync(metaPath, JSON.stringify({
-      version: 1,
-      stateId: "b2c3d4e5-f6a7-4b8c-9d0e-aabbccddeeff",
-      codeBranch: "feature/clean",
-      stateBranch: "tff-state/feature/clean",
-      parentStateBranch: null,
-      lastSyncedAt: new Date().toISOString(),
-      lastJournalOffset: 0,
-      dirty: false,
-      lastSyncedHash: hash,
-    }));
+    writeFileSync(
+      metaPath,
+      JSON.stringify({
+        version: 1,
+        stateId: "b2c3d4e5-f6a7-4b8c-9d0e-aabbccddeeff",
+        codeBranch: "feature/clean",
+        stateBranch: "tff-state/feature/clean",
+        parentStateBranch: null,
+        lastSyncedAt: new Date().toISOString(),
+        lastJournalOffset: 0,
+        dirty: false,
+        lastSyncedHash: hash,
+      }),
+    );
 
     const stateExporter = new StubStateExporter();
     stateExporter.result = ok(snapshot);
@@ -321,22 +330,23 @@ describe("RestoreStateUseCase", () => {
     const tffDir = buildTffDir(root);
 
     const metaPath = join(tffDir, "branch-meta.json");
-    writeFileSync(metaPath, JSON.stringify({
-      version: 1,
-      stateId: "c3d4e5f6-a7b8-4c9d-be1f-2a3b4c5d6e7f",
-      codeBranch: "feature/dirty",
-      stateBranch: "tff-state/feature/dirty",
-      parentStateBranch: null,
-      lastSyncedAt: new Date().toISOString(),
-      lastJournalOffset: 0,
-      dirty: false,
-      lastSyncedHash: "old-hash",
-    }));
+    writeFileSync(
+      metaPath,
+      JSON.stringify({
+        version: 1,
+        stateId: "c3d4e5f6-a7b8-4c9d-be1f-2a3b4c5d6e7f",
+        codeBranch: "feature/dirty",
+        stateBranch: "tff-state/feature/dirty",
+        parentStateBranch: null,
+        lastSyncedAt: new Date().toISOString(),
+        lastJournalOffset: 0,
+        dirty: false,
+        lastSyncedHash: "old-hash",
+      }),
+    );
 
     const stateSync = new StubStateSyncPort();
-    stateSync.syncToStateBranchResult = err(
-      new SyncError("EXPORT_FAILED", "dirty sync failed"),
-    );
+    stateSync.syncToStateBranchResult = err(new SyncError("EXPORT_FAILED", "dirty sync failed"));
 
     const stateExporter = new StubStateExporter();
     stateExporter.result = ok(makeSnapshot("e"));
@@ -362,9 +372,7 @@ describe("RestoreStateUseCase", () => {
     const tffDir = buildTffDir(root);
 
     const stateSync = new StubStateSyncPort();
-    stateSync.restoreFromStateBranchResult = err(
-      new SyncError("IMPORT_FAILED", "restore blew up"),
-    );
+    stateSync.restoreFromStateBranchResult = err(new SyncError("IMPORT_FAILED", "restore blew up"));
 
     const { deps } = makeDeps({ tffDir, stateSync });
     const useCase = new RestoreStateUseCase(deps);
@@ -467,9 +475,7 @@ describe("RestoreStateUseCase", () => {
 
     const lock = new StubAdvisoryLock();
     const stateSync = new StubStateSyncPort();
-    stateSync.restoreFromStateBranchResult = err(
-      new SyncError("IMPORT_FAILED", "oops"),
-    );
+    stateSync.restoreFromStateBranchResult = err(new SyncError("IMPORT_FAILED", "oops"));
 
     const { deps } = makeDeps({ tffDir, advisoryLock: lock, stateSync });
     const useCase = new RestoreStateUseCase(deps);

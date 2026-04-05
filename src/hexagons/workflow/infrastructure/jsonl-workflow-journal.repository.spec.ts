@@ -1,9 +1,9 @@
-import { describe, expect, it, beforeEach } from "vitest";
-import { mkdtempSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { JsonlWorkflowJournalRepository } from "./jsonl-workflow-journal.repository";
+import { join } from "node:path";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { WorkflowJournalEntry } from "../domain/ports/workflow-journal.port";
+import { JsonlWorkflowJournalRepository } from "./jsonl-workflow-journal.repository";
 
 describe("JsonlWorkflowJournalRepository", () => {
   let dir: string;

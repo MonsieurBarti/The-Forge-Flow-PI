@@ -1,4 +1,8 @@
-import type { OverseerConfig, OverseerContext, OverseerVerdict } from "../../domain/overseer.schemas";
+import type {
+  OverseerConfig,
+  OverseerContext,
+  OverseerVerdict,
+} from "../../domain/overseer.schemas";
 import type { OverseerStrategy } from "../../domain/overseer-strategy";
 
 export class TimeoutStrategy implements OverseerStrategy {

@@ -1,9 +1,9 @@
 import type { BudgetTrackingPort } from "@hexagons/settings/domain/ports/budget-tracking.port";
 import type { HotkeysConfig } from "@hexagons/settings/domain/project-settings.schemas";
-import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@infrastructure/pi";
+import type { ExtensionAPI, ExtensionContext } from "@infrastructure/pi";
 import { EVENT_NAMES } from "@kernel/event-names";
-import type { EventBusPort } from "@kernel/ports/event-bus.port";
 import type { AgentEventPort } from "@kernel/ports/agent-event.port";
+import type { EventBusPort } from "@kernel/ports/event-bus.port";
 import type { LoggerPort } from "@kernel/ports/logger.port";
 import type { OverlayDataPort } from "@kernel/ports/overlay-data.port";
 import { describe, expect, it, vi } from "vitest";
@@ -139,11 +139,11 @@ describe("registerOverlayExtension", () => {
       logger: mockLogger(),
     });
 
-    const handler = api.shortcuts.get("ctrl+alt+d")!.handler;
+    const handler = api.shortcuts.get("ctrl+alt+d")?.handler;
     const ctx = { hasUI: false, ui: {} } as unknown as ExtensionContext;
 
     // Should not throw — graceful no-op
-    await handler(ctx);
+    await handler!(ctx);
   });
 
   it("logs warning when shortcut registration fails", () => {

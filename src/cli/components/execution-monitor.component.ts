@@ -1,5 +1,5 @@
 import type { AgentEvent } from "@kernel/agents/schemas/agent-event.schema";
-import type { AgentEventPort, Unsubscribe } from "@kernel/ports/agent-event.port";
+import type { AgentEventPort } from "@kernel/ports/agent-event.port";
 import type { Component, MarkdownTheme, TUI } from "@mariozechner/pi-tui";
 import { Markdown } from "@mariozechner/pi-tui";
 
@@ -28,8 +28,7 @@ export function buildMarkdown(state: ExecutionMonitorState): string {
       return `${name} \u00d7${v.total}${errSuffix}`;
     });
 
-  const toolLine =
-    toolEntries.length > 0 ? `**Tools:** ${toolEntries.join("  ")}` : null;
+  const toolLine = toolEntries.length > 0 ? `**Tools:** ${toolEntries.join("  ")}` : null;
 
   const parts = [headerLine, "", "---", "", state.textBuffer, "", "---"];
   if (toolLine) parts.push("", toolLine);
@@ -40,7 +39,7 @@ export function buildMarkdown(state: ExecutionMonitorState): string {
 export class ExecutionMonitorComponent implements Component {
   private readonly markdown: Markdown;
   private readonly tui: TUI;
-  private readonly _unsubscribe: Unsubscribe;
+  private readonly _unsubscribe: () => void;
 
   private state: ExecutionMonitorState = {
     activeTaskId: null,
@@ -58,15 +57,8 @@ export class ExecutionMonitorComponent implements Component {
     paddingY: number,
   ) {
     this.tui = tui;
-    this.markdown = new Markdown(
-      buildMarkdown(this.state),
-      paddingX,
-      paddingY,
-      markdownTheme,
-    );
-    this._unsubscribe = agentEventPort.subscribeAll((event) =>
-      this.handleEvent(event),
-    );
+    this.markdown = new Markdown(buildMarkdown(this.state), paddingX, paddingY, markdownTheme);
+    this._unsubscribe = agentEventPort.subscribeAll((event) => this.handleEvent(event));
   }
 
   private handleEvent(event: AgentEvent): void {

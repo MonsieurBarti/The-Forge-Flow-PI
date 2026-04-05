@@ -1,3 +1,4 @@
+import type { AutonomyMode } from "@hexagons/settings";
 import { err, type Id, ok, PersistenceError, type Result } from "@kernel";
 import type Database from "better-sqlite3";
 import { WorkflowSessionRepositoryPort } from "../domain/ports/workflow-session.repository.port";
@@ -7,7 +8,6 @@ import type {
   WorkflowPhase,
   WorkflowSessionProps,
 } from "../domain/workflow-session.schemas";
-import type { AutonomyMode } from "@hexagons/settings";
 
 interface WorkflowSessionRow {
   id: string;
@@ -101,9 +101,7 @@ export class SqliteWorkflowSessionRepository extends WorkflowSessionRepositoryPo
   }
 
   async findAll(): Promise<Result<WorkflowSession[], PersistenceError>> {
-    const rows = this.db
-      .prepare("SELECT * FROM workflow_sessions")
-      .all() as WorkflowSessionRow[];
+    const rows = this.db.prepare("SELECT * FROM workflow_sessions").all() as WorkflowSessionRow[];
     return ok(rows.map((row) => WorkflowSession.reconstitute(this.toProps(row))));
   }
 

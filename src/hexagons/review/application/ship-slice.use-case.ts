@@ -1,22 +1,29 @@
 import { join } from "node:path";
-import type { WorktreePort } from "@kernel/ports/worktree.port";
-import type { StateSyncPort } from "@kernel/ports/state-sync.port";
 import type { SliceTransitionPort } from "@hexagons/workflow/domain/ports/slice-transition.port";
 import { err, ok, type Result } from "@kernel";
 import type { DateProviderPort, EventBusPort, LoggerPort } from "@kernel/ports";
 import type { GitPort } from "@kernel/ports/git.port";
 import type { GitHubPort } from "@kernel/ports/github.port";
 import type { PullRequestInfo } from "@kernel/ports/github.schemas";
-import type { ConductReviewRequest, ConductReviewResult } from "../domain/schemas/conduct-review.schemas";
+import type { StateSyncPort } from "@kernel/ports/state-sync.port";
+import type { WorktreePort } from "@kernel/ports/worktree.port";
+import { ShipRecord } from "../domain/aggregates/ship-record.aggregate";
 import { ShipError } from "../domain/errors/ship.error";
 import { SliceShippedEvent } from "../domain/events/slice-shipped.event";
 import type { FixerPort } from "../domain/ports/fixer.port";
 import type { MergeGatePort } from "../domain/ports/merge-gate.port";
 import type { ShipRecordRepositoryPort } from "../domain/ports/ship-record-repository.port";
 import type { SliceSpec, SliceSpecPort } from "../domain/ports/slice-spec.port";
+import type {
+  ConductReviewRequest,
+  ConductReviewResult,
+} from "../domain/schemas/conduct-review.schemas";
 import type { FindingProps } from "../domain/schemas/review.schemas";
-import { type ShipRequest, ShipRequestSchema, type ShipResult } from "../domain/schemas/ship.schemas";
-import { ShipRecord } from "../domain/aggregates/ship-record.aggregate";
+import {
+  type ShipRequest,
+  ShipRequestSchema,
+  type ShipResult,
+} from "../domain/schemas/ship.schemas";
 
 export function buildPRBody(spec: SliceSpec): string {
   const summaryParagraph = spec.specContent.split("\n\n")[0] ?? spec.specContent;
@@ -164,14 +171,22 @@ export class ShipSliceUseCase {
       const milestoneCodeBranch = parsed.baseBranch;
       const worktreeTffDir = this.worktreePort.resolveTffDir(parsed.sliceId);
 
-      const syncResult = await this.stateSyncPort.syncToStateBranch(sliceCodeBranch, worktreeTffDir);
+      const syncResult = await this.stateSyncPort.syncToStateBranch(
+        sliceCodeBranch,
+        worktreeTffDir,
+      );
       if (!syncResult.ok) return err(ShipError.mergeBackFailed(parsed.sliceId, syncResult.error));
 
-      const mergeResult = await this.stateSyncPort.mergeStateBranches(sliceCodeBranch, milestoneCodeBranch, parsed.sliceId);
+      const mergeResult = await this.stateSyncPort.mergeStateBranches(
+        sliceCodeBranch,
+        milestoneCodeBranch,
+        parsed.sliceId,
+      );
       if (!mergeResult.ok) return err(ShipError.mergeBackFailed(parsed.sliceId, mergeResult.error));
 
       const deleteStateResult = await this.stateSyncPort.deleteStateBranch(sliceCodeBranch);
-      if (!deleteStateResult.ok) return err(ShipError.mergeBackFailed(parsed.sliceId, deleteStateResult.error));
+      if (!deleteStateResult.ok)
+        return err(ShipError.mergeBackFailed(parsed.sliceId, deleteStateResult.error));
     }
 
     // Step 6: Cleanup (best-effort for worktree, hard fail for transition)
@@ -186,8 +201,12 @@ export class ShipSliceUseCase {
     // Step 7: Restore top-level .tff/ from milestone state branch (hard fail)
     if (this.stateSyncPort && this.resolvedRoot) {
       const rootTffDir = join(this.resolvedRoot, ".tff");
-      const restoreResult = await this.stateSyncPort.restoreFromStateBranch(parsed.baseBranch, rootTffDir);
-      if (!restoreResult.ok) return err(ShipError.mergeBackFailed(parsed.sliceId, restoreResult.error));
+      const restoreResult = await this.stateSyncPort.restoreFromStateBranch(
+        parsed.baseBranch,
+        rootTffDir,
+      );
+      if (!restoreResult.ok)
+        return err(ShipError.mergeBackFailed(parsed.sliceId, restoreResult.error));
     }
 
     const transitionResult = await this.sliceTransitionPort.transition(parsed.sliceId, "closed");

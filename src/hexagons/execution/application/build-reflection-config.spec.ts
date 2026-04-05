@@ -1,9 +1,9 @@
 import { AgentDispatchConfigBuilder } from "@kernel/agents";
 import { describe, expect, it } from "vitest";
 import {
-  REFLECTION_TOOLS,
-  buildReflectionConfig,
   type BuildReflectionConfigParams,
+  buildReflectionConfig,
+  REFLECTION_TOOLS,
 } from "./build-reflection-config";
 
 const ACCEPTANCE_CRITERIA = "- All tests pass\n- No regressions";
@@ -14,9 +14,7 @@ index abc..def 100644
 @@ -1,3 +1,5 @@
 +export function bar() {}`;
 
-function makeParams(
-  overrides?: Partial<BuildReflectionConfigParams>,
-): BuildReflectionConfigParams {
+function makeParams(overrides?: Partial<BuildReflectionConfigParams>): BuildReflectionConfigParams {
   const originalConfig = new AgentDispatchConfigBuilder()
     .withTaskId("10000001-0000-4000-a000-000000000001")
     .withSliceId("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
@@ -40,9 +38,7 @@ function makeParams(
 describe("buildReflectionConfig", () => {
   it("sets taskId to {originalId}-reflection", () => {
     const result = buildReflectionConfig(makeParams());
-    expect(result.taskId).toBe(
-      "10000001-0000-4000-a000-000000000001-reflection",
-    );
+    expect(result.taskId).toBe("10000001-0000-4000-a000-000000000001-reflection");
   });
 
   it("uses read-only tools", () => {
@@ -104,10 +100,7 @@ describe("buildReflectionConfig", () => {
     const params = makeParams();
     const result = buildReflectionConfig(params);
     result.filePaths.push("src/baz.ts");
-    expect(params.originalConfig.filePaths).toEqual([
-      "src/foo.ts",
-      "src/bar.ts",
-    ]);
+    expect(params.originalConfig.filePaths).toEqual(["src/foo.ts", "src/bar.ts"]);
   });
 
   it("exports REFLECTION_TOOLS as a readonly tuple", () => {

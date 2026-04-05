@@ -1,6 +1,8 @@
 import { err, ok, type Result } from "@kernel";
 import type { AgentDispatchConfig, AgentResult } from "@kernel/agents";
 import { AgentDispatchError, AgentDispatchPort } from "@kernel/agents";
+import { COMPRESSOR_PROMPT } from "@kernel/agents/prompts/compressor-prompt";
+import { GUARDRAIL_PROMPT } from "@kernel/agents/prompts/guardrail-prompt";
 import type {
   AgentConcern,
   AgentStatus,
@@ -9,8 +11,6 @@ import type {
 import { crossCheckAgentResult } from "@kernel/agents/services/agent-status-cross-checker";
 import { parseAgentStatusReport } from "@kernel/agents/services/agent-status-parser";
 import { AGENT_STATUS_PROMPT } from "@kernel/agents/services/agent-status-prompt";
-import { GUARDRAIL_PROMPT } from "@kernel/agents/prompts/guardrail-prompt";
-import { COMPRESSOR_PROMPT } from "@kernel/agents/prompts/compressor-prompt";
 import type { AgentEventPort } from "@kernel/ports";
 import type { Api, AssistantMessageEvent, KnownProvider, Model } from "@mariozechner/pi-ai";
 import { getModels, getProviders } from "@mariozechner/pi-ai";

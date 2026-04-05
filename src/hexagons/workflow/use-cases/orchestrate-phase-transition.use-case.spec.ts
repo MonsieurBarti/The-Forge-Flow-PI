@@ -14,7 +14,10 @@ import {
 } from "@kernel";
 import { describe, expect, it, vi } from "vitest";
 import { WorkflowPhaseChangedEvent } from "../domain/events/workflow-phase-changed.event";
-import type { WorkflowJournalEntry, WorkflowJournalPort } from "../domain/ports/workflow-journal.port";
+import type {
+  WorkflowJournalEntry,
+  WorkflowJournalPort,
+} from "../domain/ports/workflow-journal.port";
 import { WorkflowSessionBuilder } from "../domain/workflow-session.builder";
 import type { GuardContext } from "../domain/workflow-session.schemas";
 import { InMemoryWorkflowSessionRepository } from "../infrastructure/in-memory-workflow-session.repository";
@@ -214,7 +217,10 @@ describe("OrchestratePhaseTransitionUseCase", () => {
 
   it("appends phase-transition entry to workflow journal", async () => {
     const { sessionRepo, sliceRepo, sliceTransitionPort, eventBus, dateProvider } = setup();
-    const appendSpy = vi.fn(async (_entry: WorkflowJournalEntry) => ({ ok: true as const, data: undefined }));
+    const appendSpy = vi.fn(async (_entry: WorkflowJournalEntry) => ({
+      ok: true as const,
+      data: undefined,
+    }));
     const mockJournal: WorkflowJournalPort = {
       append: appendSpy,
       readAll: async () => ({ ok: true as const, data: [] as WorkflowJournalEntry[] }),
@@ -244,7 +250,7 @@ describe("OrchestratePhaseTransitionUseCase", () => {
 
     expect(isOk(result)).toBe(true);
     expect(appendSpy).toHaveBeenCalledOnce();
-    const entry = appendSpy.mock.calls[0]![0]!;
+    const entry = appendSpy.mock.calls[0]![0];
     expect(entry.type).toBe("phase-transition");
     expect(entry.sessionId).toBe(session.id);
     expect(entry.milestoneId).toBe(session.milestoneId);

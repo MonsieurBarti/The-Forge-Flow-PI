@@ -1,15 +1,13 @@
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
-import { SyncError } from "@kernel/errors";
-import { err, ok, type Result } from "@kernel/result";
-import type { GitError } from "@kernel/errors";
+import type { GitError, SyncError } from "@kernel/errors";
 import type { StateBranchOpsPort } from "@kernel/ports/state-branch-ops.port";
-import type { RestoreReport } from "@kernel/services/restore-state.use-case";
+import { ok, type Result } from "@kernel/result";
 import type { RecoveryScenario } from "@kernel/schemas/recovery.schemas";
 import { BackupService } from "@kernel/services/backup-service";
+import type { RestoreReport, RestoreStateUseCase } from "@kernel/services/restore-state.use-case";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { CrashRecoveryStrategy } from "./crash-recovery.strategy";
 
 // ---------------------------------------------------------------------------
@@ -62,7 +60,10 @@ class StubStateBranchOpsPort implements StateBranchOpsPort {
   renameBranch(_oldName: string, _newName: string): Promise<Result<void, GitError>> {
     return Promise.resolve(ok(undefined));
   }
-  syncToStateBranch(_stateBranch: string, _files: Map<string, string>): Promise<Result<string, GitError>> {
+  syncToStateBranch(
+    _stateBranch: string,
+    _files: Map<string, string>,
+  ): Promise<Result<string, GitError>> {
     return Promise.resolve(ok("abc123"));
   }
   readAllFromStateBranch(_stateBranch: string): Promise<Result<Map<string, string>, GitError>> {
@@ -141,7 +142,11 @@ describe("CrashRecoveryStrategy", () => {
     backupService = new StubBackupService();
     stateBranchOps = new StubStateBranchOpsPort();
     restoreUseCase = new StubRestoreStateUseCase();
-    strategy = new CrashRecoveryStrategy(backupService, stateBranchOps, restoreUseCase as any);
+    strategy = new CrashRecoveryStrategy(
+      backupService,
+      stateBranchOps,
+      restoreUseCase as unknown as RestoreStateUseCase,
+    );
   });
 
   afterEach(() => {

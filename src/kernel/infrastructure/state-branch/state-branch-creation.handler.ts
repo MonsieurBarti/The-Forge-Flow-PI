@@ -32,10 +32,14 @@ export class StateBranchCreationHandler {
       const result = await this.stateSync.createStateBranch(codeBranch, "tff-state/main");
 
       if (!result.ok) {
-        this.logger.warn(`StateBranchCreationHandler: failed to create state branch for ${codeBranch}: ${result.error.message}`);
+        this.logger.warn(
+          `StateBranchCreationHandler: failed to create state branch for ${codeBranch}: ${result.error.message}`,
+        );
       }
     } catch (e) {
-      this.logger.warn(`StateBranchCreationHandler: error handling MILESTONE_CREATED: ${e instanceof Error ? e.message : String(e)}`);
+      this.logger.warn(
+        `StateBranchCreationHandler: error handling MILESTONE_CREATED: ${e instanceof Error ? e.message : String(e)}`,
+      );
     }
   }
 
@@ -50,7 +54,9 @@ export class StateBranchCreationHandler {
       const slice = sliceResult.data;
       const milestoneResult = await this.milestoneRepo.findById(slice.milestoneId);
       if (!milestoneResult.ok || !milestoneResult.data) {
-        this.logger.warn(`StateBranchCreationHandler: milestone ${slice.milestoneId} not found for slice ${slice.label}`);
+        this.logger.warn(
+          `StateBranchCreationHandler: milestone ${slice.milestoneId} not found for slice ${slice.label}`,
+        );
         return;
       }
 
@@ -60,10 +66,14 @@ export class StateBranchCreationHandler {
       const result = await this.stateSync.createStateBranch(codeBranch, parentStateBranch);
 
       if (!result.ok) {
-        this.logger.warn(`StateBranchCreationHandler: failed to create state branch for ${codeBranch}: ${result.error.message}`);
+        this.logger.warn(
+          `StateBranchCreationHandler: failed to create state branch for ${codeBranch}: ${result.error.message}`,
+        );
       }
     } catch (e) {
-      this.logger.warn(`StateBranchCreationHandler: error handling SLICE_CREATED: ${e instanceof Error ? e.message : String(e)}`);
+      this.logger.warn(
+        `StateBranchCreationHandler: error handling SLICE_CREATED: ${e instanceof Error ? e.message : String(e)}`,
+      );
     }
   }
 }

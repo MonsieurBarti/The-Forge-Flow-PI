@@ -1,15 +1,12 @@
-import Database from "better-sqlite3";
 import { faker } from "@faker-js/faker";
+import Database from "better-sqlite3";
 import { beforeEach, describe, expect, it } from "vitest";
-import { WorkflowSessionBuilder } from "../domain/workflow-session.builder";
 import type { WorkflowSessionRepositoryPort } from "../domain/ports/workflow-session.repository.port";
+import { WorkflowSessionBuilder } from "../domain/workflow-session.builder";
 import { InMemoryWorkflowSessionRepository } from "./in-memory-workflow-session.repository";
 import { SqliteWorkflowSessionRepository } from "./sqlite-workflow-session.repository";
 
-function contractSuite(
-  name: string,
-  factory: () => WorkflowSessionRepositoryPort,
-) {
+function contractSuite(name: string, factory: () => WorkflowSessionRepositoryPort) {
   describe(name, () => {
     let repo: WorkflowSessionRepositoryPort;
 
@@ -66,22 +63,20 @@ function contractSuite(
       if (findResult.ok) {
         const found = findResult.data!;
         expect(found.lastEscalation).not.toBeNull();
-        expect(found.lastEscalation!.phase).toBe("executing");
+        expect(found.lastEscalation?.phase).toBe("executing");
       }
     });
 
     it("finds by milestoneId", async () => {
       const milestoneId = faker.string.uuid();
-      const session = new WorkflowSessionBuilder()
-        .withMilestoneId(milestoneId)
-        .build();
+      const session = new WorkflowSessionBuilder().withMilestoneId(milestoneId).build();
       await repo.save(session);
 
       const result = await repo.findByMilestoneId(milestoneId);
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.data).not.toBeNull();
-        expect(result.data!.milestoneId).toBe(milestoneId);
+        expect(result.data?.milestoneId).toBe(milestoneId);
       }
     });
 
@@ -93,12 +88,8 @@ function contractSuite(
 
     it("enforces one session per milestone (cardinality)", async () => {
       const milestoneId = faker.string.uuid();
-      const session1 = new WorkflowSessionBuilder()
-        .withMilestoneId(milestoneId)
-        .build();
-      const session2 = new WorkflowSessionBuilder()
-        .withMilestoneId(milestoneId)
-        .build();
+      const session1 = new WorkflowSessionBuilder().withMilestoneId(milestoneId).build();
+      const session2 = new WorkflowSessionBuilder().withMilestoneId(milestoneId).build();
       await repo.save(session1);
 
       const result = await repo.save(session2);
@@ -154,10 +145,7 @@ contractSuite(
   () => new InMemoryWorkflowSessionRepository(),
 );
 
-contractSuite(
-  "SqliteWorkflowSessionRepository (contract)",
-  () => {
-    const db = new Database(":memory:");
-    return new SqliteWorkflowSessionRepository(db);
-  },
-);
+contractSuite("SqliteWorkflowSessionRepository (contract)", () => {
+  const db = new Database(":memory:");
+  return new SqliteWorkflowSessionRepository(db);
+});

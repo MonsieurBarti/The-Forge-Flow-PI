@@ -104,39 +104,57 @@ describe("DefaultRetryPolicy", () => {
 
       // quality: attempt 0 → retry
       expect(policy.resolveModel(id, "quality", 0)).toEqual({
-        action: "retry", profile: "quality", attempt: 0,
+        action: "retry",
+        profile: "quality",
+        attempt: 0,
       });
       // quality: attempt 1 → retry (still within retryCountPerProfile)
       expect(policy.resolveModel(id, "quality", 1)).toEqual({
-        action: "retry", profile: "quality", attempt: 1,
+        action: "retry",
+        profile: "quality",
+        attempt: 1,
       });
       // quality: attempt 2 → downshift to balanced
       expect(policy.resolveModel(id, "quality", 2)).toEqual({
-        action: "downshift", profile: "balanced", attempt: 0,
+        action: "downshift",
+        profile: "balanced",
+        attempt: 0,
       });
       // balanced: attempt 0 → retry
       expect(policy.resolveModel(id, "balanced", 0)).toEqual({
-        action: "retry", profile: "balanced", attempt: 0,
+        action: "retry",
+        profile: "balanced",
+        attempt: 0,
       });
       // balanced: attempt 1 → retry
       expect(policy.resolveModel(id, "balanced", 1)).toEqual({
-        action: "retry", profile: "balanced", attempt: 1,
+        action: "retry",
+        profile: "balanced",
+        attempt: 1,
       });
       // balanced: attempt 2 → downshift to budget
       expect(policy.resolveModel(id, "balanced", 2)).toEqual({
-        action: "downshift", profile: "budget", attempt: 0,
+        action: "downshift",
+        profile: "budget",
+        attempt: 0,
       });
       // budget: attempt 0 → retry
       expect(policy.resolveModel(id, "budget", 0)).toEqual({
-        action: "retry", profile: "budget", attempt: 0,
+        action: "retry",
+        profile: "budget",
+        attempt: 0,
       });
       // budget: attempt 1 → retry
       expect(policy.resolveModel(id, "budget", 1)).toEqual({
-        action: "retry", profile: "budget", attempt: 1,
+        action: "retry",
+        profile: "budget",
+        attempt: 1,
       });
       // budget: attempt 2 → escalate
       expect(policy.resolveModel(id, "budget", 2)).toEqual({
-        action: "escalate", profile: "budget", attempt: 2,
+        action: "escalate",
+        profile: "budget",
+        attempt: 2,
       });
     });
 
@@ -155,7 +173,9 @@ describe("DefaultRetryPolicy", () => {
       expect(policy.resolveModel(id, "quality", 2).action).toBe("retry");
       // attempt 3 → downshift
       expect(policy.resolveModel(id, "quality", 3)).toEqual({
-        action: "downshift", profile: "balanced", attempt: 0,
+        action: "downshift",
+        profile: "balanced",
+        attempt: 0,
       });
     });
 
@@ -163,10 +183,14 @@ describe("DefaultRetryPolicy", () => {
       const policy = new DefaultRetryPolicy(3, 3, ["fast", "slow"], 1);
 
       expect(policy.resolveModel(id, "fast", 2)).toEqual({
-        action: "downshift", profile: "slow", attempt: 0,
+        action: "downshift",
+        profile: "slow",
+        attempt: 0,
       });
       expect(policy.resolveModel(id, "slow", 2)).toEqual({
-        action: "escalate", profile: "slow", attempt: 2,
+        action: "escalate",
+        profile: "slow",
+        attempt: 2,
       });
     });
   });

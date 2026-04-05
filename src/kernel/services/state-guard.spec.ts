@@ -1,12 +1,12 @@
-import { ok, err } from '@kernel/result';
-import type { Result } from '@kernel/result';
-import type { RecoveryScenario, RecoveryReport } from '@kernel/schemas/recovery.schemas';
-import type { HealthCheckReport } from './health-check.service';
-import { SyncError } from '@kernel/errors/sync.error';
-import { StateRecoveryPort } from '@kernel/ports/state-recovery.port';
-import { LoggerPort } from '@kernel/ports/logger.port';
-import { beforeEach, describe, expect, it } from 'vitest';
-import { StateGuard } from './state-guard';
+import { SyncError } from "@kernel/errors/sync.error";
+import { LoggerPort } from "@kernel/ports/logger.port";
+import { StateRecoveryPort } from "@kernel/ports/state-recovery.port";
+import type { Result } from "@kernel/result";
+import { err, ok } from "@kernel/result";
+import type { RecoveryReport, RecoveryScenario } from "@kernel/schemas/recovery.schemas";
+import { beforeEach, describe, expect, it } from "vitest";
+import type { HealthCheckReport } from "./health-check.service";
+import { StateGuard } from "./state-guard";
 
 // ---------------------------------------------------------------------------
 // StubStateRecoveryPort
@@ -16,8 +16,8 @@ class StubStateRecoveryPort extends StateRecoveryPort {
   recoverCallCount = 0;
 
   private detectResult: Result<RecoveryScenario, SyncError> = ok({
-    type: 'healthy',
-    currentBranch: 'main',
+    type: "healthy",
+    currentBranch: "main",
     branchMeta: null,
     backupPaths: [],
     stateBranchExists: false,
@@ -25,9 +25,9 @@ class StubStateRecoveryPort extends StateRecoveryPort {
   });
 
   private recoverResult: Result<RecoveryReport, SyncError> = ok({
-    type: 'crash',
-    action: 'restored',
-    source: 'backup',
+    type: "crash",
+    action: "restored",
+    source: "backup",
     filesRestored: 3,
     warnings: [],
   });
@@ -79,9 +79,9 @@ class StubLoggerPort extends LoggerPort {
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
-const TFF_DIR = '/fake/.tff';
+const TFF_DIR = "/fake/.tff";
 
-describe('StateGuard', () => {
+describe("StateGuard", () => {
   let recoveryPort: StubStateRecoveryPort;
   let healthCheck: StubHealthCheckService;
   let logger: StubLoggerPort;
@@ -94,11 +94,11 @@ describe('StateGuard', () => {
     guard = new StateGuard(recoveryPort, healthCheck as never, logger);
   });
 
-  it('healthy scenario — calls healthCheck.runAll + recoveryPort.detect, returns ok, recovery NOT called', async () => {
+  it("healthy scenario — calls healthCheck.runAll + recoveryPort.detect, returns ok, recovery NOT called", async () => {
     recoveryPort.givenDetectResult(
       ok({
-        type: 'healthy',
-        currentBranch: 'main',
+        type: "healthy",
+        currentBranch: "main",
         branchMeta: null,
         backupPaths: [],
         stateBranchExists: false,
@@ -114,22 +114,22 @@ describe('StateGuard', () => {
     expect(recoveryPort.recoverCallCount).toBe(0);
   });
 
-  it('crash scenario — calls detect then recover, returns ok', async () => {
+  it("crash scenario — calls detect then recover, returns ok", async () => {
     recoveryPort.givenDetectResult(
       ok({
-        type: 'crash',
-        currentBranch: 'feature/x',
+        type: "crash",
+        currentBranch: "feature/x",
         branchMeta: null,
-        backupPaths: ['/fake/.tff.backup.1'],
+        backupPaths: ["/fake/.tff.backup.1"],
         stateBranchExists: true,
         parentStateBranch: null,
       }),
     );
     recoveryPort.givenRecoverResult(
       ok({
-        type: 'crash',
-        action: 'restored',
-        source: 'backup',
+        type: "crash",
+        action: "restored",
+        source: "backup",
         filesRestored: 2,
         warnings: [],
       }),
@@ -142,18 +142,18 @@ describe('StateGuard', () => {
     expect(recoveryPort.recoverCallCount).toBe(1);
   });
 
-  it('recovery fails — returns the SyncError from recover', async () => {
+  it("recovery fails — returns the SyncError from recover", async () => {
     recoveryPort.givenDetectResult(
       ok({
-        type: 'crash',
-        currentBranch: 'feature/x',
+        type: "crash",
+        currentBranch: "feature/x",
         branchMeta: null,
         backupPaths: [],
         stateBranchExists: false,
         parentStateBranch: null,
       }),
     );
-    const syncError = new SyncError('RECOVER_FAILED', 'Recovery failed');
+    const syncError = new SyncError("RECOVER_FAILED", "Recovery failed");
     recoveryPort.givenRecoverResult(err(syncError));
 
     const result = await guard.ensure(TFF_DIR);
@@ -164,8 +164,8 @@ describe('StateGuard', () => {
     }
   });
 
-  it('detect fails — returns the SyncError from detect', async () => {
-    const syncError = new SyncError('DETECT_FAILED', 'Detect failed');
+  it("detect fails — returns the SyncError from detect", async () => {
+    const syncError = new SyncError("DETECT_FAILED", "Detect failed");
     recoveryPort.givenDetectResult(err(syncError));
 
     const result = await guard.ensure(TFF_DIR);
@@ -177,23 +177,23 @@ describe('StateGuard', () => {
     expect(recoveryPort.recoverCallCount).toBe(0);
   });
 
-  it('idempotency — first call recovers crash, second call detects healthy → zero recovery calls on second invocation', async () => {
+  it("idempotency — first call recovers crash, second call detects healthy → zero recovery calls on second invocation", async () => {
     // First call: crash scenario
     recoveryPort.givenDetectResult(
       ok({
-        type: 'crash',
-        currentBranch: 'feature/x',
+        type: "crash",
+        currentBranch: "feature/x",
         branchMeta: null,
-        backupPaths: ['/fake/.tff.backup.1'],
+        backupPaths: ["/fake/.tff.backup.1"],
         stateBranchExists: true,
         parentStateBranch: null,
       }),
     );
     recoveryPort.givenRecoverResult(
       ok({
-        type: 'crash',
-        action: 'restored',
-        source: 'backup',
+        type: "crash",
+        action: "restored",
+        source: "backup",
         filesRestored: 5,
         warnings: [],
       }),
@@ -206,8 +206,8 @@ describe('StateGuard', () => {
     // Second call: now healthy
     recoveryPort.givenDetectResult(
       ok({
-        type: 'healthy',
-        currentBranch: 'feature/x',
+        type: "healthy",
+        currentBranch: "feature/x",
         branchMeta: null,
         backupPaths: [],
         stateBranchExists: true,

@@ -1,13 +1,13 @@
-import { IdSchema, TimestampSchema } from "@kernel/schemas";
-import { ProjectPropsSchema } from "@hexagons/project/domain/project.schemas";
 import { MilestonePropsSchema } from "@hexagons/milestone/domain/milestone.schemas";
+import { ProjectPropsSchema } from "@hexagons/project/domain/project.schemas";
+import { CompletionRecordPropsSchema } from "@hexagons/review/domain/schemas/completion.schemas";
+import { ReviewPropsSchema } from "@hexagons/review/domain/schemas/review.schemas";
+import { ShipRecordPropsSchema } from "@hexagons/review/domain/schemas/ship.schemas";
+import { VerificationPropsSchema } from "@hexagons/review/domain/schemas/verification.schemas";
 import { SlicePropsSchema } from "@hexagons/slice/domain/slice.schemas";
 import { TaskPropsSchema } from "@hexagons/task/domain/task.schemas";
-import { ShipRecordPropsSchema } from "@hexagons/review/domain/schemas/ship.schemas";
-import { CompletionRecordPropsSchema } from "@hexagons/review/domain/schemas/completion.schemas";
 import { WorkflowSessionPropsSchema } from "@hexagons/workflow/domain/workflow-session.schemas";
-import { ReviewPropsSchema } from "@hexagons/review/domain/schemas/review.schemas";
-import { VerificationPropsSchema } from "@hexagons/review/domain/schemas/verification.schemas";
+import { TimestampSchema } from "@kernel/schemas";
 import { z } from "zod";
 
 export const SCHEMA_VERSION = 2;
@@ -28,7 +28,7 @@ export const StateSnapshotSchema = z.object({
 export type StateSnapshot = z.infer<typeof StateSnapshotSchema>;
 
 // BranchMeta is a kernel-level domain concept; canonical definition in @kernel/schemas/
-export { BranchMetaSchema, type BranchMeta } from "@kernel/schemas/branch-meta.schemas";
+export { type BranchMeta, BranchMetaSchema } from "@kernel/schemas/branch-meta.schemas";
 
 type Migration = (old: Record<string, unknown>) => Record<string, unknown>;
 

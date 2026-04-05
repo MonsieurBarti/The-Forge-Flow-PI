@@ -1,6 +1,11 @@
 import { faker } from "@faker-js/faker";
 import { Review } from "../aggregates/review.aggregate";
-import type { FindingProps, ReviewProps, ReviewRole, ReviewVerdict } from "../schemas/review.schemas";
+import type {
+  FindingProps,
+  ReviewProps,
+  ReviewRole,
+  ReviewVerdict,
+} from "../schemas/review.schemas";
 
 export class ReviewBuilder {
   private _id: string = faker.string.uuid();

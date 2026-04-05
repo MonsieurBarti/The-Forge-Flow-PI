@@ -22,10 +22,12 @@ describe("ToolPolicyRule", () => {
     const allowed = new Map([["claude-sonnet", ["Read", "Write"]]]);
     const rule = new ToolPolicyRule(allowed);
 
-    const violations = await rule.evaluate(makeContext({
-      agentModel: "claude-sonnet",
-      agentTools: ["Read", "Bash"],
-    }));
+    const violations = await rule.evaluate(
+      makeContext({
+        agentModel: "claude-sonnet",
+        agentTools: ["Read", "Bash"],
+      }),
+    );
     expect(violations).toHaveLength(1);
     expect(violations[0].ruleId).toBe("tool-policy");
     expect(violations[0].severity).toBe("blocker");
@@ -37,20 +39,24 @@ describe("ToolPolicyRule", () => {
     const allowed = new Map([["claude-sonnet", ["Read", "Write", "Bash"]]]);
     const rule = new ToolPolicyRule(allowed);
 
-    const violations = await rule.evaluate(makeContext({
-      agentModel: "claude-sonnet",
-      agentTools: ["Read", "Write"],
-    }));
+    const violations = await rule.evaluate(
+      makeContext({
+        agentModel: "claude-sonnet",
+        agentTools: ["Read", "Write"],
+      }),
+    );
     expect(violations).toEqual([]);
   });
 
   it("returns empty when no policy defined for the agent model", async () => {
     const rule = new ToolPolicyRule();
 
-    const violations = await rule.evaluate(makeContext({
-      agentModel: "claude-sonnet",
-      agentTools: ["Read", "Bash", "Write"],
-    }));
+    const violations = await rule.evaluate(
+      makeContext({
+        agentModel: "claude-sonnet",
+        agentTools: ["Read", "Bash", "Write"],
+      }),
+    );
     expect(violations).toEqual([]);
   });
 
@@ -58,16 +64,15 @@ describe("ToolPolicyRule", () => {
     const allowed = new Map([["claude-sonnet", ["Read"]]]);
     const rule = new ToolPolicyRule(allowed);
 
-    const violations = await rule.evaluate(makeContext({
-      agentModel: "claude-sonnet",
-      agentTools: ["Read", "Bash", "Write"],
-    }));
+    const violations = await rule.evaluate(
+      makeContext({
+        agentModel: "claude-sonnet",
+        agentTools: ["Read", "Bash", "Write"],
+      }),
+    );
     expect(violations).toHaveLength(2);
     expect(violations.map((v) => v.message)).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining("Bash"),
-        expect.stringContaining("Write"),
-      ]),
+      expect.arrayContaining([expect.stringContaining("Bash"), expect.stringContaining("Write")]),
     );
   });
 });

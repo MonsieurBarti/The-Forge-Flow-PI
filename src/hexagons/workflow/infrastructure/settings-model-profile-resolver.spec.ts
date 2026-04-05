@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import { MergeSettingsUseCase } from "@hexagons/settings";
+import { describe, expect, it } from "vitest";
 import { SettingsModelProfileResolver } from "./settings-model-profile-resolver";
 
 describe("SettingsModelProfileResolver", () => {

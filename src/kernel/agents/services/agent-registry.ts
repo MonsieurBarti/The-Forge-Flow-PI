@@ -1,8 +1,8 @@
 import type { Result } from "@kernel/result";
 import { ok } from "@kernel/result";
-import type { AgentCapability, AgentCard, AgentType } from "../schemas/agent-card.schema";
 import type { AgentLoadError } from "../errors/agent-errors";
 import { AgentRegistryError } from "../errors/agent-errors";
+import type { AgentCapability, AgentCard, AgentType } from "../schemas/agent-card.schema";
 import type { AgentResourceLoader } from "./agent-resource-loader";
 
 let _singleton: AgentRegistry | undefined;

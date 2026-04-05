@@ -2,14 +2,14 @@ import type { Result } from "@kernel/result";
 import type { Id } from "@kernel/schemas";
 
 export interface OverlayProjectSnapshot {
-  project: unknown | null;  // Generic — kernel doesn't import domain types
+  project: unknown | null; // Generic — kernel doesn't import domain types
   milestone: unknown | null;
   slices: unknown[];
   taskCounts: Map<string, { done: number; total: number }>;
 }
 
 export interface OverlaySliceSnapshot {
-  slice: unknown;  // Generic — adapters provide concrete types
+  slice: unknown; // Generic — adapters provide concrete types
   tasks: unknown[];
 }
 

@@ -1,21 +1,21 @@
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { SyncError } from "@kernel/errors";
-import { err, ok, type Result } from "@kernel/result";
-import type { SyncReport } from "@kernel/ports/state-sync.schemas";
-import { StateSyncPort, type SyncOptions } from "@kernel/ports/state-sync.port";
 import type { StateBranchOpsPort } from "@kernel/ports/state-branch-ops.port";
+import { StateSyncPort, type SyncOptions } from "@kernel/ports/state-sync.port";
+import type { SyncReport } from "@kernel/ports/state-sync.schemas";
+import { err, ok, type Result } from "@kernel/result";
 import type { StateExporter } from "@kernel/services/state-exporter";
 import type { StateImporter } from "@kernel/services/state-importer";
 import type { AdvisoryLock, LockRelease } from "./advisory-lock";
+import { mergeSnapshots, type Snapshot } from "./json-snapshot-merger";
 import {
-  BranchMetaSchema,
   type BranchMeta,
-  SCHEMA_VERSION,
+  BranchMetaSchema,
   migrateSnapshot,
+  SCHEMA_VERSION,
   StateSnapshotSchema,
 } from "./state-snapshot.schemas";
-import { mergeSnapshots, type Snapshot } from "./json-snapshot-merger";
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { join, dirname, relative, resolve, sep } from "node:path";
 
 export interface GitStateSyncAdapterDeps {
   stateBranchOps: StateBranchOpsPort;
@@ -109,7 +109,10 @@ export class GitStateSyncAdapter extends StateSyncPort {
       files.set("state-snapshot.json", JSON.stringify(exportResult.data, null, 2));
 
       // branch-meta.json
-      const existingMeta = await stateBranchOps.readFromStateBranch(stateBranch, "branch-meta.json");
+      const existingMeta = await stateBranchOps.readFromStateBranch(
+        stateBranch,
+        "branch-meta.json",
+      );
       let meta: BranchMeta;
       if (existingMeta.ok && existingMeta.data) {
         meta = BranchMetaSchema.parse(JSON.parse(existingMeta.data));
@@ -211,10 +214,7 @@ export class GitStateSyncAdapter extends StateSyncPort {
       if (branchMetaJson) {
         const meta = BranchMetaSchema.parse(JSON.parse(branchMetaJson));
         meta.lastSyncedAt = new Date();
-        writeFileSync(
-          join(tffDir, "branch-meta.json"),
-          JSON.stringify(meta, null, 2),
-        );
+        writeFileSync(join(tffDir, "branch-meta.json"), JSON.stringify(meta, null, 2));
       }
 
       return ok({
@@ -254,7 +254,9 @@ export class GitStateSyncAdapter extends StateSyncPort {
       const parentSnapshotStr = parentFiles.get("state-snapshot.json");
 
       if (!childSnapshotStr || !parentSnapshotStr) {
-        return err(new SyncError("IMPORT_FAILED", "Missing state-snapshot.json in one or both branches"));
+        return err(
+          new SyncError("IMPORT_FAILED", "Missing state-snapshot.json in one or both branches"),
+        );
       }
 
       const rawParent = JSON.parse(parentSnapshotStr);
@@ -285,7 +287,12 @@ export class GitStateSyncAdapter extends StateSyncPort {
       const parentMetrics = parentFiles.get("metrics.jsonl") ?? "";
       const childMetrics = childFiles.get("metrics.jsonl") ?? "";
       if (childMetrics) {
-        mergedFiles.set("metrics.jsonl", parentMetrics + (parentMetrics && !parentMetrics.endsWith("\n") ? "\n" : "") + childMetrics);
+        mergedFiles.set(
+          "metrics.jsonl",
+          parentMetrics +
+            (parentMetrics && !parentMetrics.endsWith("\n") ? "\n" : "") +
+            childMetrics,
+        );
       }
 
       // Copy child's slice-specific artifacts into parent
@@ -316,11 +323,7 @@ export class GitStateSyncAdapter extends StateSyncPort {
     });
   }
 
-  private collectJournal(
-    tffDir: string,
-    files: Map<string, string>,
-    meta: BranchMeta,
-  ): void {
+  private collectJournal(tffDir: string, files: Map<string, string>, meta: BranchMeta): void {
     // Normalize: read local journal files → single journal.jsonl
     const milestonesDir = join(tffDir, "milestones");
     if (!existsSync(milestonesDir)) return;
@@ -336,7 +339,7 @@ export class GitStateSyncAdapter extends StateSyncPort {
     });
 
     if (journalLines.length > 0) {
-      files.set("journal.jsonl", journalLines.join("\n") + "\n");
+      files.set("journal.jsonl", `${journalLines.join("\n")}\n`);
       meta.lastJournalOffset = journalLines.join("\n").split("\n").length;
     }
   }

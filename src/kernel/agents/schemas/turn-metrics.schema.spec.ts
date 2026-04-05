@@ -51,9 +51,7 @@ describe("TurnMetricsSchema", () => {
   it("parses valid turn metrics with tool calls", () => {
     const result = TurnMetricsSchema.parse({
       turnIndex: 0,
-      toolCalls: [
-        { toolCallId: "tc_001", toolName: "Read", durationMs: 50, isError: false },
-      ],
+      toolCalls: [{ toolCallId: "tc_001", toolName: "Read", durationMs: 50, isError: false }],
       durationMs: 3000,
     });
     expect(result.turnIndex).toBe(0);

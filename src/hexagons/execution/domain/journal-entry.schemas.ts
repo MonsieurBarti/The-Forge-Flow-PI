@@ -128,11 +128,15 @@ export const ReflectionEntrySchema = JournalEntryBaseSchema.extend({
   waveIndex: z.number().int().min(0),
   tier: z.enum(["fast", "full"]),
   passed: z.boolean(),
-  issues: z.array(z.object({
-    severity: z.enum(["blocker", "warning"]),
-    description: z.string().min(1),
-    filePath: z.string().optional(),
-  })).default([]),
+  issues: z
+    .array(
+      z.object({
+        severity: z.enum(["blocker", "warning"]),
+        description: z.string().min(1),
+        filePath: z.string().optional(),
+      }),
+    )
+    .default([]),
   triggeredRetry: z.boolean(),
 });
 export type ReflectionEntry = z.infer<typeof ReflectionEntrySchema>;

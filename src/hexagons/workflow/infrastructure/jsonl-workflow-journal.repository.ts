@@ -1,10 +1,10 @@
 import { appendFile, mkdir, readFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { err, ok, PersistenceError, type Result } from "@kernel";
-import { WorkflowJournalPort } from "../domain/ports/workflow-journal.port";
 import {
-  WorkflowJournalEntrySchema,
   type WorkflowJournalEntry,
+  WorkflowJournalEntrySchema,
+  WorkflowJournalPort,
 } from "../domain/ports/workflow-journal.port";
 
 function isNodeError(error: unknown): error is Error & { code: string } {

@@ -1,6 +1,8 @@
 import { ok, type PersistenceError, type Result } from "@kernel";
-import type { WorkflowJournalEntry } from "../domain/ports/workflow-journal.port";
-import type { WorkflowJournalPort } from "../domain/ports/workflow-journal.port";
+import type {
+  WorkflowJournalEntry,
+  WorkflowJournalPort,
+} from "../domain/ports/workflow-journal.port";
 import type { WorkflowSessionRepositoryPort } from "../domain/ports/workflow-session.repository.port";
 import { WorkflowSession } from "../domain/workflow-session.aggregate";
 import type { WorkflowPhase } from "../domain/workflow-session.schemas";

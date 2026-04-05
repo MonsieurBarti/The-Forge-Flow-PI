@@ -8,9 +8,12 @@ import {
 } from "@kernel/agents";
 import type { LoggerPort } from "@kernel/ports";
 import type { ModelProfileName } from "@kernel/schemas";
-import { type AuditReportProps, AuditReportSchema } from "../../../domain/schemas/completion.schemas";
 import { AuditError } from "../../../domain/errors/audit.error";
 import { AuditPort } from "../../../domain/ports/audit.port";
+import {
+  type AuditReportProps,
+  AuditReportSchema,
+} from "../../../domain/schemas/completion.schemas";
 
 const PROMPT_MAP: Record<string, string> = {
   "spec-reviewer": "prompts/audit-milestone-intent.md",

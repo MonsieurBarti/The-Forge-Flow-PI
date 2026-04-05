@@ -60,7 +60,22 @@ export class SqliteTaskRepository extends TaskRepositoryPort {
     }
 
     this.db
-      .prepare<[string, string, string, string, string, string, string, string, string, number | null, string, string]>(
+      .prepare<
+        [
+          string,
+          string,
+          string,
+          string,
+          string,
+          string,
+          string,
+          string,
+          string,
+          number | null,
+          string,
+          string,
+        ]
+      >(
         `INSERT OR REPLACE INTO tasks (id, slice_id, label, title, description, acceptance_criteria, file_paths, status, blocked_by, wave_index, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
@@ -83,9 +98,7 @@ export class SqliteTaskRepository extends TaskRepositoryPort {
   }
 
   async findById(id: Id): Promise<Result<Task | null, PersistenceError>> {
-    const row = this.db
-      .prepare<[string], TaskRow>("SELECT * FROM tasks WHERE id = ?")
-      .get(id);
+    const row = this.db.prepare<[string], TaskRow>("SELECT * FROM tasks WHERE id = ?").get(id);
     if (!row) return ok(null);
     return ok(Task.reconstitute(this.toProps(row)));
   }

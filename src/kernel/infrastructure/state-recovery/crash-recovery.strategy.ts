@@ -1,14 +1,14 @@
 import { existsSync } from "node:fs";
 import { basename, join } from "node:path";
 
-import { SyncError } from "@kernel/errors";
-import { ok, type Result } from "@kernel/result";
+import type { SyncError } from "@kernel/errors";
 import type { RecoveryStrategy } from "@kernel/ports/recovery-strategy";
+import type { StateBranchOpsPort } from "@kernel/ports/state-branch-ops.port";
+import { ok, type Result } from "@kernel/result";
+import { BranchMetaSchema } from "@kernel/schemas/branch-meta.schemas";
 import type { RecoveryReport, RecoveryScenario } from "@kernel/schemas/recovery.schemas";
 import type { BackupService } from "@kernel/services/backup-service";
 import type { RestoreStateUseCase } from "@kernel/services/restore-state.use-case";
-import type { StateBranchOpsPort } from "@kernel/ports/state-branch-ops.port";
-import { BranchMetaSchema } from "@kernel/schemas/branch-meta.schemas";
 
 /**
  * Extracts the ISO timestamp from a backup directory name.
@@ -28,9 +28,7 @@ function backupTimestamp(backupPath: string): string {
 }
 
 function sortBackupsNewestFirst(backupPaths: string[]): string[] {
-  return [...backupPaths].sort((a, b) =>
-    backupTimestamp(b).localeCompare(backupTimestamp(a)),
-  );
+  return [...backupPaths].sort((a, b) => backupTimestamp(b).localeCompare(backupTimestamp(a)));
 }
 
 export class CrashRecoveryStrategy implements RecoveryStrategy {

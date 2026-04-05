@@ -3,14 +3,8 @@ import { err, ok, type Result } from "@kernel";
 import type { DateProviderPort, EventBusPort, LoggerPort } from "@kernel/ports";
 import type { GitPort } from "@kernel/ports/git.port";
 import type { GitHubPort } from "@kernel/ports/github.port";
-import type { StateSyncPort } from "@kernel/ports/state-sync.port";
 import type { PullRequestInfo } from "@kernel/ports/github.schemas";
-import {
-  type AuditReportProps,
-  type CompleteMilestoneRequest,
-  CompleteMilestoneRequestSchema,
-  type CompleteMilestoneResult,
-} from "../domain/schemas/completion.schemas";
+import type { StateSyncPort } from "@kernel/ports/state-sync.port";
 import { CompletionRecord } from "../domain/aggregates/completion-record.aggregate";
 import { CompleteMilestoneError } from "../domain/errors/complete-milestone.error";
 import { MilestoneCompletedEvent } from "../domain/events/milestone-completed.event";
@@ -20,6 +14,12 @@ import type { FixerPort } from "../domain/ports/fixer.port";
 import type { MergeGatePort } from "../domain/ports/merge-gate.port";
 import type { MilestoneQueryPort } from "../domain/ports/milestone-query.port";
 import type { MilestoneTransitionPort } from "../domain/ports/milestone-transition.port";
+import {
+  type AuditReportProps,
+  type CompleteMilestoneRequest,
+  CompleteMilestoneRequestSchema,
+  type CompleteMilestoneResult,
+} from "../domain/schemas/completion.schemas";
 import type { FindingProps } from "../domain/schemas/review.schemas";
 
 export const DIFF_SIZE_LIMIT = 100_000;
@@ -231,16 +231,24 @@ export class CompleteMilestoneUseCase {
       const tffDir = join(parsed.workingDirectory, ".tff");
 
       const syncResult = await this.stateSyncPort.syncToStateBranch(milestoneCodeBranch, tffDir);
-      if (!syncResult.ok) return err(CompleteMilestoneError.mergeBackFailed(parsed.milestoneId, syncResult.error));
+      if (!syncResult.ok)
+        return err(CompleteMilestoneError.mergeBackFailed(parsed.milestoneId, syncResult.error));
 
-      const mergeResult = await this.stateSyncPort.mergeStateBranches(milestoneCodeBranch, defaultBranch, parsed.milestoneId);
-      if (!mergeResult.ok) return err(CompleteMilestoneError.mergeBackFailed(parsed.milestoneId, mergeResult.error));
+      const mergeResult = await this.stateSyncPort.mergeStateBranches(
+        milestoneCodeBranch,
+        defaultBranch,
+        parsed.milestoneId,
+      );
+      if (!mergeResult.ok)
+        return err(CompleteMilestoneError.mergeBackFailed(parsed.milestoneId, mergeResult.error));
 
       const deleteResult = await this.stateSyncPort.deleteStateBranch(milestoneCodeBranch);
-      if (!deleteResult.ok) return err(CompleteMilestoneError.mergeBackFailed(parsed.milestoneId, deleteResult.error));
+      if (!deleteResult.ok)
+        return err(CompleteMilestoneError.mergeBackFailed(parsed.milestoneId, deleteResult.error));
 
       const restoreResult = await this.stateSyncPort.restoreFromStateBranch(defaultBranch, tffDir);
-      if (!restoreResult.ok) return err(CompleteMilestoneError.mergeBackFailed(parsed.milestoneId, restoreResult.error));
+      if (!restoreResult.ok)
+        return err(CompleteMilestoneError.mergeBackFailed(parsed.milestoneId, restoreResult.error));
     }
 
     // Step 6: Post-merge cleanup (best-effort)

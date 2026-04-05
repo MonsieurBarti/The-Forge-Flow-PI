@@ -1,7 +1,11 @@
 import { isOk } from "@kernel";
 import { describe, expect, it } from "vitest";
+import type {
+  PreDispatchContext,
+  PreDispatchReport,
+  PreDispatchViolation,
+} from "../../../domain/pre-dispatch.schemas";
 import type { PreDispatchGuardrailRule } from "../../../domain/pre-dispatch-guardrail-rule";
-import type { PreDispatchContext, PreDispatchReport, PreDispatchViolation } from "../../../domain/pre-dispatch.schemas";
 import { ComposablePreDispatchAdapter } from "./composable-pre-dispatch.adapter";
 import { InMemoryPreDispatchAdapter } from "./in-memory-pre-dispatch.adapter";
 
@@ -20,10 +24,7 @@ function makeContext(overrides: Partial<PreDispatchContext> = {}): PreDispatchCo
   };
 }
 
-function makeRule(
-  id: string,
-  violations: PreDispatchViolation[],
-): PreDispatchGuardrailRule {
+function makeRule(id: string, violations: PreDispatchViolation[]): PreDispatchGuardrailRule {
   return {
     id,
     evaluate: async () => violations,
@@ -113,9 +114,7 @@ describe("InMemoryPreDispatchAdapter", () => {
     const adapter = new InMemoryPreDispatchAdapter();
     const preset: PreDispatchReport = {
       passed: false,
-      violations: [
-        { ruleId: "custom", severity: "blocker", message: "custom blocker" },
-      ],
+      violations: [{ ruleId: "custom", severity: "blocker", message: "custom blocker" }],
       checkedAt: "2026-04-05T00:00:00.000Z",
     };
     adapter.setReport(preset);

@@ -1,7 +1,6 @@
+import { isOk } from "@kernel";
 import Database from "better-sqlite3";
 import { beforeEach, describe, expect, it } from "vitest";
-
-import { isOk } from "@kernel";
 import { Verification } from "../../../domain/aggregates/verification.aggregate";
 import type { VerificationRepositoryPort } from "../../../domain/ports/verification-repository.port";
 import { InMemoryVerificationRepository } from "./in-memory-verification.repository";
@@ -73,9 +72,7 @@ function runContractTests(
     });
 
     it("reset clears all verifications", async () => {
-      await repo.save(
-        makeVerification({ id: crypto.randomUUID(), sliceId: crypto.randomUUID() }),
-      );
+      await repo.save(makeVerification({ id: crypto.randomUUID(), sliceId: crypto.randomUUID() }));
       repo.reset();
 
       const result = await repo.findAll();

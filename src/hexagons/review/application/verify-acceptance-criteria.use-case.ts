@@ -7,6 +7,7 @@ import type {
 } from "@kernel/agents";
 import type { DateProviderPort, EventBusPort, LoggerPort } from "@kernel/ports";
 import { z } from "zod";
+import { Verification } from "../domain/aggregates/verification.aggregate";
 import { FreshReviewerViolationError } from "../domain/errors/fresh-reviewer-violation.error";
 import { VerifyError } from "../domain/errors/verify.error";
 import { VerificationCompletedEvent } from "../domain/events/verification-completed.event";
@@ -16,8 +17,6 @@ import type { SliceSpec, SliceSpecPort } from "../domain/ports/slice-spec.port";
 import type { VerificationRepositoryPort } from "../domain/ports/verification-repository.port";
 import type { FindingProps } from "../domain/schemas/review.schemas";
 import type { VerificationUIContext } from "../domain/schemas/review-ui.schemas";
-import type { FreshReviewerService } from "../domain/services/fresh-reviewer.service";
-import { Verification } from "../domain/aggregates/verification.aggregate";
 import {
   type CriterionVerdictProps,
   CriterionVerdictSchema,
@@ -25,6 +24,7 @@ import {
   VerifyRequestSchema,
   type VerifyResult,
 } from "../domain/schemas/verification.schemas";
+import type { FreshReviewerService } from "../domain/services/fresh-reviewer.service";
 
 function parseCriteria(acceptanceCriteria: string): string[] {
   return acceptanceCriteria

@@ -11,50 +11,18 @@ export { ReviewPromptBuilder } from "./application/review-prompt-builder";
 export { ShipSliceUseCase } from "./application/ship-slice.use-case";
 // Application — Verify
 export { VerifyAcceptanceCriteriaUseCase } from "./application/verify-acceptance-criteria.use-case";
-// Domain — CompleteMilestone Schemas
-export type {
-  AuditAgentType,
-  AuditReportProps,
-  AuditVerdict,
-  CompleteMilestoneRequest,
-  CompleteMilestoneResult,
-  CompletionOutcome,
-  CompletionRecordProps,
-} from "./domain/schemas/completion.schemas";
-export {
-  AuditAgentTypeSchema,
-  AuditReportSchema,
-  AuditVerdictSchema,
-  CompleteMilestoneRequestSchema,
-  CompleteMilestoneResultSchema,
-  CompletionOutcomeSchema,
-  CompletionRecordPropsSchema,
-} from "./domain/schemas/completion.schemas";
 // Domain — CompletionRecord Aggregate
 export { CompletionRecord } from "./domain/aggregates/completion-record.aggregate";
-// Domain — ConductReview schemas
-export type { ConductReviewRequest, ConductReviewResult } from "./domain/schemas/conduct-review.schemas";
-export {
-  ConductReviewRequestSchema,
-  ConductReviewResultSchema,
-} from "./domain/schemas/conduct-review.schemas";
+// Domain -- Aggregates & Value Objects
+export { Review } from "./domain/aggregates/review.aggregate";
+// Domain — ShipRecord aggregate
+export { ShipRecord } from "./domain/aggregates/ship-record.aggregate";
+// Domain — Verification
+export { Verification } from "./domain/aggregates/verification.aggregate";
 // Domain -- Builders
 export { CritiqueReflectionResultBuilder } from "./domain/builders/critique-reflection.builder";
-// Domain -- Schemas (types)
-export type {
-  CritiquePassResult,
-  CritiqueReflectionResult,
-  ProcessedReviewResult,
-  ReflectionInsight,
-  ReflectionPassResult,
-} from "./domain/schemas/critique-reflection.schemas";
-export {
-  CritiquePassResultSchema,
-  CritiqueReflectionResultSchema,
-  ProcessedReviewResultSchema,
-  ReflectionInsightSchema,
-  ReflectionPassResultSchema,
-} from "./domain/schemas/critique-reflection.schemas";
+export { FindingBuilder } from "./domain/builders/finding.builder";
+export { ReviewBuilder } from "./domain/builders/review.builder";
 // Domain — CompleteMilestone Errors
 export { AuditError } from "./domain/errors/audit.error";
 export { CompleteMilestoneError } from "./domain/errors/complete-milestone.error";
@@ -80,18 +48,6 @@ export { ReviewRecordedEvent } from "./domain/events/review-recorded.event";
 // Domain — Ship Events
 export { SliceShippedEvent } from "./domain/events/slice-shipped.event";
 export { VerificationCompletedEvent } from "./domain/events/verification-completed.event";
-export { FindingBuilder } from "./domain/builders/finding.builder";
-export type {
-  ConflictProps,
-  MergedFindingProps,
-  MergedReviewProps,
-} from "./domain/schemas/merged-review.schemas";
-export {
-  ConflictPropsSchema,
-  MergedFindingPropsSchema,
-  MergedReviewPropsSchema,
-} from "./domain/schemas/merged-review.schemas";
-export { MergedReview, MergeValidationError } from "./domain/value-objects/merged-review.vo";
 // Domain — CompleteMilestone Ports
 export { AuditPort } from "./domain/ports/audit.port";
 export { ChangedFilesPort } from "./domain/ports/changed-files.port";
@@ -114,9 +70,59 @@ export type { SliceSpec } from "./domain/ports/slice-spec.port";
 // Domain — New Ports
 export { SliceSpecPort, SliceSpecSchema } from "./domain/ports/slice-spec.port";
 export { VerificationRepositoryPort } from "./domain/ports/verification-repository.port";
-// Domain -- Aggregates & Value Objects
-export { Review } from "./domain/aggregates/review.aggregate";
-export { ReviewBuilder } from "./domain/builders/review.builder";
+// Domain — CompleteMilestone Schemas
+export type {
+  AuditAgentType,
+  AuditReportProps,
+  AuditVerdict,
+  CompleteMilestoneRequest,
+  CompleteMilestoneResult,
+  CompletionOutcome,
+  CompletionRecordProps,
+} from "./domain/schemas/completion.schemas";
+export {
+  AuditAgentTypeSchema,
+  AuditReportSchema,
+  AuditVerdictSchema,
+  CompleteMilestoneRequestSchema,
+  CompleteMilestoneResultSchema,
+  CompletionOutcomeSchema,
+  CompletionRecordPropsSchema,
+} from "./domain/schemas/completion.schemas";
+// Domain — ConductReview schemas
+export type {
+  ConductReviewRequest,
+  ConductReviewResult,
+} from "./domain/schemas/conduct-review.schemas";
+export {
+  ConductReviewRequestSchema,
+  ConductReviewResultSchema,
+} from "./domain/schemas/conduct-review.schemas";
+// Domain -- Schemas (types)
+export type {
+  CritiquePassResult,
+  CritiqueReflectionResult,
+  ProcessedReviewResult,
+  ReflectionInsight,
+  ReflectionPassResult,
+} from "./domain/schemas/critique-reflection.schemas";
+export {
+  CritiquePassResultSchema,
+  CritiqueReflectionResultSchema,
+  ProcessedReviewResultSchema,
+  ReflectionInsightSchema,
+  ReflectionPassResultSchema,
+} from "./domain/schemas/critique-reflection.schemas";
+export type {
+  ConflictProps,
+  MergedFindingProps,
+  MergedReviewProps,
+} from "./domain/schemas/merged-review.schemas";
+export {
+  ConflictPropsSchema,
+  MergedFindingPropsSchema,
+  MergedReviewPropsSchema,
+} from "./domain/schemas/merged-review.schemas";
 export type {
   FindingImpact,
   FindingProps,
@@ -137,8 +143,6 @@ export {
   ReviewVerdictSchema,
   SEVERITY_RANK,
 } from "./domain/schemas/review.schemas";
-// Domain -- Strategy
-export { strategyForRole } from "./domain/strategies/review-strategy";
 // Domain — ReviewUI Schemas
 export type {
   ApprovalUIContext,
@@ -156,9 +160,6 @@ export {
   VerificationUIContextSchema,
   VerificationUIResponseSchema,
 } from "./domain/schemas/review-ui.schemas";
-// Domain -- Services
-export { CritiqueReflectionService } from "./domain/services/critique-reflection.service";
-export { FreshReviewerService } from "./domain/services/fresh-reviewer.service";
 // Domain — Ship schemas
 export type {
   MergeGateDecision,
@@ -172,10 +173,6 @@ export {
   ShipRequestSchema,
   ShipResultSchema,
 } from "./domain/schemas/ship.schemas";
-// Domain — ShipRecord aggregate
-export { ShipRecord } from "./domain/aggregates/ship-record.aggregate";
-// Domain — Verification
-export { Verification } from "./domain/aggregates/verification.aggregate";
 export type {
   CriterionVerdictProps,
   VerificationProps,
@@ -190,28 +187,34 @@ export {
   VerifyRequestSchema,
   VerifyResultSchema,
 } from "./domain/schemas/verification.schemas";
-export { BeadSliceSpecAdapter } from "./infrastructure/adapters/slice-spec/bead-slice-spec.adapter";
+// Domain -- Services
+export { CritiqueReflectionService } from "./domain/services/critique-reflection.service";
+export { FreshReviewerService } from "./domain/services/fresh-reviewer.service";
+// Domain -- Strategy
+export { strategyForRole } from "./domain/strategies/review-strategy";
+export { MergedReview, MergeValidationError } from "./domain/value-objects/merged-review.vo";
+export { PiAuditAdapter } from "./infrastructure/adapters/audit/pi-audit.adapter";
+export { GitChangedFilesAdapter } from "./infrastructure/adapters/changed-files/git-changed-files.adapter";
 // Infrastructure -- Adapters
 export { CachedExecutorQueryAdapter } from "./infrastructure/adapters/executor-query/cached-executor-query.adapter";
-export { GitChangedFilesAdapter } from "./infrastructure/adapters/changed-files/git-changed-files.adapter";
-// Infrastructure — CompleteMilestone
-export { InMemoryCompletionRecordRepository } from "./infrastructure/repositories/completion-record/in-memory-completion-record.repository";
-export { InMemoryReviewRepository } from "./infrastructure/repositories/review/in-memory-review.repository";
-// Infrastructure — ReviewUI Adapters
-export { InMemoryReviewUIAdapter } from "./infrastructure/adapters/review-ui/in-memory-review-ui.adapter";
-// Infrastructure — Ship
-export { InMemoryShipRecordRepository } from "./infrastructure/repositories/ship-record/in-memory-ship-record.repository";
-// Infrastructure — Verification
-export { InMemoryVerificationRepository } from "./infrastructure/repositories/verification/in-memory-verification.repository";
-export { MilestoneQueryAdapter } from "./infrastructure/adapters/milestone/milestone-query.adapter";
-export { MilestoneTransitionAdapter } from "./infrastructure/adapters/milestone/milestone-transition.adapter";
-export { PiAuditAdapter } from "./infrastructure/adapters/audit/pi-audit.adapter";
-export { PiMergeGateAdapter } from "./infrastructure/adapters/merge-gate/pi-merge-gate.adapter";
-export { PlannotatorReviewUIAdapter } from "./infrastructure/adapters/review-ui/plannotator-review-ui.adapter";
-export { SqliteCompletionRecordRepository } from "./infrastructure/repositories/completion-record/sqlite-completion-record.repository";
-export { SqliteReviewRepository } from "./infrastructure/repositories/review/sqlite-review.repository";
-export { SqliteShipRecordRepository } from "./infrastructure/repositories/ship-record/sqlite-ship-record.repository";
-export { SqliteVerificationRepository } from "./infrastructure/repositories/verification/sqlite-verification.repository";
 // Infrastructure — New Adapters
 export { StubFixerAdapter } from "./infrastructure/adapters/fixer/stub-fixer.adapter";
+export { PiMergeGateAdapter } from "./infrastructure/adapters/merge-gate/pi-merge-gate.adapter";
+export { MilestoneQueryAdapter } from "./infrastructure/adapters/milestone/milestone-query.adapter";
+export { MilestoneTransitionAdapter } from "./infrastructure/adapters/milestone/milestone-transition.adapter";
+// Infrastructure — ReviewUI Adapters
+export { InMemoryReviewUIAdapter } from "./infrastructure/adapters/review-ui/in-memory-review-ui.adapter";
+export { PlannotatorReviewUIAdapter } from "./infrastructure/adapters/review-ui/plannotator-review-ui.adapter";
 export { TerminalReviewUIAdapter } from "./infrastructure/adapters/review-ui/terminal-review-ui.adapter";
+export { BeadSliceSpecAdapter } from "./infrastructure/adapters/slice-spec/bead-slice-spec.adapter";
+// Infrastructure — CompleteMilestone
+export { InMemoryCompletionRecordRepository } from "./infrastructure/repositories/completion-record/in-memory-completion-record.repository";
+export { SqliteCompletionRecordRepository } from "./infrastructure/repositories/completion-record/sqlite-completion-record.repository";
+export { InMemoryReviewRepository } from "./infrastructure/repositories/review/in-memory-review.repository";
+export { SqliteReviewRepository } from "./infrastructure/repositories/review/sqlite-review.repository";
+// Infrastructure — Ship
+export { InMemoryShipRecordRepository } from "./infrastructure/repositories/ship-record/in-memory-ship-record.repository";
+export { SqliteShipRecordRepository } from "./infrastructure/repositories/ship-record/sqlite-ship-record.repository";
+// Infrastructure — Verification
+export { InMemoryVerificationRepository } from "./infrastructure/repositories/verification/in-memory-verification.repository";
+export { SqliteVerificationRepository } from "./infrastructure/repositories/verification/sqlite-verification.repository";

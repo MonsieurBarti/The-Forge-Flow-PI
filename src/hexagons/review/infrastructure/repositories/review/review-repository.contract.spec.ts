@@ -7,10 +7,7 @@ import type { ReviewRepositoryPort } from "../../../domain/ports/review-reposito
 import { InMemoryReviewRepository } from "./in-memory-review.repository";
 import { SqliteReviewRepository } from "./sqlite-review.repository";
 
-function runContractTests(
-  name: string,
-  factory: () => ReviewRepositoryPort & { reset(): void },
-) {
+function runContractTests(name: string, factory: () => ReviewRepositoryPort & { reset(): void }) {
   describe(`${name} contract`, () => {
     let repo: ReviewRepositoryPort & { reset(): void };
 

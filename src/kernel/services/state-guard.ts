@@ -1,9 +1,9 @@
-import type { StateRecoveryPort } from '@kernel/ports/state-recovery.port';
-import type { HealthCheckService } from './health-check.service';
-import type { Result } from '@kernel/result';
-import { ok, err } from '@kernel/result';
-import type { SyncError } from '@kernel/errors/sync.error';
-import type { LoggerPort } from '@kernel/ports/logger.port';
+import type { SyncError } from "@kernel/errors/sync.error";
+import type { LoggerPort } from "@kernel/ports/logger.port";
+import type { StateRecoveryPort } from "@kernel/ports/state-recovery.port";
+import type { Result } from "@kernel/result";
+import { err, ok } from "@kernel/result";
+import type { HealthCheckService } from "./health-check.service";
 
 export class StateGuard {
   constructor(
@@ -23,7 +23,7 @@ export class StateGuard {
     const scenario = detectResult.data;
 
     // 3. If healthy or untracked → return ok immediately (idempotent, zero fs writes)
-    if (scenario.type === 'healthy' || scenario.type === 'untracked') {
+    if (scenario.type === "healthy" || scenario.type === "untracked") {
       return ok(undefined);
     }
 

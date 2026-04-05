@@ -59,9 +59,7 @@ describe("ScopeContainmentRule", () => {
     });
 
     it("returns empty for empty taskFilePaths", async () => {
-      const violations = await rule.evaluate(
-        makeContext({ taskFilePaths: [] }),
-      );
+      const violations = await rule.evaluate(makeContext({ taskFilePaths: [] }));
       expect(violations).toEqual([]);
     });
   });

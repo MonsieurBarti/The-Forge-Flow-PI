@@ -1,4 +1,7 @@
 // Domain — Autonomy Policy
+
+// Application
+export { ReplayWorkflowJournalUseCase } from "./application/replay-workflow-journal.use-case";
 export { getHumanGates, shouldAutoTransition } from "./domain/autonomy-policy";
 export { ContextPackageBuilder } from "./domain/context-package.builder";
 export {
@@ -72,10 +75,12 @@ export {
 } from "./domain/ports/context-staging.port";
 export { ModelProfileResolverPort } from "./domain/ports/model-profile-resolver.port";
 export { SliceTransitionPort } from "./domain/ports/slice-transition.port";
-export { WorkflowSessionRepositoryPort } from "./domain/ports/workflow-session.repository.port";
-export { WorkflowJournalPort } from "./domain/ports/workflow-journal.port";
 export type { WorkflowJournalEntry } from "./domain/ports/workflow-journal.port";
-export { WorkflowJournalEntrySchema } from "./domain/ports/workflow-journal.port";
+export {
+  WorkflowJournalEntrySchema,
+  WorkflowJournalPort,
+} from "./domain/ports/workflow-journal.port";
+export { WorkflowSessionRepositoryPort } from "./domain/ports/workflow-session.repository.port";
 // Domain — Transition Table
 export {
   ACTIVE_PHASES,
@@ -110,13 +115,11 @@ export {
   WorkflowSessionPropsSchema,
   WorkflowTriggerSchema,
 } from "./domain/workflow-session.schemas";
+export { DefaultContextStagingAdapter } from "./infrastructure/default-context-staging.adapter";
 // Infrastructure — Adapters
 export { InMemoryArtifactFileAdapter } from "./infrastructure/in-memory-artifact-file.adapter";
-export { DefaultContextStagingAdapter } from "./infrastructure/default-context-staging.adapter";
 export { InMemoryWorkflowSessionRepository } from "./infrastructure/in-memory-workflow-session.repository";
 export { JsonlWorkflowJournalRepository } from "./infrastructure/jsonl-workflow-journal.repository";
-export { SqliteWorkflowSessionRepository } from "./infrastructure/sqlite-workflow-session.repository";
-export { SettingsModelProfileResolver } from "./infrastructure/settings-model-profile-resolver";
 // Infrastructure — PI Tools & Commands
 export { createClassifyComplexityTool } from "./infrastructure/pi/classify-complexity.tool";
 export {
@@ -152,9 +155,8 @@ export {
 export { createWritePlanTool } from "./infrastructure/pi/write-plan.tool";
 export { createWriteResearchTool } from "./infrastructure/pi/write-research.tool";
 export { createWriteSpecTool } from "./infrastructure/pi/write-spec.tool";
-
-// Application
-export { ReplayWorkflowJournalUseCase } from "./application/replay-workflow-journal.use-case";
+export { SettingsModelProfileResolver } from "./infrastructure/settings-model-profile-resolver";
+export { SqliteWorkflowSessionRepository } from "./infrastructure/sqlite-workflow-session.repository";
 
 // Use Cases
 export { ClassifyComplexityUseCase } from "./use-cases/classify-complexity.use-case";

@@ -1,6 +1,6 @@
-import type { StateSyncPort } from "@kernel/ports/state-sync.port";
-import type { GitPort } from "@kernel/ports/git.port";
 import { SyncError } from "@kernel/errors";
+import type { GitPort } from "@kernel/ports/git.port";
+import type { StateSyncPort } from "@kernel/ports/state-sync.port";
 import { err, type Result } from "@kernel/result";
 import type { RestoreReport, RestoreStateUseCase } from "./restore-state.use-case";
 
@@ -23,7 +23,7 @@ export class ForceSyncUseCase {
     return this.stateSync.syncToStateBranch(branch, tffDir);
   }
 
-  async pull(tffDir: string): Promise<Result<RestoreReport, SyncError>> {
+  async pull(_tffDir: string): Promise<Result<RestoreReport, SyncError>> {
     const branchResult = await this.gitPort.currentBranch();
     if (!branchResult.ok) {
       return err(new SyncError("GIT_ERROR", branchResult.error.message));

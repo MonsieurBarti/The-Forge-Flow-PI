@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { Verification } from "./verification.aggregate";
 import type { CriterionVerdictProps } from "../schemas/verification.schemas";
+import { Verification } from "./verification.aggregate";
 
 const NOW = new Date("2026-04-01T12:00:00Z");
 const ID = crypto.randomUUID();

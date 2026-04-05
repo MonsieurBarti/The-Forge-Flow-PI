@@ -70,7 +70,11 @@ describe("RecordTaskMetricsUseCase", () => {
   it("persists turns from agentResult into TaskMetrics", async () => {
     const turns = [
       { turnIndex: 0, toolCalls: [], durationMs: 1200 },
-      { turnIndex: 1, toolCalls: [{ toolCallId: "tc-1", toolName: "Read", durationMs: 50, isError: false }], durationMs: 800 },
+      {
+        turnIndex: 1,
+        toolCalls: [{ toolCallId: "tc-1", toolName: "Read", durationMs: 50, isError: false }],
+        durationMs: 800,
+      },
     ];
     const agentResult = new AgentResultBuilder().withTurns(turns).build();
 

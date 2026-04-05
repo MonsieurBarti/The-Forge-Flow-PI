@@ -1,21 +1,13 @@
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
-import { GitError } from "@kernel/errors/git.error";
-import { HookError } from "@kernel/ports/git-hook.port";
-import type { GitHookPort } from "@kernel/ports/git-hook.port";
-import type { StateBranchOpsPort } from "@kernel/ports/state-branch-ops.port";
-import type { GitPort } from "@kernel/ports/git.port";
-import { ok, err, type Result } from "@kernel/result";
-import { HealthCheckService } from "./health-check.service";
+import type { GitError } from "@kernel/errors/git.error";
 import { InMemoryGitAdapter } from "@kernel/infrastructure/in-memory-git.adapter";
+import type { GitHookPort, HookError } from "@kernel/ports/git-hook.port";
+import type { StateBranchOpsPort } from "@kernel/ports/state-branch-ops.port";
+import { ok, type Result } from "@kernel/result";
+import { afterEach, describe, expect, it } from "vitest";
+import { HealthCheckService } from "./health-check.service";
 
 // ── Stubs ──────────────────────────────────────────────────────────────────
 
@@ -79,9 +71,7 @@ class StubStateBranchOpsPort implements StateBranchOpsPort {
     return Promise.resolve(ok(null));
   }
 
-  readAllFromStateBranch(
-    _stateBranch: string,
-  ): Promise<Result<Map<string, string>, GitError>> {
+  readAllFromStateBranch(_stateBranch: string): Promise<Result<Map<string, string>, GitError>> {
     return Promise.resolve(ok(new Map()));
   }
 }

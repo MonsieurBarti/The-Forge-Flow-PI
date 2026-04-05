@@ -8,9 +8,7 @@ export interface BuildReflectionConfigParams {
   readonly gitDiff: string;
 }
 
-export function buildReflectionConfig(
-  params: BuildReflectionConfigParams,
-): AgentDispatchConfig {
+export function buildReflectionConfig(params: BuildReflectionConfigParams): AgentDispatchConfig {
   const { originalConfig, acceptanceCriteria, gitDiff } = params;
 
   return {
@@ -19,11 +17,7 @@ export function buildReflectionConfig(
     agentType: originalConfig.agentType,
     workingDirectory: originalConfig.workingDirectory,
     systemPrompt: REFLECTION_SYSTEM_PROMPT,
-    taskPrompt: buildReflectionTaskPrompt(
-      acceptanceCriteria,
-      gitDiff,
-      originalConfig.taskPrompt,
-    ),
+    taskPrompt: buildReflectionTaskPrompt(acceptanceCriteria, gitDiff, originalConfig.taskPrompt),
     model: originalConfig.model,
     tools: [...REFLECTION_TOOLS],
     filePaths: [...originalConfig.filePaths],

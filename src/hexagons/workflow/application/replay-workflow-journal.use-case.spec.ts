@@ -1,8 +1,8 @@
-import { describe, expect, it, beforeEach } from "vitest";
 import { ok, type PersistenceError, type Result } from "@kernel";
-import { InMemoryWorkflowSessionRepository } from "../infrastructure/in-memory-workflow-session.repository";
-import { WorkflowJournalPort } from "../domain/ports/workflow-journal.port";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { WorkflowJournalEntry } from "../domain/ports/workflow-journal.port";
+import { WorkflowJournalPort } from "../domain/ports/workflow-journal.port";
+import { InMemoryWorkflowSessionRepository } from "../infrastructure/in-memory-workflow-session.repository";
 import { ReplayWorkflowJournalUseCase } from "./replay-workflow-journal.use-case";
 
 class MockWorkflowJournal extends WorkflowJournalPort {

@@ -1,8 +1,7 @@
 import { type Id, ok, type PersistenceError, type Result } from "@kernel";
 import type Database from "better-sqlite3";
-
-import { VerificationRepositoryPort } from "../../../domain/ports/verification-repository.port";
 import { Verification } from "../../../domain/aggregates/verification.aggregate";
+import { VerificationRepositoryPort } from "../../../domain/ports/verification-repository.port";
 import type { VerificationProps } from "../../../domain/schemas/verification.schemas";
 import { VerificationVerdictSchema } from "../../../domain/schemas/verification.schemas";
 
@@ -61,9 +60,7 @@ export class SqliteVerificationRepository extends VerificationRepositoryPort {
   }
 
   async findAll(): Promise<Result<Verification[], PersistenceError>> {
-    const rows = this.db
-      .prepare<[], VerificationRow>("SELECT * FROM verifications")
-      .all();
+    const rows = this.db.prepare<[], VerificationRow>("SELECT * FROM verifications").all();
     return ok(rows.map((row) => Verification.reconstitute(this.toProps(row))));
   }
 

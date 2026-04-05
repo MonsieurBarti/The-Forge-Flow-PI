@@ -1,6 +1,9 @@
 import { ok, type Result } from "@kernel";
 import type { GuardrailError } from "../../../domain/errors/guardrail.error";
-import type { GuardrailContext, GuardrailValidationReport } from "../../../domain/guardrail.schemas";
+import type {
+  GuardrailContext,
+  GuardrailValidationReport,
+} from "../../../domain/guardrail.schemas";
 import { OutputGuardrailPort } from "../../../domain/ports/output-guardrail.port";
 
 const CLEAN_REPORT: GuardrailValidationReport = {
