@@ -1,4 +1,4 @@
-import type { MergeSettingsUseCase } from "@hexagons/settings";
+import type { DiscoverStackUseCase, MergeSettingsUseCase } from "@hexagons/settings";
 import type { ExtensionAPI } from "@infrastructure/pi";
 import { createZodTool } from "@infrastructure/pi";
 import type { DateProviderPort, EventBusPort } from "@kernel";
@@ -15,6 +15,7 @@ export interface ProjectExtensionDeps {
   eventBus: EventBusPort;
   dateProvider: DateProviderPort;
   gitHookPort?: GitHookPort;
+  discoverStack?: DiscoverStackUseCase;
   withGuard?: () => Promise<void>;
 }
 
@@ -44,6 +45,7 @@ export function registerProjectExtension(api: ExtensionAPI, deps: ProjectExtensi
           deps.eventBus,
           deps.dateProvider,
           deps.gitHookPort,
+          deps.discoverStack,
         );
         const result = await useCase.execute(params);
         if (!result.ok) {
