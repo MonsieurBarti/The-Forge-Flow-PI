@@ -137,6 +137,13 @@ const BaseHotkeysConfigSchema = z.object({
 });
 export type HotkeysConfig = z.infer<typeof BaseHotkeysConfigSchema>;
 
+const BaseFallbackStrategyConfigSchema = z.object({
+  retryCount: z.number().int().min(0).max(3).default(1),
+  downshiftChain: z.array(z.string()).default(["quality", "balanced", "budget"]),
+  checkpointBeforeRetry: z.boolean().default(true),
+});
+export type FallbackStrategyConfig = z.infer<typeof BaseFallbackStrategyConfigSchema>;
+
 // ---------------------------------------------------------------------------
 // Fully-hydrated defaults (required by Zod 4 — parent .default() is literal)
 // ---------------------------------------------------------------------------
@@ -192,6 +199,12 @@ export const HOTKEYS_DEFAULTS: HotkeysConfig = {
   executionMonitor: "ctrl+alt+e",
 };
 
+export const FALLBACK_STRATEGY_DEFAULTS: FallbackStrategyConfig = {
+  retryCount: 1,
+  downshiftChain: ["quality", "balanced", "budget"],
+  checkpointBeforeRetry: true,
+};
+
 // ---------------------------------------------------------------------------
 // Exported schemas with .catch() for resilience
 // ---------------------------------------------------------------------------
@@ -203,6 +216,7 @@ export const BeadsConfigSchema = BaseBeadsConfigSchema.catch(BEADS_DEFAULTS);
 export const GuardrailsConfigSchema = BaseGuardrailsConfigSchema.catch(GUARDRAILS_DEFAULTS);
 export const OverseerConfigSchema = BaseOverseerConfigSchema.catch(OVERSEER_DEFAULTS);
 export const HotkeysConfigSchema = BaseHotkeysConfigSchema.catch(HOTKEYS_DEFAULTS);
+export const FallbackStrategyConfigSchema = BaseFallbackStrategyConfigSchema.catch(FALLBACK_STRATEGY_DEFAULTS);
 
 // ---------------------------------------------------------------------------
 // Top-level SettingsSchema
@@ -216,6 +230,7 @@ export const SETTINGS_DEFAULTS = {
   guardrails: GUARDRAILS_DEFAULTS,
   overseer: OVERSEER_DEFAULTS,
   hotkeys: HOTKEYS_DEFAULTS,
+  fallback: undefined as FallbackStrategyConfig | undefined,
 };
 
 export const SettingsSchema = z
@@ -227,6 +242,7 @@ export const SettingsSchema = z
     guardrails: GuardrailsConfigSchema.default(GUARDRAILS_DEFAULTS),
     overseer: OverseerConfigSchema.default(OVERSEER_DEFAULTS),
     hotkeys: HotkeysConfigSchema.default(HOTKEYS_DEFAULTS),
+    fallback: FallbackStrategyConfigSchema.optional(),
   })
   .default(SETTINGS_DEFAULTS);
 export type SettingsProps = z.infer<typeof SettingsSchema>;

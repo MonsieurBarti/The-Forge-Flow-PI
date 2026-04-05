@@ -34,4 +34,24 @@ describe("TaskMetricsBuilder", () => {
     const metrics = new TaskMetricsBuilder().withMilestoneId(id).build();
     expect(metrics.milestoneId).toBe(id);
   });
+
+  it("defaults reflectionTier to skipped", () => {
+    const metrics = new TaskMetricsBuilder().build();
+    expect(metrics.reflectionTier).toBe("skipped");
+  });
+
+  it("applies withReflectionTier override", () => {
+    const metrics = new TaskMetricsBuilder().withReflectionTier("full").build();
+    expect(metrics.reflectionTier).toBe("full");
+  });
+
+  it("applies withFinalProfile override", () => {
+    const metrics = new TaskMetricsBuilder().withFinalProfile("quality").build();
+    expect(metrics.finalProfile).toBe("quality");
+  });
+
+  it("applies withTotalAttempts override", () => {
+    const metrics = new TaskMetricsBuilder().withTotalAttempts(2).build();
+    expect(metrics.totalAttempts).toBe(2);
+  });
 });

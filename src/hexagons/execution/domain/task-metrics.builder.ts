@@ -20,6 +20,9 @@ export class TaskMetricsBuilder {
   private _retries = 0;
   private _downshifted = false;
   private _reflectionPassed?: boolean;
+  private _reflectionTier: "fast" | "full" | "skipped" = "skipped";
+  private _finalProfile?: string;
+  private _totalAttempts?: number;
   private _timestamp: Date = faker.date.recent();
 
   withTaskId(id: string): this {
@@ -78,6 +81,18 @@ export class TaskMetricsBuilder {
     this._reflectionPassed = r;
     return this;
   }
+  withReflectionTier(tier: "fast" | "full" | "skipped"): this {
+    this._reflectionTier = tier;
+    return this;
+  }
+  withFinalProfile(profile: string): this {
+    this._finalProfile = profile;
+    return this;
+  }
+  withTotalAttempts(attempts: number): this {
+    this._totalAttempts = attempts;
+    return this;
+  }
   withTimestamp(t: Date): this {
     this._timestamp = t;
     return this;
@@ -96,6 +111,9 @@ export class TaskMetricsBuilder {
       retries: this._retries,
       downshifted: this._downshifted,
       reflectionPassed: this._reflectionPassed,
+      reflectionTier: this._reflectionTier,
+      finalProfile: this._finalProfile,
+      totalAttempts: this._totalAttempts,
       timestamp: this._timestamp,
     });
   }
