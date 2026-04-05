@@ -1,58 +1,108 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { ExecuteSliceUseCase } from "@hexagons/execution/application/execute-slice.use-case";
+import { ExecuteSliceUseCase } from "@hexagons/execution/application/execute-slice.use-case";
+import { GetSliceExecutorsUseCase } from "@hexagons/execution/application/get-slice-executors.use-case";
 import { ReplayJournalUseCase } from "@hexagons/execution/application/replay-journal.use-case";
-import { GitWorktreeAdapter } from "@hexagons/execution/infrastructure/git-worktree.adapter";
-import { InMemoryCheckpointRepository } from "@hexagons/execution/infrastructure/in-memory-checkpoint.repository";
-import { InMemoryJournalRepository } from "@hexagons/execution/infrastructure/in-memory-journal.repository";
-import { MarkdownExecutionSessionAdapter } from "@hexagons/execution/infrastructure/markdown-execution-session.adapter";
+import { RollbackSliceUseCase } from "@hexagons/execution/application/rollback-slice.use-case";
+import { OverseerConfigSchema } from "@hexagons/execution/domain/overseer.schemas";
+import { PiAgentDispatchAdapter } from "@hexagons/execution/infrastructure/adapters/agent-dispatch/pi-agent-dispatch.adapter";
+import { MarkdownExecutionSessionAdapter } from "@hexagons/execution/infrastructure/adapters/execution-session/markdown-execution-session.adapter";
+import { ComposableGuardrailAdapter } from "@hexagons/execution/infrastructure/adapters/guardrails/composable-guardrail.adapter";
+import { CredentialExposureRule } from "@hexagons/execution/infrastructure/adapters/guardrails/rules/credential-exposure.rule";
+import { DangerousCommandRule } from "@hexagons/execution/infrastructure/adapters/guardrails/rules/dangerous-command.rule";
+import { DestructiveGitRule } from "@hexagons/execution/infrastructure/adapters/guardrails/rules/destructive-git.rule";
+import { FileScopeRule } from "@hexagons/execution/infrastructure/adapters/guardrails/rules/file-scope.rule";
+import { SuspiciousContentRule } from "@hexagons/execution/infrastructure/adapters/guardrails/rules/suspicious-content.rule";
+import { ComposableOverseerAdapter } from "@hexagons/execution/infrastructure/adapters/overseer/composable-overseer.adapter";
+import { ProcessSignalPauseAdapter } from "@hexagons/execution/infrastructure/adapters/pause-signal/process-signal-pause.adapter";
+import { ComposablePreDispatchAdapter } from "@hexagons/execution/infrastructure/adapters/pre-dispatch/composable-pre-dispatch.adapter";
+import { BudgetCheckRule } from "@hexagons/execution/infrastructure/adapters/pre-dispatch/rules/budget-check.rule";
+import { DependencyCheckRule } from "@hexagons/execution/infrastructure/adapters/pre-dispatch/rules/dependency-check.rule";
+import { ScopeContainmentRule } from "@hexagons/execution/infrastructure/adapters/pre-dispatch/rules/scope-containment.rule";
+import { ToolPolicyRule } from "@hexagons/execution/infrastructure/adapters/pre-dispatch/rules/tool-policy.rule";
+import {
+  type WorktreeStateGitOps,
+  WorktreeStateRule,
+} from "@hexagons/execution/infrastructure/adapters/pre-dispatch/rules/worktree-state.rule";
 import { registerExecutionExtension } from "@hexagons/execution/infrastructure/pi/execution.extension";
-import { PiAgentDispatchAdapter } from "@hexagons/execution/infrastructure/pi-agent-dispatch.adapter";
-import { ProcessSignalPauseAdapter } from "@hexagons/execution/infrastructure/process-signal-pause.adapter";
-import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/in-memory-milestone.repository";
+import { DefaultRetryPolicy } from "@hexagons/execution/infrastructure/policies/default-retry-policy";
+import { TimeoutStrategy } from "@hexagons/execution/infrastructure/policies/timeout-strategy";
+import { MarkdownCheckpointRepository } from "@hexagons/execution/infrastructure/repositories/checkpoint/markdown-checkpoint.repository";
+import { JsonlJournalRepository } from "@hexagons/execution/infrastructure/repositories/journal/jsonl-journal.repository";
+import { JsonlMetricsRepository } from "@hexagons/execution/infrastructure/repositories/metrics/jsonl-metrics.repository";
+import { SqliteMilestoneRepository } from "@hexagons/milestone/infrastructure/sqlite-milestone.repository";
 import { registerProjectExtension } from "@hexagons/project";
-import { InMemoryProjectRepository } from "@hexagons/project/infrastructure/in-memory-project.repository";
 import { NodeProjectFileSystemAdapter } from "@hexagons/project/infrastructure/node-project-filesystem.adapter";
+import { SqliteProjectRepository } from "@hexagons/project/infrastructure/sqlite-project.repository";
+import { AuditMilestoneUseCase } from "@hexagons/review/application/audit-milestone.use-case";
 import { CompleteMilestoneUseCase } from "@hexagons/review/application/complete-milestone.use-case";
 import { ConductReviewUseCase } from "@hexagons/review/application/conduct-review.use-case";
 import { ReviewPromptBuilder } from "@hexagons/review/application/review-prompt-builder";
 import { ShipSliceUseCase } from "@hexagons/review/application/ship-slice.use-case";
 import { VerifyAcceptanceCriteriaUseCase } from "@hexagons/review/application/verify-acceptance-criteria.use-case";
+import { ExecutorQueryError } from "@hexagons/review/domain/errors/executor-query.error";
 import { CritiqueReflectionService } from "@hexagons/review/domain/services/critique-reflection.service";
 import { FreshReviewerService } from "@hexagons/review/domain/services/fresh-reviewer.service";
-import { BeadSliceSpecAdapter } from "@hexagons/review/infrastructure/bead-slice-spec.adapter";
-import { CachedExecutorQueryAdapter } from "@hexagons/review/infrastructure/cached-executor-query.adapter";
-import { GitChangedFilesAdapter } from "@hexagons/review/infrastructure/git-changed-files.adapter";
-import { InMemoryReviewRepository } from "@hexagons/review/infrastructure/in-memory-review.repository";
-import { InMemoryReviewUIAdapter } from "@hexagons/review/infrastructure/in-memory-review-ui.adapter";
-import { InMemoryVerificationRepository } from "@hexagons/review/infrastructure/in-memory-verification.repository";
-import { MilestoneQueryAdapter } from "@hexagons/review/infrastructure/milestone-query.adapter";
-import { MilestoneTransitionAdapter } from "@hexagons/review/infrastructure/milestone-transition.adapter";
-import { PiAuditAdapter } from "@hexagons/review/infrastructure/pi-audit.adapter";
-import { PiFixerAdapter } from "@hexagons/review/infrastructure/pi-fixer.adapter";
-import { PiMergeGateAdapter } from "@hexagons/review/infrastructure/pi-merge-gate.adapter";
-import { PlannotatorReviewUIAdapter } from "@hexagons/review/infrastructure/plannotator-review-ui.adapter";
-import { SqliteCompletionRecordRepository } from "@hexagons/review/infrastructure/sqlite-completion-record.repository";
-import { SqliteShipRecordRepository } from "@hexagons/review/infrastructure/sqlite-ship-record.repository";
-import { TerminalReviewUIAdapter } from "@hexagons/review/infrastructure/terminal-review-ui.adapter";
-import { HOTKEYS_DEFAULTS, MergeSettingsUseCase } from "@hexagons/settings";
-import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
+import { PiAuditAdapter } from "@hexagons/review/infrastructure/adapters/audit/pi-audit.adapter";
+import { GitChangedFilesAdapter } from "@hexagons/review/infrastructure/adapters/changed-files/git-changed-files.adapter";
+import { CachedExecutorQueryAdapter } from "@hexagons/review/infrastructure/adapters/executor-query/cached-executor-query.adapter";
+import { PiFixerAdapter } from "@hexagons/review/infrastructure/adapters/fixer/pi-fixer.adapter";
+import { PiMergeGateAdapter } from "@hexagons/review/infrastructure/adapters/merge-gate/pi-merge-gate.adapter";
+import { MilestoneQueryAdapter } from "@hexagons/review/infrastructure/adapters/milestone/milestone-query.adapter";
+import { MilestoneTransitionAdapter } from "@hexagons/review/infrastructure/adapters/milestone/milestone-transition.adapter";
+import { PlannotatorReviewUIAdapter } from "@hexagons/review/infrastructure/adapters/review-ui/plannotator-review-ui.adapter";
+import { TerminalReviewUIAdapter } from "@hexagons/review/infrastructure/adapters/review-ui/terminal-review-ui.adapter";
+import { BeadSliceSpecAdapter } from "@hexagons/review/infrastructure/adapters/slice-spec/bead-slice-spec.adapter";
+import { registerAuditMilestoneCommand } from "@hexagons/review/infrastructure/pi/audit-milestone.command";
+import { createAuditMilestoneTool } from "@hexagons/review/infrastructure/pi/audit-milestone.tool";
+import { SqliteCompletionRecordRepository } from "@hexagons/review/infrastructure/repositories/completion-record/sqlite-completion-record.repository";
+import { SqliteMilestoneAuditRecordRepository } from "@hexagons/review/infrastructure/repositories/milestone-audit-record/sqlite-milestone-audit-record.repository";
+import { SqliteReviewRepository } from "@hexagons/review/infrastructure/repositories/review/sqlite-review.repository";
+import { SqliteShipRecordRepository } from "@hexagons/review/infrastructure/repositories/ship-record/sqlite-ship-record.repository";
+import { SqliteVerificationRepository } from "@hexagons/review/infrastructure/repositories/verification/sqlite-verification.repository";
+import {
+  DiscoverStackUseCase,
+  HOTKEYS_DEFAULTS,
+  LoadSettingsUseCase,
+  MergeSettingsUseCase,
+} from "@hexagons/settings";
+import { FormatSettingsCascadeService } from "@hexagons/settings/domain/services/format-settings-cascade.service";
+import { AlwaysUnderBudgetAdapter } from "@hexagons/settings/infrastructure/always-under-budget.adapter";
+import { FsSettingsFileAdapter } from "@hexagons/settings/infrastructure/fs-settings-file.adapter";
+import { ProcessEnvVarAdapter } from "@hexagons/settings/infrastructure/process-env-var.adapter";
+import { AddSliceUseCase } from "@hexagons/slice/application/add-slice.use-case";
+import { RemoveSliceUseCase } from "@hexagons/slice/application/remove-slice.use-case";
+import { registerAddSliceCommand } from "@hexagons/slice/infrastructure/pi/add-slice.command";
+import { createAddSliceTool } from "@hexagons/slice/infrastructure/pi/add-slice.tool";
+import { registerRemoveSliceCommand } from "@hexagons/slice/infrastructure/pi/remove-slice.command";
+import { createRemoveSliceTool } from "@hexagons/slice/infrastructure/pi/remove-slice.tool";
+import { SqliteSliceRepository } from "@hexagons/slice/infrastructure/sqlite-slice.repository";
 import { WorkflowSliceTransitionAdapter } from "@hexagons/slice/infrastructure/workflow-slice-transition.adapter";
 import { CreateTasksUseCase } from "@hexagons/task/application/create-tasks.use-case";
 import { DetectWavesUseCase } from "@hexagons/task/domain/detect-waves.use-case";
-import { InMemoryTaskRepository } from "@hexagons/task/infrastructure/in-memory-task.repository";
+import { SqliteTaskRepository } from "@hexagons/task/infrastructure/sqlite-task.repository";
 import {
-  type ContextPackage,
-  type ContextStagingError,
-  ContextStagingPort,
-  InMemoryWorkflowSessionRepository,
+  DefaultContextStagingAdapter,
+  GetStatusUseCase,
+  JsonlWorkflowJournalRepository,
   registerWorkflowExtension,
+  SettingsModelProfileResolver,
+  SqliteWorkflowSessionRepository,
 } from "@hexagons/workflow";
+import { MapCodebaseUseCase } from "@hexagons/workflow/application/map-codebase.use-case";
 import { NodeArtifactFileAdapter } from "@hexagons/workflow/infrastructure/node-artifact-file.adapter";
-import { AlwaysUnderBudgetAdapter } from "@hexagons/settings/infrastructure/always-under-budget.adapter";
-import { OverlayDataAdapter } from "./infrastructure/overlay-data.adapter";
-import { registerOverlayExtension } from "./overlay.extension";
+import { registerHealthCommand } from "@hexagons/workflow/infrastructure/pi/health.command";
+import { createHealthCheckTool } from "@hexagons/workflow/infrastructure/pi/health-check.tool";
+import { registerHelpCommand } from "@hexagons/workflow/infrastructure/pi/help.command";
+import { registerMapCodebaseCommand } from "@hexagons/workflow/infrastructure/pi/map-codebase.command";
+import { createMapCodebaseTool } from "@hexagons/workflow/infrastructure/pi/map-codebase.tool";
+import { registerProgressCommand } from "@hexagons/workflow/infrastructure/pi/progress.command";
+import { createProgressTool } from "@hexagons/workflow/infrastructure/pi/progress.tool";
+import { registerSettingsCommand } from "@hexagons/workflow/infrastructure/pi/settings.command";
+import { createReadSettingsTool } from "@hexagons/workflow/infrastructure/pi/settings-read.tool";
+import { createUpdateSettingTool } from "@hexagons/workflow/infrastructure/pi/settings-update.tool";
+import { PiDocWriterAdapter } from "@hexagons/workflow/infrastructure/pi-doc-writer.adapter";
 import type { ExtensionAPI } from "@infrastructure/pi";
 import type { Result } from "@kernel";
 import {
@@ -65,25 +115,69 @@ import {
   InProcessEventBus,
   initializeAgentRegistry,
   isAgentRegistryInitialized,
-  type ModelProfileName,
   PersistenceError,
   type ResolvedModel,
   SystemDateProvider,
 } from "@kernel";
 import { GhCliAdapter } from "@kernel/infrastructure/gh-cli.adapter";
+import { GitHookAdapter } from "@kernel/infrastructure/git-hook/git-hook.adapter";
+import { AdvisoryLock } from "@kernel/infrastructure/state-branch/advisory-lock";
+import { GitStateBranchOpsAdapter } from "@kernel/infrastructure/state-branch/git-state-branch-ops.adapter";
+import { GitStateSyncAdapter } from "@kernel/infrastructure/state-branch/git-state-sync.adapter";
+import { StateBranchCreationHandler } from "@kernel/infrastructure/state-branch/state-branch-creation.handler";
+import { CrashRecoveryStrategy } from "@kernel/infrastructure/state-recovery/crash-recovery.strategy";
+import { FreshCloneStrategy } from "@kernel/infrastructure/state-recovery/fresh-clone.strategy";
+import { MismatchRecoveryStrategy } from "@kernel/infrastructure/state-recovery/mismatch-recovery.strategy";
+import { RenameRecoveryStrategy } from "@kernel/infrastructure/state-recovery/rename-recovery.strategy";
+import { StateRecoveryAdapter } from "@kernel/infrastructure/state-recovery/state-recovery.adapter";
+import { GitWorktreeAdapter } from "@kernel/infrastructure/worktree/git-worktree.adapter";
+import type { RecoveryStrategy } from "@kernel/ports/recovery-strategy";
+import type { RecoveryType } from "@kernel/schemas/recovery.schemas";
+import { BackupService } from "@kernel/services/backup-service";
+import { ForceSyncUseCase } from "@kernel/services/force-sync.use-case";
+import { HealthCheckService } from "@kernel/services/health-check.service";
+import { RestoreStateUseCase } from "@kernel/services/restore-state.use-case";
+import { StateExporter } from "@kernel/services/state-exporter";
+import { StateGuard } from "@kernel/services/state-guard";
+import { StateImporter } from "@kernel/services/state-importer";
+import type { KnownProvider } from "@mariozechner/pi-ai";
+import { getModels, getProviders } from "@mariozechner/pi-ai";
 import Database from "better-sqlite3";
+import { OverlayDataAdapter } from "./infrastructure/overlay-data.adapter";
+import { registerOverlayExtension } from "./overlay.extension";
+
+/**
+ * Resolve model ID from PI's registry by name.
+ * Tries exact match, then partial (substring) match.
+ * Returns undefined when nothing matches.
+ */
+function resolveModelFromRegistry(provider: KnownProvider, name: string): string | undefined {
+  const models = getModels(provider);
+  // Exact match (full model ID like "claude-sonnet-4-6")
+  const exact = models.find((m) => m.id === name);
+  if (exact) return exact.id;
+  // Partial match (short alias like "opus", "sonnet", "haiku")
+  const partials = models.filter((m) => m.id.includes(name));
+  if (partials.length === 0) return undefined;
+  // Prefer non-dated alias over dated snapshot
+  const alias = partials.find((m) => !/-\d{8}$/.test(m.id));
+  return alias?.id ?? partials[partials.length - 1].id;
+}
+
+/**
+ * Return PI's default model ID for the given provider.
+ * Uses the first model in PI's registry for that provider.
+ */
+function piDefaultModelId(provider: KnownProvider): string {
+  const models = getModels(provider);
+  return models[0]?.id ?? "unknown";
+}
 
 function detectPlannotator(): string | undefined {
   try {
     return execFileSync("which", ["plannotator"], { encoding: "utf-8" }).trim() || undefined;
   } catch {
     return undefined;
-  }
-}
-
-class NoOpContextStaging extends ContextStagingPort {
-  async stage(): Promise<Result<ContextPackage, ContextStagingError>> {
-    throw new Error("ContextStagingPort: not yet implemented");
   }
 }
 
@@ -112,25 +206,35 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     initializeAgentRegistry(agentRegistryResult.data);
   }
 
-  // --- Repositories (in-memory for now; SQLite swap in later slice) ---
-  const projectRepo = new InMemoryProjectRepository();
-  const milestoneRepo = new InMemoryMilestoneRepository();
-  const sliceRepo = new InMemorySliceRepository();
-  const taskRepo = new InMemoryTaskRepository();
+  // --- Core infrastructure ---
+  const gitPort = new GitCliAdapter(options.projectRoot);
 
-  // --- Hexagon extensions ---
-  registerProjectExtension(api, {
-    projectRoot: options.projectRoot,
-    projectRepo,
-    projectFs: new NodeProjectFileSystemAdapter(),
-    mergeSettings: new MergeSettingsUseCase(),
-    eventBus,
-    dateProvider,
-  });
+  // --- tffDir resolution ---
+  const rootTffDir = join(options.projectRoot, ".tff");
+  mkdirSync(rootTffDir, { recursive: true });
+  const worktreeAdapter = new GitWorktreeAdapter(gitPort, options.projectRoot);
+  const resolveActiveTffDir = async (sliceId?: string): Promise<string> => {
+    if (sliceId && (await worktreeAdapter.exists(sliceId))) {
+      return worktreeAdapter.resolveTffDir(sliceId);
+    }
+    return rootTffDir;
+  };
+
+  // --- Shared SQLite database for core entities ---
+  const stateDb = new Database(join(rootTffDir, "state.db"));
+
+  // --- Repositories (SQLite-backed) ---
+  const projectRepo = new SqliteProjectRepository(stateDb);
+  const milestoneRepo = new SqliteMilestoneRepository(stateDb);
+  const sliceRepo = new SqliteSliceRepository(stateDb);
+  const taskRepo = new SqliteTaskRepository(stateDb);
+
+  // --- Shared infrastructure ---
+  const gitHookAdapter = new GitHookAdapter(join(options.projectRoot, ".git"));
 
   const sliceTransitionPort = new WorkflowSliceTransitionAdapter(sliceRepo, dateProvider);
   const artifactFile = new NodeArtifactFileAdapter(options.projectRoot);
-  const workflowSessionRepo = new InMemoryWorkflowSessionRepository();
+  const workflowSessionRepo = new SqliteWorkflowSessionRepository(stateDb);
   const autonomyModeProvider = { getAutonomyMode: () => "plan-to-pr" as const };
 
   const plannotatorPath = detectPlannotator();
@@ -138,68 +242,154 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     ? new PlannotatorReviewUIAdapter(plannotatorPath)
     : new TerminalReviewUIAdapter();
 
-  registerWorkflowExtension(api, {
-    projectRepo,
-    milestoneRepo,
-    sliceRepo,
-    taskRepo,
-    createTasksPort: new CreateTasksUseCase(taskRepo, new DetectWavesUseCase(), dateProvider),
-    sliceTransitionPort,
-    eventBus,
-    dateProvider,
-    contextStaging: new NoOpContextStaging(),
-    artifactFile,
-    workflowSessionRepo,
-    autonomyModeProvider,
-    reviewUI,
-    maxRetries: 2,
-  });
+  // --- Shared: modelResolver + templateLoader (needed by execution & review) ---
+  const templateLoader = (path: string) =>
+    readFileSync(join(options.projectRoot, "src/resources", path), "utf-8");
 
-  // --- Execution extension ---
-  // Pause and resume tools are immediately usable via session persistence.
-  // The execute tool delegates to ExecuteSliceUseCase, which requires the full
-  // agent dispatch stack (worktree, guardrail, overseer, metrics, git).
-  // The TFF workflow orchestrator assembles that stack at runtime.
-  // TODO(M05): Replace the stub below with the fully-wired ExecuteSliceUseCase.
-  const journalRepo = new InMemoryJournalRepository();
-  const checkpointRepo = new InMemoryCheckpointRepository();
-  const resolveSlicePath = (sliceId: string): Promise<Result<string, PersistenceError>> =>
-    Promise.resolve(
-      err(new PersistenceError(`Slice path resolver not configured for: ${sliceId}`)),
-    );
-  const sessionRepo = new MarkdownExecutionSessionAdapter(options.projectRoot, resolveSlicePath);
-  const replayJournal = new ReplayJournalUseCase(journalRepo);
-  const executeSliceStub: Pick<ExecuteSliceUseCase, "execute"> = {
-    execute: () => Promise.reject(new Error("ExecuteSliceUseCase not wired — use TFF workflow")),
+  const mergeSettingsForModel = new MergeSettingsUseCase();
+  const settingsForModel = mergeSettingsForModel.execute({
+    team: null,
+    local: null,
+    env: process.env,
+  });
+  const modelProfiles = settingsForModel.ok ? settingsForModel.data.modelRouting.profiles : null;
+
+  const providers = getProviders();
+  const defaultProvider = providers[0];
+  if (!defaultProvider) {
+    throw new Error("No PI providers available. Ensure at least one provider is configured.");
+  }
+  const modelResolver = (profileName: string): ResolvedModel => {
+    const provider = defaultProvider;
+    const profile =
+      profileName === "quality" || profileName === "balanced" || profileName === "budget"
+        ? modelProfiles?.[profileName]
+        : undefined;
+    const modelName = profile?.model;
+
+    if (!modelName) {
+      // No profile configured — use PI's default model for the provider
+      return { provider, modelId: piDefaultModelId(provider) };
+    }
+
+    const resolved = resolveModelFromRegistry(provider, modelName);
+    return { provider, modelId: resolved ?? piDefaultModelId(provider) };
   };
 
-  registerExecutionExtension(api, {
-    sessionRepository: sessionRepo,
-    pauseSignal: new ProcessSignalPauseAdapter(),
-    executeSlice: executeSliceStub,
-    replayJournal,
+  // --- Execution extension ---
+  const journalRepo = new JsonlJournalRepository(join(rootTffDir, "journal"));
+  const checkpointRepo = new MarkdownCheckpointRepository(options.projectRoot, async (sliceId) => {
+    if (await worktreeAdapter.exists(sliceId)) {
+      return { ok: true as const, data: join(".tff", "worktrees", sliceId) };
+    }
+    return err(new PersistenceError(`No worktree for slice: ${sliceId}`));
+  });
+  const resolveSlicePath = async (sliceId: string): Promise<Result<string, PersistenceError>> => {
+    if (await worktreeAdapter.exists(sliceId)) {
+      return { ok: true as const, data: join(".tff", "worktrees", sliceId) };
+    }
+    return err(new PersistenceError(`No worktree for slice: ${sliceId}`));
+  };
+  const sessionRepo = new MarkdownExecutionSessionAdapter(options.projectRoot, resolveSlicePath);
+  const replayJournal = new ReplayJournalUseCase(journalRepo);
+
+  // --- ExecuteSliceUseCase full wiring ---
+  const metricsRepo = new JsonlMetricsRepository(join(rootTffDir, "metrics.jsonl"));
+  const overseerConfig = OverseerConfigSchema.parse({});
+  const guardrail = new ComposableGuardrailAdapter(
+    [
+      new DangerousCommandRule(),
+      new CredentialExposureRule(),
+      new DestructiveGitRule(),
+      new FileScopeRule(),
+      new SuspiciousContentRule(),
+    ],
+    new Map(),
+    gitPort,
+  );
+  const overseer = new ComposableOverseerAdapter([new TimeoutStrategy(overseerConfig)]);
+  const retryPolicy = new DefaultRetryPolicy(2, overseerConfig.retryLoop.threshold);
+  const worktreeStateGitOps: WorktreeStateGitOps = {
+    async statusAt(cwd: string) {
+      const result = await gitPort.statusAt(cwd);
+      if (!result.ok) return { ok: false as const, error: result.error };
+      return { ok: true as const, value: { branch: result.data.branch, clean: result.data.clean } };
+    },
+  };
+  const preDispatchGuardrail = new ComposablePreDispatchAdapter([
+    new ScopeContainmentRule(),
+    new DependencyCheckRule(),
+    new ToolPolicyRule(settingsForModel.ok ? settingsForModel.data.toolPolicies : undefined),
+    new WorktreeStateRule(worktreeStateGitOps),
+    new BudgetCheckRule(),
+  ]);
+  const executeProtocol = readFileSync(
+    join(options.projectRoot, "src/resources/protocols/execute.md"),
+    "utf-8",
+  );
+
+  const executeSlice = new ExecuteSliceUseCase({
+    taskRepository: taskRepo,
+    waveDetection: new DetectWavesUseCase(),
     checkpointRepository: checkpointRepo,
+    agentDispatch: sharedAgentDispatch,
+    worktree: worktreeAdapter,
     eventBus,
+    journalRepository: journalRepo,
+    metricsRepository: metricsRepo,
     dateProvider,
     logger,
+    templateContent: executeProtocol,
+    guardrail,
+    gitPort,
+    overseer,
+    retryPolicy,
+    overseerConfig,
+    preDispatchGuardrail,
+    modelResolver,
+    checkpointBeforeRetry: true,
   });
 
+  // --- Rollback wiring ---
+  const phaseTransitionAdapter = {
+    async transition(sliceId: string, _from: string, to: string) {
+      return sliceTransitionPort.transition(
+        sliceId,
+        to as import("@hexagons/slice/domain/slice.schemas").SliceStatus,
+      );
+    },
+  };
+  const rollbackUseCase = new RollbackSliceUseCase(journalRepo, gitPort, phaseTransitionAdapter);
+
+  registerExecutionExtension(
+    api,
+    {
+      sessionRepository: sessionRepo,
+      pauseSignal: new ProcessSignalPauseAdapter(),
+      executeSlice,
+      replayJournal,
+      checkpointRepository: checkpointRepo,
+      eventBus,
+      dateProvider,
+      logger,
+    },
+    {
+      rollback: { rollback: rollbackUseCase, checkpointRepo: checkpointRepo, sliceRepo },
+    },
+  );
+
   // --- Review pipeline wiring ---
-  const gitPort = new GitCliAdapter(options.projectRoot);
-  const reviewRepository = new InMemoryReviewRepository();
-  const executorQueryAdapter = new CachedExecutorQueryAdapter(async (_sliceId) => {
-    // Stub: returns empty set. Real implementation will query execution session.
-    return { ok: true as const, data: new Set<string>() };
+  const reviewRepository = new SqliteReviewRepository(stateDb);
+  const getSliceExecutors = new GetSliceExecutorsUseCase(checkpointRepo);
+  const executorQueryAdapter = new CachedExecutorQueryAdapter(async (sliceId) => {
+    const result = await getSliceExecutors.execute(sliceId);
+    if (!result.ok)
+      return { ok: false as const, error: new ExecutorQueryError(result.error.message) };
+    return result;
   });
   const freshReviewerService = new FreshReviewerService(executorQueryAdapter);
   const critiqueReflectionService = new CritiqueReflectionService();
-  const templateLoader = (path: string) =>
-    readFileSync(join(options.projectRoot, "src/resources", path), "utf-8");
   const reviewPromptBuilder = new ReviewPromptBuilder(templateLoader);
-  const modelResolver = (_profile: ModelProfileName): ResolvedModel => ({
-    provider: "anthropic",
-    modelId: "claude-opus-4-6",
-  });
   const beadSliceSpecAdapter = new BeadSliceSpecAdapter(
     (milestoneLabel, sliceLabel) => artifactFile.read(milestoneLabel, sliceLabel, "spec"),
     (sliceId) => {
@@ -262,14 +452,14 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   );
 
   // --- Verify pipeline wiring ---
-  const verificationRepository = new InMemoryVerificationRepository();
+  const verificationRepository = new SqliteVerificationRepository(stateDb);
   const verifyUseCase = new VerifyAcceptanceCriteriaUseCase(
     beadSliceSpecAdapter,
     freshReviewerService,
     sharedAgentDispatch,
     piFixerAdapter,
     verificationRepository,
-    new InMemoryReviewUIAdapter(), // TODO(M05-S09): wire ReviewUIPort adapter selection
+    reviewUI,
     modelResolver,
     eventBus,
     dateProvider,
@@ -279,15 +469,54 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   );
   void verifyUseCase; // Available for verify command wiring
 
-  // --- Ship pipeline wiring ---
-  const worktreeAdapter = new GitWorktreeAdapter(gitPort, options.projectRoot);
+  // --- State sync wiring (moved before ship/complete for dependency injection) ---
   const ghCliAdapter = new GhCliAdapter(options.projectRoot);
   const mergeGateAdapter = new PiMergeGateAdapter();
-  const tffDir = join(options.projectRoot, ".tff");
-  mkdirSync(tffDir, { recursive: true });
-  const shipRecordDb = new Database(join(tffDir, "ship-records.db"));
+  const shipRecordDb = new Database(join(rootTffDir, "ship-records.db"));
   const shipRecordRepository = new SqliteShipRecordRepository(shipRecordDb);
+  const completionRecordDb = new Database(join(rootTffDir, "completion-records.db"));
+  const completionRecordRepository = new SqliteCompletionRecordRepository(completionRecordDb);
 
+  const stateBranchOps = new GitStateBranchOpsAdapter(options.projectRoot);
+  const stateExporter = new StateExporter({
+    projectRepo,
+    milestoneRepo,
+    sliceRepo,
+    taskRepo,
+    shipRecordRepo: shipRecordRepository,
+    completionRecordRepo: completionRecordRepository,
+    workflowSessionRepo,
+    reviewRepo: reviewRepository,
+    verificationRepo: verificationRepository,
+  });
+  const stateImporter = new StateImporter({
+    projectRepo,
+    milestoneRepo,
+    sliceRepo,
+    taskRepo,
+    shipRecordRepo: shipRecordRepository,
+    completionRecordRepo: completionRecordRepository,
+    workflowSessionRepo,
+    reviewRepo: reviewRepository,
+    verificationRepo: verificationRepository,
+  });
+  const gitStateSyncAdapter = new GitStateSyncAdapter({
+    stateBranchOps,
+    stateExporter,
+    stateImporter,
+    advisoryLock: new AdvisoryLock(),
+    tffDir: rootTffDir,
+    projectRoot: options.projectRoot,
+  });
+  const stateBranchCreationHandler = new StateBranchCreationHandler(
+    gitStateSyncAdapter,
+    milestoneRepo,
+    sliceRepo,
+    logger,
+  );
+  stateBranchCreationHandler.register(eventBus);
+
+  // --- Ship pipeline wiring ---
   const shipSliceUseCase = new ShipSliceUseCase(
     beadSliceSpecAdapter,
     ghCliAdapter,
@@ -302,8 +531,10 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     dateProvider,
     () => crypto.randomUUID(),
     logger,
+    gitStateSyncAdapter,
+    options.projectRoot,
   );
-  void shipSliceUseCase; // Available for ship command wiring
+  void shipSliceUseCase;
 
   // --- Complete milestone pipeline wiring ---
   const milestoneQueryAdapter = new MilestoneQueryAdapter(
@@ -312,30 +543,276 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     options.projectRoot,
   );
   const milestoneTransitionAdapter = new MilestoneTransitionAdapter(milestoneRepo, dateProvider);
-  const piAuditAdapter = new PiAuditAdapter(
-    new PiAgentDispatchAdapter(),
+  const auditRecordDb = new Database(join(rootTffDir, "audit-records.db"));
+  const milestoneAuditRecordRepo = new SqliteMilestoneAuditRecordRepository(auditRecordDb);
+
+  // --- Map codebase use case (shared with CompleteMilestone + /tff:map-codebase) ---
+  const docWriterAdapter = new PiDocWriterAdapter(
+    new PiAgentDispatchAdapter({ agentEventPort: agentEventHub }),
     templateLoader,
     modelResolver,
     logger,
   );
-  const completionRecordDb = new Database(join(tffDir, "completion-records.db"));
-  const completionRecordRepository = new SqliteCompletionRecordRepository(completionRecordDb);
+  const mapCodebaseUseCase = new MapCodebaseUseCase(docWriterAdapter, gitPort, logger);
 
   const completeMilestoneUseCase = new CompleteMilestoneUseCase(
     milestoneQueryAdapter,
-    piAuditAdapter,
+    milestoneAuditRecordRepo,
     ghCliAdapter,
     mergeGateAdapter,
     completionRecordRepository,
-    piFixerAdapter,
     gitPort,
     milestoneTransitionAdapter,
     eventBus,
     dateProvider,
     () => crypto.randomUUID(),
     logger,
+    gitStateSyncAdapter,
+    mapCodebaseUseCase,
   );
   void completeMilestoneUseCase;
+
+  // --- Restore + guard wiring ---
+  const backupService = new BackupService();
+  const restoreUseCase = new RestoreStateUseCase({
+    stateSync: gitStateSyncAdapter,
+    gitPort,
+    advisoryLock: new AdvisoryLock(),
+    stateExporter,
+    backupService,
+    tffDir: rootTffDir,
+  });
+  const hookScript =
+    'if [ "$3" = "1" ]; then\n  node -e "require(\'./node_modules/.tff-restore.js\')" 2>/dev/null || true\nfi';
+  const healthCheckService = new HealthCheckService({
+    gitHookPort: gitHookAdapter,
+    stateBranchOps,
+    gitPort,
+    hookScriptContent: hookScript,
+    projectRoot: options.projectRoot,
+    worktreePort: worktreeAdapter,
+    sliceRepo,
+    taskRepo,
+    journalRepo,
+    artifactFile,
+  });
+
+  const strategies = new Map<RecoveryType, RecoveryStrategy>([
+    ["crash", new CrashRecoveryStrategy(backupService, stateBranchOps, restoreUseCase)],
+    ["mismatch", new MismatchRecoveryStrategy(restoreUseCase)],
+    ["rename", new RenameRecoveryStrategy(stateBranchOps)],
+    [
+      "fresh-clone",
+      new FreshCloneStrategy(
+        backupService,
+        stateBranchOps,
+        restoreUseCase,
+        healthCheckService,
+        options.projectRoot,
+      ),
+    ],
+  ]);
+  const stateRecoveryAdapter = new StateRecoveryAdapter(
+    strategies,
+    gitPort,
+    stateBranchOps,
+    options.projectRoot,
+  );
+  const stateGuard = new StateGuard(stateRecoveryAdapter, healthCheckService, logger);
+
+  const forceSyncUseCase = new ForceSyncUseCase(gitStateSyncAdapter, restoreUseCase, gitPort);
+
+  // --- withGuard helper ---
+  const withGuard = async (): Promise<void> => {
+    const result = await stateGuard.ensure(rootTffDir);
+    if (!result.ok) {
+      api.sendUserMessage(`State guard failed: ${result.error.message}`);
+    }
+  };
+
+  // --- Hexagon extensions (registered after withGuard is available) ---
+  const settingsFileAdapter = new FsSettingsFileAdapter();
+  registerProjectExtension(api, {
+    projectRoot: options.projectRoot,
+    projectRepo,
+    projectFs: new NodeProjectFileSystemAdapter(),
+    mergeSettings: new MergeSettingsUseCase(),
+    eventBus,
+    dateProvider,
+    gitHookPort: gitHookAdapter,
+    discoverStack: new DiscoverStackUseCase(settingsFileAdapter),
+    withGuard,
+  });
+
+  const settingsResolver = new SettingsModelProfileResolver(new MergeSettingsUseCase());
+  const contextStaging = new DefaultContextStagingAdapter({
+    modelProfileResolver: settingsResolver,
+  });
+  const workflowJournal = new JsonlWorkflowJournalRepository(
+    join(rootTffDir, "workflow-journal.jsonl"),
+  );
+
+  registerWorkflowExtension(api, {
+    projectRepo,
+    milestoneRepo,
+    sliceRepo,
+    taskRepo,
+    createTasksPort: new CreateTasksUseCase(taskRepo, new DetectWavesUseCase(), dateProvider),
+    sliceTransitionPort,
+    eventBus,
+    dateProvider,
+    contextStaging,
+    artifactFile,
+    workflowSessionRepo,
+    autonomyModeProvider,
+    reviewUI,
+    maxRetries: 2,
+    tffDir: rootTffDir,
+    resolveActiveTffDir,
+    withGuard,
+    workflowJournal,
+    failurePolicies: settingsForModel.ok
+      ? settingsForModel.data.workflow.failurePolicies
+      : undefined,
+  });
+
+  // --- Health command + tool ---
+  registerHealthCommand(api, { healthCheck: healthCheckService, tffDir: rootTffDir });
+  api.registerTool(createHealthCheckTool({ healthCheck: healthCheckService, tffDir: rootTffDir }));
+
+  // --- Progress command + tool ---
+  const getStatusForProgress = new GetStatusUseCase(
+    projectRepo,
+    milestoneRepo,
+    sliceRepo,
+    taskRepo,
+  );
+  registerProgressCommand(api, { getStatus: getStatusForProgress, tffDir: rootTffDir });
+  api.registerTool(createProgressTool({ getStatus: getStatusForProgress }));
+
+  // --- Settings command + tools ---
+  const loadSettings = new LoadSettingsUseCase(
+    new FsSettingsFileAdapter(),
+    new ProcessEnvVarAdapter(),
+  );
+  const mergeSettingsForSettings = new MergeSettingsUseCase();
+  const formatCascade = new FormatSettingsCascadeService();
+  registerSettingsCommand(api, {
+    loadSettings,
+    mergeSettings: mergeSettingsForSettings,
+    formatCascade,
+    projectRoot: options.projectRoot,
+  });
+  api.registerTool(
+    createReadSettingsTool({
+      loadSettings,
+      mergeSettings: mergeSettingsForSettings,
+      formatCascade,
+      projectRoot: options.projectRoot,
+    }),
+  );
+  api.registerTool(createUpdateSettingTool({ projectRoot: options.projectRoot }));
+
+  // --- Help command ---
+  registerHelpCommand(api);
+
+  // --- /tff:sync command ---
+  api.registerCommand("tff:sync", {
+    description: "Force-push or force-pull state to/from state branch",
+    handler: async (args: string) => {
+      const guardResult = await stateGuard.ensure(rootTffDir);
+      if (!guardResult.ok) {
+        api.sendUserMessage(`State guard failed: ${guardResult.error.message}`);
+        return;
+      }
+      const isPull = args.trim() === "--pull";
+      if (isPull) {
+        const pullResult = await forceSyncUseCase.pull(rootTffDir);
+        api.sendUserMessage(
+          pullResult.ok
+            ? `Pulled state from state branch (${pullResult.data.filesRestored} files restored)`
+            : `Pull failed: ${pullResult.error.message}`,
+        );
+      } else {
+        const pushResult = await forceSyncUseCase.push(rootTffDir);
+        api.sendUserMessage(
+          pushResult.ok
+            ? "State pushed to state branch"
+            : `Push failed: ${pushResult.error.message}`,
+        );
+      }
+    },
+  });
+
+  // --- S09: Slice management commands ---
+  const addSliceUseCase = new AddSliceUseCase(sliceRepo, milestoneRepo, dateProvider);
+  const removeSliceUseCase = new RemoveSliceUseCase(
+    sliceRepo,
+    worktreeAdapter,
+    stateBranchOps,
+    gitPort,
+    milestoneRepo,
+    rootTffDir,
+  );
+
+  registerAddSliceCommand(api, {
+    addSlice: addSliceUseCase,
+    activeMilestoneId: async () => {
+      const project = await projectRepo.findSingleton();
+      if (!project.ok || !project.data) return null;
+      const milestones = await milestoneRepo.findByProjectId(project.data.id);
+      if (!milestones.ok) return null;
+      const active = milestones.data.find((m) => m.status === "in_progress");
+      return active?.id ?? null;
+    },
+  });
+  api.registerTool(createAddSliceTool({ addSlice: addSliceUseCase }));
+
+  registerRemoveSliceCommand(api, { removeSlice: removeSliceUseCase });
+  api.registerTool(createRemoveSliceTool({ removeSlice: removeSliceUseCase }));
+
+  // --- S09: Audit milestone ---
+  const piAuditAdapter = new PiAuditAdapter(
+    new PiAgentDispatchAdapter({ agentEventPort: agentEventHub }),
+    templateLoader,
+    modelResolver,
+    logger,
+  );
+  const auditMilestoneUseCase = new AuditMilestoneUseCase(
+    milestoneQueryAdapter,
+    piAuditAdapter,
+    milestoneAuditRecordRepo,
+    gitPort,
+    dateProvider,
+    () => crypto.randomUUID(),
+  );
+  registerAuditMilestoneCommand(api, {
+    auditMilestone: auditMilestoneUseCase,
+    resolveActiveMilestone: async () => {
+      const project = await projectRepo.findSingleton();
+      if (!project.ok || !project.data) return null;
+      const milestones = await milestoneRepo.findByProjectId(project.data.id);
+      if (!milestones.ok) return null;
+      const active = milestones.data.find((m) => m.status === "in_progress");
+      if (!active) return null;
+      return {
+        milestoneId: active.id,
+        milestoneLabel: active.label,
+        headBranch: `milestone/${active.label}`,
+        baseBranch: "main",
+        workingDirectory: options.projectRoot,
+      };
+    },
+  });
+  api.registerTool(createAuditMilestoneTool({ auditMilestone: auditMilestoneUseCase }));
+
+  // --- S09: Map codebase ---
+  registerMapCodebaseCommand(api, {
+    mapCodebase: mapCodebaseUseCase,
+    tffDir: rootTffDir,
+    workingDirectory: options.projectRoot,
+  });
+  api.registerTool(createMapCodebaseTool({ mapCodebase: mapCodebaseUseCase }));
 
   // --- Overlay extension wiring ---
   const overlayDataAdapter = new OverlayDataAdapter(

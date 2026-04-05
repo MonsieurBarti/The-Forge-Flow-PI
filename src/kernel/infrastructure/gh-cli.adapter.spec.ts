@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { transformPrJson, mapGhError } from "./gh-cli.adapter";
+import { mapGhError, transformPrJson } from "./gh-cli.adapter";
 
 describe("transformPrJson", () => {
   it("lowercases state and renames ref fields", () => {
     const raw = {
-      number: 42, title: "S09: Ship command",
+      number: 42,
+      title: "S09: Ship command",
       url: "https://github.com/org/repo/pull/42",
-      state: "OPEN", headRefName: "slice/M05-S09",
-      baseRefName: "milestone/M05", createdAt: "2026-04-02T12:00:00Z",
+      state: "OPEN",
+      headRefName: "slice/M05-S09",
+      baseRefName: "milestone/M05",
+      createdAt: "2026-04-02T12:00:00Z",
     };
     const result = transformPrJson(raw);
     expect(result.state).toBe("open");

@@ -1,5 +1,15 @@
 // Agent event streaming
 
+// Builders
+export { AgentDispatchConfigBuilder } from "./builders/agent-dispatch.builder";
+export { AgentResultBuilder } from "./builders/agent-result.builder";
+export { AgentDispatchError } from "./errors/agent-dispatch.error";
+// Errors
+export { AgentLoadError, AgentRegistryError, AgentValidationError } from "./errors/agent-errors";
+export { AgentStatusParseError } from "./errors/agent-status-parse.error";
+export { AgentDispatchPort } from "./ports/agent-dispatch.port";
+export { COMPRESSOR_PROMPT } from "./prompts/compressor-prompt";
+export { GUARDRAIL_PROMPT } from "./prompts/guardrail-prompt";
 // Schemas
 // New schema types
 export type {
@@ -9,7 +19,7 @@ export type {
   AgentSkill,
   AgentType,
   FreshReviewerRule,
-} from "./agent-card.schema";
+} from "./schemas/agent-card.schema";
 export {
   AgentCapabilitySchema,
   AgentCardSchema,
@@ -17,15 +27,9 @@ export {
   AgentSkillSchema,
   AgentTypeSchema,
   FreshReviewerRuleSchema,
-} from "./agent-card.schema";
-// Builders
-export { AgentDispatchConfigBuilder } from "./agent-dispatch.builder";
-export { AgentDispatchError } from "./agent-dispatch.error";
-export { AgentDispatchPort } from "./agent-dispatch.port";
-export type { AgentDispatchConfig, ResolvedModel } from "./agent-dispatch.schema";
-export { AgentDispatchConfigSchema, ResolvedModelSchema } from "./agent-dispatch.schema";
-// Errors
-export { AgentLoadError, AgentRegistryError, AgentValidationError } from "./agent-errors";
+} from "./schemas/agent-card.schema";
+export type { AgentDispatchConfig, ResolvedModel } from "./schemas/agent-dispatch.schema";
+export { AgentDispatchConfigSchema, ResolvedModelSchema } from "./schemas/agent-dispatch.schema";
 export type {
   AgentEvent,
   AgentMessageEnd,
@@ -36,7 +40,7 @@ export type {
   AgentToolExecutionUpdate,
   AgentTurnEnd,
   AgentTurnStart,
-} from "./agent-event.schema";
+} from "./schemas/agent-event.schema";
 export {
   AgentEventSchema,
   AgentMessageEndSchema,
@@ -47,20 +51,9 @@ export {
   AgentToolExecutionUpdateSchema,
   AgentTurnEndSchema,
   AgentTurnStartSchema,
-} from "./agent-event.schema";
-// Registry
-export {
-  AgentRegistry,
-  findAgentsByCapability,
-  getAgentCard,
-  initializeAgentRegistry,
-  isAgentRegistryInitialized,
-  resetAgentRegistry,
-} from "./agent-registry";
-export { AgentResourceLoader } from "./agent-resource-loader";
-export { AgentResultBuilder } from "./agent-result.builder";
-export type { AgentCost, AgentResult } from "./agent-result.schema";
-export { AgentCostSchema, AgentResultSchema } from "./agent-result.schema";
+} from "./schemas/agent-event.schema";
+export type { AgentCost, AgentResult } from "./schemas/agent-result.schema";
+export { AgentCostSchema, AgentResultSchema } from "./schemas/agent-result.schema";
 // Status protocol
 export type {
   AgentConcern,
@@ -71,7 +64,7 @@ export type {
   SelfReviewChecklist,
   SelfReviewDimension,
   SelfReviewDimensionName,
-} from "./agent-status.schema";
+} from "./schemas/agent-status.schema";
 export {
   AgentConcernSchema,
   AgentConcernSeveritySchema,
@@ -82,18 +75,26 @@ export {
   SelfReviewChecklistSchema,
   SelfReviewDimensionNameSchema,
   SelfReviewDimensionSchema,
-} from "./agent-status.schema";
-export type { AgentResultTransport, CrossCheckResult } from "./agent-status-cross-checker";
-export { crossCheckAgentResult } from "./agent-status-cross-checker";
-export { AgentStatusParseError } from "./agent-status-parse.error";
-export { parseAgentStatusReport } from "./agent-status-parser";
-export { AGENT_STATUS_PROMPT } from "./agent-status-prompt";
-export type { CreateAgentOptions } from "./agent-template";
-// Template
-export { createAgentTemplate } from "./agent-template";
-// Services
-export { AgentValidationService } from "./agent-validation.service";
-export { GUARDRAIL_PROMPT } from "./guardrail-prompt";
+} from "./schemas/agent-status.schema";
 // Turn metrics
-export type { ToolCallMetrics, TurnMetrics } from "./turn-metrics.schema";
-export { ToolCallMetricsSchema, TurnMetricsSchema } from "./turn-metrics.schema";
+export type { ToolCallMetrics, TurnMetrics } from "./schemas/turn-metrics.schema";
+export { ToolCallMetricsSchema, TurnMetricsSchema } from "./schemas/turn-metrics.schema";
+// Registry
+export {
+  AgentRegistry,
+  findAgentsByCapability,
+  getAgentCard,
+  initializeAgentRegistry,
+  isAgentRegistryInitialized,
+  resetAgentRegistry,
+} from "./services/agent-registry";
+export { AgentResourceLoader } from "./services/agent-resource-loader";
+export type { AgentResultTransport, CrossCheckResult } from "./services/agent-status-cross-checker";
+export { crossCheckAgentResult } from "./services/agent-status-cross-checker";
+export { parseAgentStatusReport } from "./services/agent-status-parser";
+export { AGENT_STATUS_PROMPT } from "./services/agent-status-prompt";
+export type { CreateAgentOptions } from "./services/agent-template";
+// Template
+export { createAgentTemplate } from "./services/agent-template";
+// Services
+export { AgentValidationService } from "./services/agent-validation.service";

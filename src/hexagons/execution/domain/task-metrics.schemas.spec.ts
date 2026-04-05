@@ -59,6 +59,40 @@ describe("TaskMetricsSchema", () => {
     expect(result.reflectionPassed).toBe(true);
   });
 
+  it("defaults reflectionTier to skipped", () => {
+    const result = TaskMetricsSchema.parse(valid);
+    expect(result.reflectionTier).toBe("skipped");
+  });
+
+  it("accepts explicit reflectionTier", () => {
+    const result = TaskMetricsSchema.parse({ ...valid, reflectionTier: "fast" });
+    expect(result.reflectionTier).toBe("fast");
+  });
+
+  it("accepts explicit finalProfile", () => {
+    const result = TaskMetricsSchema.parse({ ...valid, finalProfile: "quality" });
+    expect(result.finalProfile).toBe("quality");
+  });
+
+  it("leaves finalProfile undefined when omitted", () => {
+    const result = TaskMetricsSchema.parse(valid);
+    expect(result.finalProfile).toBeUndefined();
+  });
+
+  it("accepts explicit totalAttempts", () => {
+    const result = TaskMetricsSchema.parse({ ...valid, totalAttempts: 3 });
+    expect(result.totalAttempts).toBe(3);
+  });
+
+  it("leaves totalAttempts undefined when omitted", () => {
+    const result = TaskMetricsSchema.parse(valid);
+    expect(result.totalAttempts).toBeUndefined();
+  });
+
+  it("rejects invalid reflectionTier", () => {
+    expect(() => TaskMetricsSchema.parse({ ...valid, reflectionTier: "invalid" })).toThrow();
+  });
+
   it("rejects negative costUsd", () => {
     expect(() => TaskMetricsSchema.parse({ ...valid, costUsd: -1 })).toThrow();
   });

@@ -1,4 +1,4 @@
-import type { AgentEvent } from "@kernel/agents/agent-event.schema";
+import type { AgentEvent } from "@kernel/agents/schemas/agent-event.schema";
 import { describe, expect, it } from "vitest";
 import { InMemoryAgentEventHub } from "./in-memory-agent-event-hub";
 

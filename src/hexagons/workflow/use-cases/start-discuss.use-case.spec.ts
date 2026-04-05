@@ -1,13 +1,54 @@
+import { MilestoneBuilder } from "@hexagons/milestone/domain/milestone.builder";
+import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/in-memory-milestone.repository";
 import { SliceBuilder } from "@hexagons/slice/domain/slice.builder";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
-import { InProcessEventBus, isErr, isOk, SilentLoggerAdapter } from "@kernel";
+import {
+  err,
+  InProcessEventBus,
+  isErr,
+  isOk,
+  ok,
+  type Result,
+  SilentLoggerAdapter,
+  SyncError,
+} from "@kernel";
+import { InMemoryWorktreeAdapter } from "@kernel/infrastructure/worktree/in-memory-worktree.adapter";
+import { StateSyncPort } from "@kernel/ports/state-sync.port";
+import type { SyncReport } from "@kernel/ports/state-sync.schemas";
 import { describe, expect, it } from "vitest";
 import { WorkflowSession } from "../domain/workflow-session.aggregate";
 import { WorkflowSessionBuilder } from "../domain/workflow-session.builder";
 import { InMemoryWorkflowSessionRepository } from "../infrastructure/in-memory-workflow-session.repository";
 import { StartDiscussUseCase } from "./start-discuss.use-case";
 
-function setup(overrides?: { autonomyMode?: "guided" | "plan-to-pr" }) {
+class StubStateSyncPort extends StateSyncPort {
+  createCalls: Array<{ codeBranch: string; parent: string }> = [];
+  deleteCalls: string[] = [];
+  shouldFailCreate = false;
+
+  async syncToStateBranch(): Promise<Result<void, SyncError>> {
+    return ok(undefined);
+  }
+  async restoreFromStateBranch(): Promise<Result<SyncReport, SyncError>> {
+    return ok({ pulled: 0, conflicts: [], timestamp: new Date() });
+  }
+  async mergeStateBranches(): Promise<Result<void, SyncError>> {
+    return ok(undefined);
+  }
+  async createStateBranch(codeBranch: string, parent: string): Promise<Result<void, SyncError>> {
+    this.createCalls.push({ codeBranch, parent });
+    if (this.shouldFailCreate) {
+      return err(new SyncError("BRANCH_NOT_FOUND", "parent branch not found"));
+    }
+    return ok(undefined);
+  }
+  async deleteStateBranch(codeBranch: string): Promise<Result<void, SyncError>> {
+    this.deleteCalls.push(codeBranch);
+    return ok(undefined);
+  }
+}
+
+function setup(overrides?: { autonomyMode?: "guided" | "plan-to-pr"; withWorkspace?: boolean }) {
   const sliceRepo = new InMemorySliceRepository();
   const sessionRepo = new InMemoryWorkflowSessionRepository();
   const eventBus = new InProcessEventBus(new SilentLoggerAdapter());
@@ -17,14 +58,33 @@ function setup(overrides?: { autonomyMode?: "guided" | "plan-to-pr" }) {
     getAutonomyMode: () => overrides?.autonomyMode ?? ("plan-to-pr" as const),
   };
 
-  const useCase = new StartDiscussUseCase(
+  const worktreeAdapter = new InMemoryWorktreeAdapter();
+  const stateSyncPort = new StubStateSyncPort();
+  const milestoneRepo = new InMemoryMilestoneRepository();
+
+  const useCase = overrides?.withWorkspace
+    ? new StartDiscussUseCase(
+        sliceRepo,
+        sessionRepo,
+        eventBus,
+        dateProvider,
+        autonomyModeProvider,
+        worktreeAdapter,
+        stateSyncPort,
+        milestoneRepo,
+      )
+    : new StartDiscussUseCase(sliceRepo, sessionRepo, eventBus, dateProvider, autonomyModeProvider);
+  return {
+    useCase,
     sliceRepo,
     sessionRepo,
     eventBus,
     dateProvider,
-    autonomyModeProvider,
-  );
-  return { useCase, sliceRepo, sessionRepo, eventBus, dateProvider, fixedNow };
+    fixedNow,
+    worktreeAdapter,
+    stateSyncPort,
+    milestoneRepo,
+  };
 }
 
 describe("StartDiscussUseCase", () => {
@@ -36,6 +96,7 @@ describe("StartDiscussUseCase", () => {
     const result = await useCase.execute({
       sliceId: "a0000000-0000-1000-a000-000000000001",
       milestoneId: "b0000000-0000-1000-a000-000000000001",
+      tffDir: "/tmp/.tff",
     });
 
     expect(isOk(result)).toBe(true);
@@ -61,6 +122,7 @@ describe("StartDiscussUseCase", () => {
     const result = await useCase.execute({
       sliceId: "a0000000-0000-1000-a000-000000000002",
       milestoneId: "b0000000-0000-1000-a000-000000000001",
+      tffDir: "/tmp/.tff",
     });
 
     expect(isOk(result)).toBe(true);
@@ -72,6 +134,7 @@ describe("StartDiscussUseCase", () => {
     const result = await useCase.execute({
       sliceId: "a0000000-0000-1000-a000-000000000099",
       milestoneId: "b0000000-0000-1000-a000-000000000001",
+      tffDir: "/tmp/.tff",
     });
     expect(isErr(result)).toBe(true);
     if (isErr(result)) expect(result.error.code).toBe("SLICE.NOT_FOUND");
@@ -98,6 +161,7 @@ describe("StartDiscussUseCase", () => {
     const result = await useCase.execute({
       sliceId: "a0000000-0000-1000-a000-000000000004",
       milestoneId: "b0000000-0000-1000-a000-000000000002",
+      tffDir: "/tmp/.tff",
     });
     expect(isErr(result)).toBe(true);
     if (isErr(result)) expect(result.error.code).toBe("WORKFLOW.SLICE_ALREADY_ASSIGNED");
@@ -119,7 +183,63 @@ describe("StartDiscussUseCase", () => {
     const result = await useCase.execute({
       sliceId: "a0000000-0000-1000-a000-000000000005",
       milestoneId: "b0000000-0000-1000-a000-000000000003",
+      tffDir: "/tmp/.tff",
     });
     expect(isErr(result)).toBe(true);
+  });
+
+  describe("workspace creation", () => {
+    it("creates worktree + state branch + workspace when ports provided", async () => {
+      const { useCase, sliceRepo, worktreeAdapter, stateSyncPort, milestoneRepo } = setup({
+        withWorkspace: true,
+      });
+      const slice = new SliceBuilder()
+        .withId("a0000000-0000-1000-a000-000000000010")
+        .withMilestoneId("b0000000-0000-1000-a000-000000000010")
+        .build();
+      sliceRepo.seed(slice);
+      const milestone = new MilestoneBuilder()
+        .withId("b0000000-0000-1000-a000-000000000010")
+        .withLabel("M07")
+        .build();
+      milestoneRepo.seed(milestone);
+
+      const result = await useCase.execute({
+        sliceId: "a0000000-0000-1000-a000-000000000010",
+        milestoneId: "b0000000-0000-1000-a000-000000000010",
+        tffDir: "/tmp/.tff",
+      });
+
+      expect(isOk(result)).toBe(true);
+      expect(await worktreeAdapter.exists("a0000000-0000-1000-a000-000000000010")).toBe(true);
+      expect(stateSyncPort.createCalls).toHaveLength(1);
+    });
+
+    it("rolls back worktree if state branch creation fails", async () => {
+      const { useCase, sliceRepo, worktreeAdapter, stateSyncPort, milestoneRepo } = setup({
+        withWorkspace: true,
+      });
+      const slice = new SliceBuilder()
+        .withId("a0000000-0000-1000-a000-000000000011")
+        .withMilestoneId("b0000000-0000-1000-a000-000000000011")
+        .build();
+      sliceRepo.seed(slice);
+      const milestone = new MilestoneBuilder()
+        .withId("b0000000-0000-1000-a000-000000000011")
+        .withLabel("M07")
+        .build();
+      milestoneRepo.seed(milestone);
+      stateSyncPort.shouldFailCreate = true;
+
+      const result = await useCase.execute({
+        sliceId: "a0000000-0000-1000-a000-000000000011",
+        milestoneId: "b0000000-0000-1000-a000-000000000011",
+        tffDir: "/tmp/.tff",
+      });
+
+      expect(isErr(result)).toBe(true);
+      // Worktree should be cleaned up
+      expect(await worktreeAdapter.exists("a0000000-0000-1000-a000-000000000011")).toBe(false);
+    });
   });
 });

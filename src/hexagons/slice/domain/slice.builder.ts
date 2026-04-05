@@ -1,10 +1,10 @@
 import { faker } from "@faker-js/faker";
 import { Slice } from "./slice.aggregate";
-import type { ComplexityTier, SliceProps, SliceStatus } from "./slice.schemas";
+import type { ComplexityTier, SliceKind, SliceProps, SliceStatus } from "./slice.schemas";
 
 export class SliceBuilder {
   private _id: string = faker.string.uuid();
-  private _milestoneId: string = faker.string.uuid();
+  private _milestoneId: string | null = faker.string.uuid();
   private _label = "M01-S01";
   private _title: string = faker.lorem.words(3);
   private _description: string = faker.lorem.sentence();
@@ -14,6 +14,8 @@ export class SliceBuilder {
   private _planPath: string | null = null;
   private _researchPath: string | null = null;
   private _now: Date = faker.date.recent();
+  private _kind: SliceKind = "milestone";
+  private _position = 0;
 
   withId(id: string): this {
     this._id = id;
@@ -65,13 +67,31 @@ export class SliceBuilder {
     return this;
   }
 
+  withKind(kind: SliceKind): this {
+    this._kind = kind;
+    return this;
+  }
+
+  withPosition(position: number): this {
+    this._position = position;
+    return this;
+  }
+
+  withoutMilestone(): this {
+    this._milestoneId = null;
+    this._kind = "quick";
+    return this;
+  }
+
   build(): Slice {
     return Slice.createNew({
       id: this._id,
-      milestoneId: this._milestoneId,
+      milestoneId: this._milestoneId ?? undefined,
       label: this._label,
       title: this._title,
       description: this._description,
+      kind: this._kind,
+      position: this._position,
       now: this._now,
     });
   }
@@ -80,6 +100,7 @@ export class SliceBuilder {
     return {
       id: this._id,
       milestoneId: this._milestoneId,
+      kind: this._kind,
       label: this._label,
       title: this._title,
       description: this._description,
@@ -88,6 +109,7 @@ export class SliceBuilder {
       specPath: this._specPath,
       planPath: this._planPath,
       researchPath: this._researchPath,
+      position: this._position,
       createdAt: this._now,
       updatedAt: this._now,
     };

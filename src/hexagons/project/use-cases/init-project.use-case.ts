@@ -1,4 +1,4 @@
-import type { MergeSettingsUseCase } from "@hexagons/settings";
+import type { DiscoverStackUseCase, MergeSettingsUseCase } from "@hexagons/settings";
 import {
   type DateProviderPort,
   type EventBusPort,
@@ -8,6 +8,7 @@ import {
   type PersistenceError,
   type Result,
 } from "@kernel";
+import type { GitHookPort } from "@kernel/ports/git-hook.port";
 import { stringify } from "yaml";
 import { z } from "zod";
 import { ProjectAlreadyExistsError } from "../domain/errors/project-already-exists.error";
@@ -32,6 +33,8 @@ export class InitProjectUseCase {
     private readonly mergeSettings: MergeSettingsUseCase,
     private readonly eventBus: EventBusPort,
     private readonly dateProvider: DateProviderPort,
+    private readonly gitHookPort?: GitHookPort,
+    private readonly discoverStack?: DiscoverStackUseCase,
   ) {}
 
   async execute(params: InitProjectParams): Promise<Result<ProjectDTO, InitProjectError>> {
@@ -57,14 +60,23 @@ export class InitProjectUseCase {
     const writeProjResult = await this.projectFs.writeFile(`${tffDir}/PROJECT.md`, projectMd);
     if (isErr(writeProjResult)) return writeProjResult;
 
-    // 4. Generate + write settings.yaml
+    // 4. Generate + write settings.yaml (with optional stack discovery)
     const settingsResult = this.mergeSettings.execute({
       team: null,
       local: null,
       env: {},
     });
     if (isErr(settingsResult)) return settingsResult;
-    const settingsYaml = stringify(settingsResult.data.toJSON());
+    const settingsJson = settingsResult.data.toJSON();
+
+    if (this.discoverStack) {
+      const stackResult = await this.discoverStack.execute(params.projectRoot);
+      if (stackResult.ok) {
+        settingsJson.stack = { detected: stackResult.data, overrides: {} };
+      }
+    }
+
+    const settingsYaml = stringify(settingsJson);
     const writeSettingsResult = await this.projectFs.writeFile(
       `${tffDir}/settings.yaml`,
       settingsYaml,
@@ -86,6 +98,16 @@ export class InitProjectUseCase {
     // 6. Publish domain events
     for (const event of project.pullEvents()) {
       await this.eventBus.publish(event);
+    }
+
+    // 7. Install post-checkout hook (optional — skipped if no port provided)
+    if (this.gitHookPort) {
+      const hookScript = [
+        'if [ "$3" = "1" ]; then',
+        "  node -e \"require('./node_modules/.tff-restore.js')\" 2>/dev/null || true",
+        "fi",
+      ].join("\n");
+      await this.gitHookPort.installPostCheckoutHook(hookScript);
     }
 
     return ok(project.toJSON());

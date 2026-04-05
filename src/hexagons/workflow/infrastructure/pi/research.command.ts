@@ -13,13 +13,16 @@ export interface ResearchCommandDeps {
   sessionRepo: WorkflowSessionRepositoryPort;
   artifactFile: ArtifactFilePort;
   suggestNextStep: SuggestNextStepUseCase;
+  withGuard?: () => Promise<void>;
 }
 
 export function registerResearchCommand(api: ExtensionAPI, deps: ResearchCommandDeps): void {
   api.registerCommand("tff:research", {
     description:
       "Start the research phase for a slice — dispatch an Explore agent and produce RESEARCH.md",
-    handler: async (args: string) => {
+    handler: async (args: string, ctx) => {
+      if (ctx?.newSession) await ctx.newSession();
+      await deps.withGuard?.();
       // 1. Resolve target slice from args (label or ID)
       const identifier = args.trim();
       if (!identifier) {
@@ -43,6 +46,10 @@ export function registerResearchCommand(api: ExtensionAPI, deps: ResearchCommand
       const slice = sliceResult.data;
       if (!slice) {
         api.sendUserMessage(`Slice not found: ${identifier}`);
+        return;
+      }
+      if (!slice.milestoneId) {
+        api.sendUserMessage("Error: ad-hoc slices don't use this command");
         return;
       }
 

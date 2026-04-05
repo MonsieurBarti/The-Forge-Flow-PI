@@ -1,5 +1,5 @@
-import type { AgentEvent } from "@kernel/agents/agent-event.schema";
-import type { ToolCallMetrics, TurnMetrics } from "@kernel/agents/turn-metrics.schema";
+import type { AgentEvent } from "@kernel/agents/schemas/agent-event.schema";
+import type { ToolCallMetrics, TurnMetrics } from "@kernel/agents/schemas/turn-metrics.schema";
 
 interface TurnAccumulator {
   turnIndex: number;

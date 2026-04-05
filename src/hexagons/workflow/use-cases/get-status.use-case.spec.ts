@@ -109,6 +109,7 @@ describe("GetStatusUseCase", () => {
       Slice.reconstitute({
         id: sliceId,
         milestoneId,
+        kind: "milestone" as const,
         label: "M01-S01",
         title: "Slice One",
         description: "",
@@ -117,6 +118,7 @@ describe("GetStatusUseCase", () => {
         specPath: null,
         planPath: null,
         researchPath: null,
+        position: 0,
         createdAt: now,
         updatedAt: now,
       }),

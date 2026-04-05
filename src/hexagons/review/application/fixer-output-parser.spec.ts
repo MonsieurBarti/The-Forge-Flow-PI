@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { FindingProps } from "../domain/review.schemas";
+import type { FindingProps } from "../domain/schemas/review.schemas";
 import { FixerOutputParser } from "./fixer-output-parser";
 
 const FINDINGS: FindingProps[] = [

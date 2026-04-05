@@ -1,8 +1,10 @@
 import { isErr, isOk } from "@kernel";
+import Database from "better-sqlite3";
 import { beforeEach, describe, expect, it } from "vitest";
 import { MilestoneBuilder } from "../domain/milestone.builder";
 import type { MilestoneRepositoryPort } from "../domain/ports/milestone-repository.port";
 import { InMemoryMilestoneRepository } from "./in-memory-milestone.repository";
+import { SqliteMilestoneRepository } from "./sqlite-milestone.repository";
 
 function runContractTests(
   name: string,
@@ -107,3 +109,8 @@ function runContractTests(
 }
 
 runContractTests("InMemoryMilestoneRepository", () => new InMemoryMilestoneRepository());
+
+runContractTests("SqliteMilestoneRepository", () => {
+  const db = new Database(":memory:");
+  return new SqliteMilestoneRepository(db);
+});

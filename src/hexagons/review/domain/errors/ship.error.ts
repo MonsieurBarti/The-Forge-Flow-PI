@@ -47,4 +47,13 @@ export class ShipError extends BaseDomainError {
       { sliceId, cause: msg },
     );
   }
+
+  static mergeBackFailed(sliceId: string, cause: unknown): ShipError {
+    const msg = cause instanceof Error ? cause.message : String(cause);
+    return new ShipError(
+      "SHIP.MERGE_BACK_FAILED",
+      `State merge-back failed for slice ${sliceId}: ${msg}`,
+      { sliceId, cause: msg },
+    );
+  }
 }

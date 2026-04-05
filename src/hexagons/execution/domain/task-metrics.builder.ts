@@ -7,6 +7,7 @@ export class TaskMetricsBuilder {
   private _taskId: string = faker.string.uuid();
   private _sliceId: string = faker.string.uuid();
   private _milestoneId: string = faker.string.uuid();
+  private _phase?: string;
   private _provider = "anthropic";
   private _modelId = "claude-sonnet-4-6";
   private _profile: ModelProfileName = "balanced";
@@ -20,6 +21,9 @@ export class TaskMetricsBuilder {
   private _retries = 0;
   private _downshifted = false;
   private _reflectionPassed?: boolean;
+  private _reflectionTier: "fast" | "full" | "skipped" = "skipped";
+  private _finalProfile?: string;
+  private _totalAttempts?: number;
   private _timestamp: Date = faker.date.recent();
 
   withTaskId(id: string): this {
@@ -32,6 +36,10 @@ export class TaskMetricsBuilder {
   }
   withMilestoneId(id: string): this {
     this._milestoneId = id;
+    return this;
+  }
+  withPhase(phase: string): this {
+    this._phase = phase;
     return this;
   }
   withProvider(p: string): this {
@@ -78,6 +86,18 @@ export class TaskMetricsBuilder {
     this._reflectionPassed = r;
     return this;
   }
+  withReflectionTier(tier: "fast" | "full" | "skipped"): this {
+    this._reflectionTier = tier;
+    return this;
+  }
+  withFinalProfile(profile: string): this {
+    this._finalProfile = profile;
+    return this;
+  }
+  withTotalAttempts(attempts: number): this {
+    this._totalAttempts = attempts;
+    return this;
+  }
   withTimestamp(t: Date): this {
     this._timestamp = t;
     return this;
@@ -88,6 +108,7 @@ export class TaskMetricsBuilder {
       taskId: this._taskId,
       sliceId: this._sliceId,
       milestoneId: this._milestoneId,
+      phase: this._phase,
       model: { provider: this._provider, modelId: this._modelId, profile: this._profile },
       tokens: { input: this._inputTokens, output: this._outputTokens },
       costUsd: this._costUsd,
@@ -96,6 +117,9 @@ export class TaskMetricsBuilder {
       retries: this._retries,
       downshifted: this._downshifted,
       reflectionPassed: this._reflectionPassed,
+      reflectionTier: this._reflectionTier,
+      finalProfile: this._finalProfile,
+      totalAttempts: this._totalAttempts,
       timestamp: this._timestamp,
     });
   }

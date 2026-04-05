@@ -1,20 +1,29 @@
-import type { WorktreePort } from "@hexagons/execution/domain/ports/worktree.port";
+import { join } from "node:path";
 import type { SliceTransitionPort } from "@hexagons/workflow/domain/ports/slice-transition.port";
 import { err, ok, type Result } from "@kernel";
 import type { DateProviderPort, EventBusPort, LoggerPort } from "@kernel/ports";
 import type { GitPort } from "@kernel/ports/git.port";
 import type { GitHubPort } from "@kernel/ports/github.port";
 import type { PullRequestInfo } from "@kernel/ports/github.schemas";
-import type { ConductReviewRequest, ConductReviewResult } from "../domain/conduct-review.schemas";
+import type { StateSyncPort } from "@kernel/ports/state-sync.port";
+import type { WorktreePort } from "@kernel/ports/worktree.port";
+import { ShipRecord } from "../domain/aggregates/ship-record.aggregate";
 import { ShipError } from "../domain/errors/ship.error";
 import { SliceShippedEvent } from "../domain/events/slice-shipped.event";
 import type { FixerPort } from "../domain/ports/fixer.port";
 import type { MergeGatePort } from "../domain/ports/merge-gate.port";
 import type { ShipRecordRepositoryPort } from "../domain/ports/ship-record-repository.port";
 import type { SliceSpec, SliceSpecPort } from "../domain/ports/slice-spec.port";
-import type { FindingProps } from "../domain/review.schemas";
-import { type ShipRequest, ShipRequestSchema, type ShipResult } from "../domain/ship.schemas";
-import { ShipRecord } from "../domain/ship-record.aggregate";
+import type {
+  ConductReviewRequest,
+  ConductReviewResult,
+} from "../domain/schemas/conduct-review.schemas";
+import type { FindingProps } from "../domain/schemas/review.schemas";
+import {
+  type ShipRequest,
+  ShipRequestSchema,
+  type ShipResult,
+} from "../domain/schemas/ship.schemas";
 
 export function buildPRBody(spec: SliceSpec): string {
   const summaryParagraph = spec.specContent.split("\n\n")[0] ?? spec.specContent;
@@ -63,6 +72,8 @@ export class ShipSliceUseCase {
     private readonly dateProvider: DateProviderPort,
     private readonly generateId: () => string,
     private readonly logger: LoggerPort,
+    private readonly stateSyncPort?: StateSyncPort,
+    private readonly resolvedRoot?: string,
   ) {}
 
   async execute(request: ShipRequest): Promise<Result<ShipResult, ShipError>> {
@@ -154,7 +165,31 @@ export class ShipSliceUseCase {
       }
     }
 
-    // Step 5: Cleanup (best-effort for worktree, hard fail for transition)
+    // Step 5: State merge-back (hard fail)
+    if (this.stateSyncPort && this.resolvedRoot) {
+      const sliceCodeBranch = parsed.headBranch;
+      const milestoneCodeBranch = parsed.baseBranch;
+      const worktreeTffDir = this.worktreePort.resolveTffDir(parsed.sliceId);
+
+      const syncResult = await this.stateSyncPort.syncToStateBranch(
+        sliceCodeBranch,
+        worktreeTffDir,
+      );
+      if (!syncResult.ok) return err(ShipError.mergeBackFailed(parsed.sliceId, syncResult.error));
+
+      const mergeResult = await this.stateSyncPort.mergeStateBranches(
+        sliceCodeBranch,
+        milestoneCodeBranch,
+        parsed.sliceId,
+      );
+      if (!mergeResult.ok) return err(ShipError.mergeBackFailed(parsed.sliceId, mergeResult.error));
+
+      const deleteStateResult = await this.stateSyncPort.deleteStateBranch(sliceCodeBranch);
+      if (!deleteStateResult.ok)
+        return err(ShipError.mergeBackFailed(parsed.sliceId, deleteStateResult.error));
+    }
+
+    // Step 6: Cleanup (best-effort for worktree, hard fail for transition)
     const worktreeResult = await this.worktreePort.delete(parsed.sliceId);
     if (!worktreeResult.ok) {
       this.logger.warn("Worktree cleanup failed", {
@@ -163,16 +198,27 @@ export class ShipSliceUseCase {
       });
     }
 
+    // Step 7: Restore top-level .tff/ from milestone state branch (hard fail)
+    if (this.stateSyncPort && this.resolvedRoot) {
+      const rootTffDir = join(this.resolvedRoot, ".tff");
+      const restoreResult = await this.stateSyncPort.restoreFromStateBranch(
+        parsed.baseBranch,
+        rootTffDir,
+      );
+      if (!restoreResult.ok)
+        return err(ShipError.mergeBackFailed(parsed.sliceId, restoreResult.error));
+    }
+
     const transitionResult = await this.sliceTransitionPort.transition(parsed.sliceId, "closed");
     if (!transitionResult.ok) {
       return err(ShipError.cleanupFailed(parsed.sliceId, transitionResult.error));
     }
 
-    // Step 6: Record merge and save
+    // Step 9: Record merge and save
     record.recordMerge(cycle, this.dateProvider.now());
     await this.shipRecordRepository.save(record);
 
-    // Step 7: Emit event
+    // Step 10: Emit event
     await this.eventBus.publish(
       new SliceShippedEvent({
         id: this.generateId(),
@@ -185,7 +231,7 @@ export class ShipSliceUseCase {
       }),
     );
 
-    // Step 8: Return result
+    // Step 11: Return result
     return ok({
       sliceId: parsed.sliceId,
       prNumber,

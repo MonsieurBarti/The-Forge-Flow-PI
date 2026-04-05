@@ -6,7 +6,7 @@ import {
   IdSchema,
 } from "@kernel";
 import { z } from "zod";
-import { AuditAgentTypeSchema, AuditVerdictSchema } from "../completion.schemas";
+import { AuditAgentTypeSchema, AuditVerdictSchema } from "../schemas/completion.schemas";
 
 const AuditVerdictEntrySchema = z.object({
   agentType: AuditAgentTypeSchema,

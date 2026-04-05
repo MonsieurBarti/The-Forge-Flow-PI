@@ -1,7 +1,8 @@
-import type { MergeSettingsUseCase } from "@hexagons/settings";
+import type { DiscoverStackUseCase, MergeSettingsUseCase } from "@hexagons/settings";
 import type { ExtensionAPI } from "@infrastructure/pi";
 import { createZodTool } from "@infrastructure/pi";
 import type { DateProviderPort, EventBusPort } from "@kernel";
+import type { GitHookPort } from "@kernel/ports/git-hook.port";
 import type { ProjectFileSystemPort } from "../../domain/ports/project-filesystem.port";
 import type { ProjectRepositoryPort } from "../../domain/ports/project-repository.port";
 import { InitProjectParamsSchema, InitProjectUseCase } from "../../use-cases/init-project.use-case";
@@ -13,12 +14,16 @@ export interface ProjectExtensionDeps {
   mergeSettings: MergeSettingsUseCase;
   eventBus: EventBusPort;
   dateProvider: DateProviderPort;
+  gitHookPort?: GitHookPort;
+  discoverStack?: DiscoverStackUseCase;
+  withGuard?: () => Promise<void>;
 }
 
 export function registerProjectExtension(api: ExtensionAPI, deps: ProjectExtensionDeps): void {
   api.registerCommand("tff:new", {
     description: "Initialize a new TFF project in the current directory",
-    handler: async (_args, ctx) => {
+    handler: async (_args, _ctx) => {
+      await deps.withGuard?.();
       api.sendUserMessage(
         "I'll initialize a TFF project. Please provide a project name and vision, then I'll call the tff_init_project tool.",
       );
@@ -39,6 +44,8 @@ export function registerProjectExtension(api: ExtensionAPI, deps: ProjectExtensi
           deps.mergeSettings,
           deps.eventBus,
           deps.dateProvider,
+          deps.gitHookPort,
+          deps.discoverStack,
         );
         const result = await useCase.execute(params);
         if (!result.ok) {

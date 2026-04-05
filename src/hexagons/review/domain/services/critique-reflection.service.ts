@@ -1,9 +1,9 @@
 import { err, ok, type Result } from "@kernel";
+import { CritiqueReflectionError } from "../errors/critique-reflection.error";
 import {
   CritiqueReflectionResultSchema,
   type ProcessedReviewResult,
-} from "../critique-reflection.schemas";
-import { CritiqueReflectionError } from "../errors/critique-reflection.error";
+} from "../schemas/critique-reflection.schemas";
 
 export class CritiqueReflectionService {
   processResult(rawResult: unknown): Result<ProcessedReviewResult, CritiqueReflectionError> {

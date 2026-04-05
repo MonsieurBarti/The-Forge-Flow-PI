@@ -158,6 +158,27 @@ describe("GuardContextSchema", () => {
     });
     expect(ctx.complexityTier).toBeNull();
   });
+
+  it("parses with failurePolicy: 'lenient'", () => {
+    const ctx = GuardContextSchema.parse({
+      complexityTier: "F-lite",
+      retryCount: 0,
+      maxRetries: 3,
+      allSlicesClosed: false,
+      failurePolicy: "lenient",
+    });
+    expect(ctx.failurePolicy).toBe("lenient");
+  });
+
+  it("defaults failurePolicy to 'strict' when omitted", () => {
+    const ctx = GuardContextSchema.parse({
+      complexityTier: "F-lite",
+      retryCount: 0,
+      maxRetries: 3,
+      allSlicesClosed: false,
+    });
+    expect(ctx.failurePolicy).toBe("strict");
+  });
 });
 
 describe("TransitionRuleSchema", () => {

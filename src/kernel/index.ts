@@ -71,51 +71,74 @@ export {
   InvalidTransitionError,
   PersistenceError,
   SyncError,
+  WorktreeError,
 } from "./errors";
 export type { EventName } from "./event-names";
 export { EVENT_NAMES, EventNameSchema } from "./event-names";
 export {
   ConsoleLoggerAdapter,
   GitCliAdapter,
+  GitWorktreeAdapter,
   InMemoryAgentEventHub,
   InMemoryGitAdapter,
+  InMemoryWorktreeAdapter,
   InProcessEventBus,
   SilentLoggerAdapter,
   SystemDateProvider,
 } from "./infrastructure";
 export type {
   AgentEventListener,
+  CleanupReport,
   GitFileStatus,
   GitLogEntry,
   GitStatus,
   GitStatusEntry,
   GitWorktreeEntry,
+  HookErrorCode,
   PrFilter,
   PullRequestConfig,
   PullRequestInfo,
   SyncReport,
   Unsubscribe,
+  WorktreeHealth,
+  WorktreeInfo,
 } from "./ports";
 export {
   AgentEventPort,
+  CleanupReportSchema,
   DateProviderPort,
   EventBusPort,
   GitFileStatusSchema,
+  GitHookPort,
   GitHubPort,
   GitLogEntrySchema,
   GitPort,
   GitStatusEntrySchema,
   GitStatusSchema,
   GitWorktreeEntrySchema,
+  HookError,
   LoggerPort,
   PrFilterSchema,
   PullRequestConfigSchema,
   PullRequestInfoSchema,
+  StateBranchOpsPort,
   StateSyncPort,
+  SYNC_ERROR_CODES,
   SyncReportSchema,
+  WorktreeHealthSchema,
+  WorktreeInfoSchema,
+  WorktreePort,
 } from "./ports";
 export type { Result } from "./result";
 export { err, isErr, isOk, match, ok } from "./result";
 export type { ComplexityTier, Id, ModelProfileName, Timestamp } from "./schemas";
 export { ComplexityTierSchema, IdSchema, ModelProfileNameSchema, TimestampSchema } from "./schemas";
+export type { RecoveryReport, RecoveryScenario, RecoveryType } from "./schemas/recovery.schemas";
+export {
+  RecoveryReportSchema,
+  RecoveryScenarioSchema,
+  RecoveryTypeSchema,
+} from "./schemas/recovery.schemas";
+export type { RenameDetectionResult } from "./schemas/rename-detection.schemas";
+export { RenameDetectionResultSchema } from "./schemas/rename-detection.schemas";
 export { ValueObject } from "./value-object.base";

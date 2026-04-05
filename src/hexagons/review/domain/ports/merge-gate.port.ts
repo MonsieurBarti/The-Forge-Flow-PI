@@ -1,4 +1,4 @@
-import type { MergeGateDecision } from "../ship.schemas";
+import type { MergeGateDecision } from "../schemas/ship.schemas";
 
 export interface MergeGateContext {
   subjectId: string;

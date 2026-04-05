@@ -28,6 +28,7 @@ function seedSlice(
   const slice = Slice.reconstitute({
     id: overrides.id ?? faker.string.uuid(),
     milestoneId: faker.string.uuid(),
+    kind: "milestone" as const,
     label: "M01-S01",
     title: "Test Slice",
     description: "",
@@ -36,6 +37,7 @@ function seedSlice(
     specPath: null,
     planPath: null,
     researchPath: null,
+    position: 0,
     createdAt: new Date(),
     updatedAt: new Date(),
   });

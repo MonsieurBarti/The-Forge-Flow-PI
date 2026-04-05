@@ -3,13 +3,13 @@ pre-commit:
   commands:
     lint:
       glob: "*.{ts,tsx,js,jsx,json}"
-      run: npx @biomejs/biome check --no-errors-on-unmatched {staged_files}
+      run: ./node_modules/.bin/biome check --no-errors-on-unmatched {staged_files}
       stage_fixed: true
     typecheck:
-      run: npx tsc --noEmit
+      run: ./node_modules/.bin/tsc --noEmit
 
 pre-push:
   parallel: true
   commands:
     test:
-      run: npx vitest run
+      run: ./node_modules/.bin/vitest run

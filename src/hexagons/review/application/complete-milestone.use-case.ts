@@ -1,24 +1,25 @@
+import { join } from "node:path";
+import type { MapCodebaseUseCase } from "@hexagons/workflow/application/map-codebase.use-case";
 import { err, ok, type Result } from "@kernel";
 import type { DateProviderPort, EventBusPort, LoggerPort } from "@kernel/ports";
 import type { GitPort } from "@kernel/ports/git.port";
 import type { GitHubPort } from "@kernel/ports/github.port";
 import type { PullRequestInfo } from "@kernel/ports/github.schemas";
+import type { StateSyncPort } from "@kernel/ports/state-sync.port";
+import { CompletionRecord } from "../domain/aggregates/completion-record.aggregate";
+import { CompleteMilestoneError } from "../domain/errors/complete-milestone.error";
+import { MilestoneCompletedEvent } from "../domain/events/milestone-completed.event";
+import type { CompletionRecordRepositoryPort } from "../domain/ports/completion-record-repository.port";
+import type { MergeGatePort } from "../domain/ports/merge-gate.port";
+import type { MilestoneAuditRecordRepositoryPort } from "../domain/ports/milestone-audit-record-repository.port";
+import type { MilestoneQueryPort } from "../domain/ports/milestone-query.port";
+import type { MilestoneTransitionPort } from "../domain/ports/milestone-transition.port";
 import {
   type AuditReportProps,
   type CompleteMilestoneRequest,
   CompleteMilestoneRequestSchema,
   type CompleteMilestoneResult,
-} from "../domain/completion.schemas";
-import { CompletionRecord } from "../domain/completion-record.aggregate";
-import { CompleteMilestoneError } from "../domain/errors/complete-milestone.error";
-import { MilestoneCompletedEvent } from "../domain/events/milestone-completed.event";
-import type { AuditPort } from "../domain/ports/audit.port";
-import type { CompletionRecordRepositoryPort } from "../domain/ports/completion-record-repository.port";
-import type { FixerPort } from "../domain/ports/fixer.port";
-import type { MergeGatePort } from "../domain/ports/merge-gate.port";
-import type { MilestoneQueryPort } from "../domain/ports/milestone-query.port";
-import type { MilestoneTransitionPort } from "../domain/ports/milestone-transition.port";
-import type { FindingProps } from "../domain/review.schemas";
+} from "../domain/schemas/completion.schemas";
 
 export const DIFF_SIZE_LIMIT = 100_000;
 
@@ -37,17 +38,18 @@ export function buildMilestonePRBody(auditReports: AuditReportProps[]): string {
 export class CompleteMilestoneUseCase {
   constructor(
     private readonly milestoneQueryPort: MilestoneQueryPort,
-    private readonly auditPort: AuditPort,
+    private readonly auditRecordRepo: MilestoneAuditRecordRepositoryPort,
     private readonly gitHubPort: GitHubPort,
     private readonly mergeGatePort: MergeGatePort,
     private readonly completionRecordRepository: CompletionRecordRepositoryPort,
-    private readonly fixerPort: FixerPort,
     private readonly gitPort: GitPort,
     private readonly milestoneTransitionPort: MilestoneTransitionPort,
     private readonly eventBus: EventBusPort,
     private readonly dateProvider: DateProviderPort,
     private readonly generateId: () => string,
     private readonly logger: LoggerPort,
+    private readonly stateSyncPort?: StateSyncPort,
+    private readonly mapCodebase?: Pick<MapCodebaseUseCase, "execute">,
   ) {}
 
   async execute(
@@ -90,61 +92,17 @@ export class CompleteMilestoneUseCase {
       );
     }
 
-    // Step 2: Audit — parallel dispatch
-    const reqContentResult = await this.milestoneQueryPort.getRequirementsContent(
-      parsed.milestoneLabel,
-    );
-    if (!reqContentResult.ok) {
+    // Step 2: Check for passing audit record
+    const auditResult = await this.auditRecordRepo.findLatestByMilestoneId(parsed.milestoneId);
+    if (!auditResult.ok) {
       return err(
-        CompleteMilestoneError.auditFailed(parsed.milestoneId, reqContentResult.error.message),
+        CompleteMilestoneError.auditRequired(parsed.milestoneId, "Failed to query audit records"),
       );
     }
-
-    const diffResult = await this.gitPort.diffAgainst(parsed.baseBranch, parsed.workingDirectory);
-    if (!diffResult.ok) {
-      return err(CompleteMilestoneError.auditFailed(parsed.milestoneId, diffResult.error.message));
+    if (!auditResult.data?.allPassed) {
+      return err(CompleteMilestoneError.auditRequired(parsed.milestoneId));
     }
-
-    const rawDiff = diffResult.data;
-    const diffContent = rawDiff.length > DIFF_SIZE_LIMIT ? truncateDiff(rawDiff) : rawDiff;
-
-    const [intentResult, securityResult] = await Promise.all([
-      this.auditPort.auditMilestone({
-        milestoneLabel: parsed.milestoneLabel,
-        requirementsContent: reqContentResult.data,
-        diffContent,
-        agentType: "spec-reviewer",
-      }),
-      this.auditPort.auditMilestone({
-        milestoneLabel: parsed.milestoneLabel,
-        requirementsContent: reqContentResult.data,
-        diffContent,
-        agentType: "security-auditor",
-      }),
-    ]);
-
-    if (!intentResult.ok) {
-      return err(
-        CompleteMilestoneError.auditFailed(parsed.milestoneId, intentResult.error.message),
-      );
-    }
-    if (!securityResult.ok) {
-      return err(
-        CompleteMilestoneError.auditFailed(parsed.milestoneId, securityResult.error.message),
-      );
-    }
-
-    const auditReports: AuditReportProps[] = [intentResult.data, securityResult.data];
-
-    // Log critical findings but proceed (user decides at merge gate)
-    for (const report of auditReports) {
-      const criticals = report.findings.filter((f) => f.severity === "critical");
-      if (criticals.length > 0) {
-        this.logger.warn(`${report.agentType} found ${criticals.length} critical finding(s)`, {
-          milestoneId: parsed.milestoneId,
-        });
-      }
-    }
+    const auditReports: AuditReportProps[] = auditResult.data.auditReports;
 
     // Step 3: Idempotent PR creation
     const listResult = await this.gitHubPort.listPullRequests({
@@ -221,6 +179,33 @@ export class CompleteMilestoneUseCase {
       }
     }
 
+    // Step 5.5: State merge-back (hard fail)
+    if (this.stateSyncPort) {
+      const milestoneCodeBranch = parsed.headBranch;
+      const defaultBranch = parsed.baseBranch;
+      const tffDir = join(parsed.workingDirectory, ".tff");
+
+      const syncResult = await this.stateSyncPort.syncToStateBranch(milestoneCodeBranch, tffDir);
+      if (!syncResult.ok)
+        return err(CompleteMilestoneError.mergeBackFailed(parsed.milestoneId, syncResult.error));
+
+      const mergeResult = await this.stateSyncPort.mergeStateBranches(
+        milestoneCodeBranch,
+        defaultBranch,
+        parsed.milestoneId,
+      );
+      if (!mergeResult.ok)
+        return err(CompleteMilestoneError.mergeBackFailed(parsed.milestoneId, mergeResult.error));
+
+      const deleteResult = await this.stateSyncPort.deleteStateBranch(milestoneCodeBranch);
+      if (!deleteResult.ok)
+        return err(CompleteMilestoneError.mergeBackFailed(parsed.milestoneId, deleteResult.error));
+
+      const restoreResult = await this.stateSyncPort.restoreFromStateBranch(defaultBranch, tffDir);
+      if (!restoreResult.ok)
+        return err(CompleteMilestoneError.mergeBackFailed(parsed.milestoneId, restoreResult.error));
+    }
+
     // Step 6: Post-merge cleanup (best-effort)
     const branchListResult = await this.gitPort.listBranches(`slice/${parsed.milestoneLabel}-*`);
     if (branchListResult.ok) {
@@ -253,6 +238,22 @@ export class CompleteMilestoneUseCase {
     record.recordMerge(cycle, this.dateProvider.now());
     await this.completionRecordRepository.save(record);
 
+    // Step 8.5: Incremental codebase documentation (best-effort)
+    if (this.mapCodebase) {
+      try {
+        await this.mapCodebase.execute({
+          tffDir: join(parsed.workingDirectory, ".tff"),
+          workingDirectory: parsed.workingDirectory,
+          mode: "incremental",
+          milestoneLabel: parsed.milestoneLabel,
+          baseBranch: parsed.baseBranch,
+          headBranch: parsed.headBranch,
+        });
+      } catch (e) {
+        this.logger.warn("Incremental doc update failed", { error: String(e) });
+      }
+    }
+
     // Step 9: Emit event
     await this.eventBus.publish(
       new MilestoneCompletedEvent({
@@ -281,60 +282,13 @@ export class CompleteMilestoneUseCase {
 
   private async runFixCycle(
     parsed: CompleteMilestoneRequest,
-    cycle: number,
+    _cycle: number,
   ): Promise<string | undefined> {
-    // Fresh re-dispatch of both audit agents
-    const reqContentResult = await this.milestoneQueryPort.getRequirementsContent(
-      parsed.milestoneLabel,
-    );
-    if (!reqContentResult.ok) return reqContentResult.error.message;
-
-    const diffResult = await this.gitPort.diffAgainst(parsed.baseBranch, parsed.workingDirectory);
-    if (!diffResult.ok) return diffResult.error.message;
-
-    const diffContent =
-      diffResult.data.length > DIFF_SIZE_LIMIT ? truncateDiff(diffResult.data) : diffResult.data;
-
-    const [intentResult, securityResult] = await Promise.all([
-      this.auditPort.auditMilestone({
-        milestoneLabel: parsed.milestoneLabel,
-        requirementsContent: reqContentResult.data,
-        diffContent,
-        agentType: "spec-reviewer",
-      }),
-      this.auditPort.auditMilestone({
-        milestoneLabel: parsed.milestoneLabel,
-        requirementsContent: reqContentResult.data,
-        diffContent,
-        agentType: "security-auditor",
-      }),
-    ]);
-
-    // Merge findings from both reports
-    const findings: FindingProps[] = [];
-    if (intentResult.ok) findings.push(...intentResult.data.findings);
-    if (securityResult.ok) findings.push(...securityResult.data.findings);
-
-    if (findings.length > 0) {
-      const fixResult = await this.fixerPort.fix({
-        sliceId: parsed.milestoneId,
-        findings,
-        workingDirectory: parsed.workingDirectory,
-      });
-      if (!fixResult.ok) {
-        this.logger.warn("Fixer failed during fix cycle", {
-          cycle,
-          error: fixResult.error.message,
-        });
-        return fixResult.error.message;
-      }
-    }
-
-    // Push changes
+    // Audit is now a pre-gate (/tff:audit-milestone). Fix cycles only push changes.
     const pushResult = await this.gitPort.pushFrom(parsed.workingDirectory, parsed.headBranch);
     if (!pushResult.ok) {
       this.logger.warn("Push failed during fix cycle", {
-        cycle,
+        cycle: _cycle,
         error: pushResult.error.message,
       });
       return pushResult.error.message;

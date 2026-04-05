@@ -1,29 +1,31 @@
 import type { BudgetTrackingPort } from "@hexagons/settings/domain/ports/budget-tracking.port";
 import type { HotkeysConfig } from "@hexagons/settings/domain/project-settings.schemas";
-import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@infrastructure/pi";
+import type { ExtensionAPI, ExtensionContext } from "@infrastructure/pi";
 import { EVENT_NAMES } from "@kernel/event-names";
-import type { EventBusPort } from "@kernel/ports/event-bus.port";
 import type { AgentEventPort } from "@kernel/ports/agent-event.port";
+import type { EventBusPort } from "@kernel/ports/event-bus.port";
 import type { LoggerPort } from "@kernel/ports/logger.port";
 import type { OverlayDataPort } from "@kernel/ports/overlay-data.port";
 import { describe, expect, it, vi } from "vitest";
 import { registerOverlayExtension } from "./overlay.extension";
 
+type HandlerFn = (...args: unknown[]) => unknown;
+
 function mockApi(): ExtensionAPI & {
-  shortcuts: Map<string, { description?: string; handler: Function }>;
-  commands: Map<string, { description?: string; handler: Function }>;
+  shortcuts: Map<string, { description?: string; handler: HandlerFn }>;
+  commands: Map<string, { description?: string; handler: HandlerFn }>;
 } {
-  const shortcuts = new Map<string, { description?: string; handler: Function }>();
-  const commands = new Map<string, { description?: string; handler: Function }>();
+  const shortcuts = new Map<string, { description?: string; handler: HandlerFn }>();
+  const commands = new Map<string, { description?: string; handler: HandlerFn }>();
 
   return {
     on: vi.fn(),
     registerTool: vi.fn(),
     registerFlag: vi.fn(),
-    registerShortcut: vi.fn((key: string, opts: { description?: string; handler: Function }) => {
+    registerShortcut: vi.fn((key: string, opts: { description?: string; handler: HandlerFn }) => {
       shortcuts.set(key, opts);
     }),
-    registerCommand: vi.fn((name: string, opts: { description?: string; handler: Function }) => {
+    registerCommand: vi.fn((name: string, opts: { description?: string; handler: HandlerFn }) => {
       commands.set(name, opts);
     }),
     shortcuts,
@@ -56,17 +58,17 @@ function mockOverlayDataPort(): OverlayDataPort {
   } as unknown as OverlayDataPort;
 }
 
-function mockEventBus(): EventBusPort & { handlers: Map<string, Function[]> } {
-  const handlers = new Map<string, Function[]>();
+function mockEventBus(): EventBusPort & { handlers: Map<string, HandlerFn[]> } {
+  const handlers = new Map<string, HandlerFn[]>();
   return {
     publish: vi.fn(),
-    subscribe: vi.fn((eventName: string, handler: Function) => {
+    subscribe: vi.fn((eventName: string, handler: HandlerFn) => {
       const list = handlers.get(eventName) ?? [];
       list.push(handler);
       handlers.set(eventName, list);
     }),
     handlers,
-  } as unknown as EventBusPort & { handlers: Map<string, Function[]> };
+  } as unknown as EventBusPort & { handlers: Map<string, HandlerFn[]> };
 }
 
 const DEFAULT_HOTKEYS: HotkeysConfig = {
@@ -139,10 +141,11 @@ describe("registerOverlayExtension", () => {
       logger: mockLogger(),
     });
 
-    const handler = api.shortcuts.get("ctrl+alt+d")!.handler;
+    const handler = api.shortcuts.get("ctrl+alt+d")?.handler;
     const ctx = { hasUI: false, ui: {} } as unknown as ExtensionContext;
 
     // Should not throw — graceful no-op
+    if (!handler) throw new Error("Expected handler to be defined");
     await handler(ctx);
   });
 
@@ -156,7 +159,7 @@ describe("registerOverlayExtension", () => {
       (key: string, opts: unknown) => {
         callCount++;
         if (callCount === 1) throw new Error("conflict");
-        api.shortcuts.set(key, opts as { description?: string; handler: Function });
+        api.shortcuts.set(key, opts as { description?: string; handler: HandlerFn });
       },
     );
 

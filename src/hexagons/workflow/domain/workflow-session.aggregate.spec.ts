@@ -12,6 +12,7 @@ const defaultCtx: GuardContext = {
   maxRetries: 2,
   allSlicesClosed: false,
   lastError: null,
+  failurePolicy: "strict",
 };
 
 describe("WorkflowSession", () => {
@@ -349,6 +350,43 @@ describe("WorkflowSession", () => {
     });
   });
 
+  describe("createNew — nullable milestoneId", () => {
+    it("creates session with null milestoneId for ad-hoc slices", () => {
+      const session = WorkflowSession.createNew({
+        id: faker.string.uuid(),
+        autonomyMode: "guided",
+        now: new Date(),
+      });
+      expect(session.milestoneId).toBeNull();
+    });
+
+    it("creates session with milestoneId for milestone slices", () => {
+      const milestoneId = faker.string.uuid();
+      const session = WorkflowSession.createNew({
+        id: faker.string.uuid(),
+        milestoneId,
+        autonomyMode: "guided",
+        now: new Date(),
+      });
+      expect(session.milestoneId).toBe(milestoneId);
+    });
+
+    it("emits phase changed event with null milestoneId", () => {
+      const session = WorkflowSession.createNew({
+        id: faker.string.uuid(),
+        autonomyMode: "guided",
+        now: new Date(),
+      });
+      session.pullEvents();
+      session.trigger("start", defaultCtx, new Date());
+      const events = session.pullEvents();
+      expect(events).toHaveLength(1);
+      const phaseEvent =
+        events[0] as import("./events/workflow-phase-changed.event").WorkflowPhaseChangedEvent;
+      expect(phaseEvent.milestoneId).toBeNull();
+    });
+  });
+
   describe("reconstitute", () => {
     it("reconstitutes from props without events", () => {
       const now = new Date();
@@ -412,6 +450,7 @@ describe("WorkflowSession", () => {
         maxRetries: 2,
         allSlicesClosed: false,
         lastError: "Test failed: expected 1 but got 2",
+        failurePolicy: "strict",
       };
 
       const result = session.trigger("fail", ctx, new Date());
@@ -448,6 +487,7 @@ describe("WorkflowSession", () => {
         maxRetries: 2,
         allSlicesClosed: false,
         lastError: null,
+        failurePolicy: "strict",
       };
 
       session.trigger("fail", ctx, new Date());

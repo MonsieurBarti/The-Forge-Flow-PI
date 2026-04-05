@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import type { Id, Result } from "@kernel";
+import { describe, expect, it } from "vitest";
 
 // These imports should exist after T02 implementation
 import {
@@ -23,9 +23,7 @@ describe("OverlayDataPort", () => {
       };
     }
 
-    async getSliceSnapshot(
-      _sliceId: Id,
-    ): Promise<Result<OverlaySliceSnapshot, Error>> {
+    async getSliceSnapshot(_sliceId: Id): Promise<Result<OverlaySliceSnapshot, Error>> {
       return {
         ok: true,
         data: {

@@ -271,4 +271,24 @@ export class GitCliAdapter extends GitPort {
     if (!result.ok) return result;
     return ok(undefined);
   }
+
+  async currentBranch(): Promise<Result<string | null, GitError>> {
+    const result = await this.runGit(["rev-parse", "--abbrev-ref", "HEAD"]);
+    if (!result.ok) return result;
+    const branch = result.data.trim();
+    return ok(branch === "HEAD" ? null : branch);
+  }
+
+  async branchExists(name: string): Promise<Result<boolean, GitError>> {
+    const result = await this.runGit(["rev-parse", "--verify", `refs/heads/${name}`]);
+    if (result.ok) return ok(true);
+    if (
+      result.error.code === "REF_NOT_FOUND" ||
+      result.error.message.includes("not a valid object name") ||
+      result.error.message.includes("Needed a single revision")
+    ) {
+      return ok(false);
+    }
+    return err(result.error);
+  }
 }

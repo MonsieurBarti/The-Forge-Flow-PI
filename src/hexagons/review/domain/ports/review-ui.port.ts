@@ -7,7 +7,7 @@ import type {
   FindingsUIResponse,
   VerificationUIContext,
   VerificationUIResponse,
-} from "../review-ui.schemas";
+} from "../schemas/review-ui.schemas";
 
 export abstract class ReviewUIPort {
   abstract presentFindings(

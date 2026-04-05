@@ -25,4 +25,6 @@ export abstract class GitPort {
   abstract diffAgainst(base: string, cwd: string): Promise<Result<string, GitError>>;
   abstract restoreWorktree(cwd: string): Promise<Result<void, GitError>>;
   abstract pushFrom(cwd: string, branch: string): Promise<Result<void, GitError>>;
+  abstract currentBranch(): Promise<Result<string | null, GitError>>;
+  abstract branchExists(name: string): Promise<Result<boolean, GitError>>;
 }

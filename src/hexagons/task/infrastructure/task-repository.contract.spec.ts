@@ -1,8 +1,10 @@
 import { isErr, isOk } from "@kernel";
+import Database from "better-sqlite3";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { TaskRepositoryPort } from "../domain/ports/task-repository.port";
 import { TaskBuilder } from "../domain/task.builder";
 import { InMemoryTaskRepository } from "./in-memory-task.repository";
+import { SqliteTaskRepository } from "./sqlite-task.repository";
 
 function runContractTests(name: string, factory: () => TaskRepositoryPort & { reset(): void }) {
   describe(`${name} contract`, () => {
@@ -114,3 +116,8 @@ function runContractTests(name: string, factory: () => TaskRepositoryPort & { re
 }
 
 runContractTests("InMemoryTaskRepository", () => new InMemoryTaskRepository());
+
+runContractTests("SqliteTaskRepository", () => {
+  const db = new Database(":memory:");
+  return new SqliteTaskRepository(db);
+});

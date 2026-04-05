@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createMockExtensionAPI } from "@infrastructure/pi/testing";
@@ -14,6 +14,10 @@ describe("createTffExtension", () => {
 
   beforeEach(() => {
     projectRoot = mkdtempSync(join(tmpdir(), "tff-ext-test-"));
+    // Create the protocol file required by ExecuteSliceUseCase wiring
+    const protocolDir = join(projectRoot, "src/resources/protocols");
+    mkdirSync(protocolDir, { recursive: true });
+    writeFileSync(join(protocolDir, "execute.md"), "# Execute Protocol\n", "utf-8");
   });
 
   afterEach(() => {
@@ -39,5 +43,40 @@ describe("createTffExtension", () => {
     });
     expect(toolNames).toContain("tff_init_project");
     expect(toolNames).toContain("tff_status");
+  });
+
+  it("registers tff:health, tff:progress, tff:settings, tff:help commands", () => {
+    const { api, fns } = createMockExtensionAPI();
+    createTffExtension(api, { projectRoot });
+
+    const commandNames = fns.registerCommand.mock.calls.map((call: unknown[]) => call[0]);
+    expect(commandNames).toContain("tff:health");
+    expect(commandNames).toContain("tff:progress");
+    expect(commandNames).toContain("tff:settings");
+    expect(commandNames).toContain("tff:help");
+  });
+
+  it("registers tff:quick and tff:debug commands", () => {
+    const { api, fns } = createMockExtensionAPI();
+    createTffExtension(api, { projectRoot });
+
+    const commandNames = fns.registerCommand.mock.calls.map((call: unknown[]) => call[0]);
+    expect(commandNames).toContain("tff:quick");
+    expect(commandNames).toContain("tff:debug");
+  });
+
+  it("registers tff_health_check, tff_progress, tff_read_settings, tff_update_setting, tff_quick_start tools", () => {
+    const { api, fns } = createMockExtensionAPI();
+    createTffExtension(api, { projectRoot });
+
+    const toolNames = fns.registerTool.mock.calls.map((call: unknown[]) => {
+      const tool = call[0];
+      return isRecord(tool) ? tool.name : undefined;
+    });
+    expect(toolNames).toContain("tff_health_check");
+    expect(toolNames).toContain("tff_progress");
+    expect(toolNames).toContain("tff_read_settings");
+    expect(toolNames).toContain("tff_update_setting");
+    expect(toolNames).toContain("tff_quick_start");
   });
 });

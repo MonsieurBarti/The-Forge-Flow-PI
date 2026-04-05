@@ -1,16 +1,10 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import type { TUI } from "@mariozechner/pi-tui";
-import type { MarkdownTheme } from "@mariozechner/pi-tui";
-import type { OverlayDataPort, OverlayProjectSnapshot } from "@kernel/ports/overlay-data.port";
 import type { BudgetTrackingPort } from "@hexagons/settings/domain/ports/budget-tracking.port";
 import type { SliceStatus } from "@hexagons/slice/domain/slice.schemas";
-import { ok, err } from "@kernel/result";
-import {
-  DashboardComponent,
-  buildMarkdown,
-  progressBar,
-  NEXT_ACTION,
-} from "./dashboard.component";
+import type { OverlayDataPort, OverlayProjectSnapshot } from "@kernel/ports/overlay-data.port";
+import { err, ok } from "@kernel/result";
+import type { MarkdownTheme, TUI } from "@mariozechner/pi-tui";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { buildMarkdown, DashboardComponent, NEXT_ACTION, progressBar } from "./dashboard.component";
 
 // --- Test helpers ---
 
@@ -60,8 +54,20 @@ function fullSnapshot(): OverlayProjectSnapshot {
     project: { name: "Forge Flow" },
     milestone: { label: "M06", title: "TUI Overlays" },
     slices: [
-      { label: "M06-S01", title: "Setup", status: "executing" as SliceStatus, complexity: "S", id: "slice-1" },
-      { label: "M06-S02", title: "Dashboard", status: "closed" as SliceStatus, complexity: "F-lite", id: "slice-2" },
+      {
+        label: "M06-S01",
+        title: "Setup",
+        status: "executing" as SliceStatus,
+        complexity: "S",
+        id: "slice-1",
+      },
+      {
+        label: "M06-S02",
+        title: "Dashboard",
+        status: "closed" as SliceStatus,
+        complexity: "F-lite",
+        id: "slice-2",
+      },
     ],
     taskCounts,
   };
@@ -75,7 +81,13 @@ function allClosedSnapshot(): OverlayProjectSnapshot {
     project: { name: "Forge Flow" },
     milestone: { label: "M06", title: "TUI Overlays" },
     slices: [
-      { label: "M06-S01", title: "Setup", status: "closed" as SliceStatus, complexity: "S", id: "slice-1" },
+      {
+        label: "M06-S01",
+        title: "Setup",
+        status: "closed" as SliceStatus,
+        complexity: "S",
+        id: "slice-1",
+      },
     ],
     taskCounts,
   };

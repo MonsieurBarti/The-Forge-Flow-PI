@@ -1,5 +1,5 @@
-import type { AgentEvent } from "@kernel/agents/agent-event.schema";
-import type { AgentEventPort, Unsubscribe } from "@kernel/ports/agent-event.port";
+import type { AgentEvent } from "@kernel/agents/schemas/agent-event.schema";
+import type { AgentEventPort } from "@kernel/ports/agent-event.port";
 import type { Component, MarkdownTheme, TUI } from "@mariozechner/pi-tui";
 import { Markdown } from "@mariozechner/pi-tui";
 
@@ -28,8 +28,7 @@ export function buildMarkdown(state: ExecutionMonitorState): string {
       return `${name} \u00d7${v.total}${errSuffix}`;
     });
 
-  const toolLine =
-    toolEntries.length > 0 ? `**Tools:** ${toolEntries.join("  ")}` : null;
+  const toolLine = toolEntries.length > 0 ? `**Tools:** ${toolEntries.join("  ")}` : null;
 
   const parts = [headerLine, "", "---", "", state.textBuffer, "", "---"];
   if (toolLine) parts.push("", toolLine);
@@ -40,7 +39,8 @@ export function buildMarkdown(state: ExecutionMonitorState): string {
 export class ExecutionMonitorComponent implements Component {
   private readonly markdown: Markdown;
   private readonly tui: TUI;
-  private readonly _unsubscribe: Unsubscribe;
+  // biome-ignore lint/correctness/noUnusedPrivateClassMembers: retained to prevent GC of subscription
+  private readonly _unsubscribe: () => void;
 
   private state: ExecutionMonitorState = {
     activeTaskId: null,
@@ -58,15 +58,8 @@ export class ExecutionMonitorComponent implements Component {
     paddingY: number,
   ) {
     this.tui = tui;
-    this.markdown = new Markdown(
-      buildMarkdown(this.state),
-      paddingX,
-      paddingY,
-      markdownTheme,
-    );
-    this._unsubscribe = agentEventPort.subscribeAll((event) =>
-      this.handleEvent(event),
-    );
+    this.markdown = new Markdown(buildMarkdown(this.state), paddingX, paddingY, markdownTheme);
+    this._unsubscribe = agentEventPort.subscribeAll((event) => this.handleEvent(event));
   }
 
   private handleEvent(event: AgentEvent): void {
@@ -95,7 +88,8 @@ export class ExecutionMonitorComponent implements Component {
         if (!this.state.toolCounts.has(event.toolName)) {
           this.state.toolCounts.set(event.toolName, { total: 0, errors: 0 });
         }
-        this.state.toolCounts.get(event.toolName)!.total++;
+        const toolEntry = this.state.toolCounts.get(event.toolName);
+        if (toolEntry) toolEntry.total++;
         break;
       }
       case "tool_execution_end":

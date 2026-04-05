@@ -1,6 +1,6 @@
 import type { Result } from "@kernel";
-import type { AuditReportProps } from "../completion.schemas";
 import type { AuditError } from "../errors/audit.error";
+import type { AuditReportProps } from "../schemas/completion.schemas";
 
 export abstract class AuditPort {
   abstract auditMilestone(params: {

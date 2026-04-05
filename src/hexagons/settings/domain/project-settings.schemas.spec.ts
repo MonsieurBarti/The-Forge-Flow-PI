@@ -4,10 +4,18 @@ import {
   AUTO_LEARN_DEFAULTS,
   AUTONOMY_DEFAULTS,
   BEADS_DEFAULTS,
+  FALLBACK_STRATEGY_DEFAULTS,
+  FallbackStrategyConfigSchema,
   MODEL_ROUTING_DEFAULTS,
   ModelNameSchema,
   ModelProfileNameSchema,
+  QUALITY_METRICS_DEFAULTS,
   SettingsSchema,
+  STACK_DEFAULTS,
+  TOOL_POLICIES_DEFAULTS,
+  ToolPoliciesConfigSchema,
+  WORKFLOW_DEFAULTS,
+  WorkflowConfigSchema,
 } from "./project-settings.schemas";
 
 describe("SettingsSchema", () => {
@@ -51,14 +59,19 @@ describe("SettingsSchema", () => {
 });
 
 describe("ModelNameSchema", () => {
-  it("accepts valid model names", () => {
+  it("accepts short model aliases", () => {
     expect(ModelNameSchema.parse("opus")).toBe("opus");
     expect(ModelNameSchema.parse("sonnet")).toBe("sonnet");
     expect(ModelNameSchema.parse("haiku")).toBe("haiku");
   });
 
-  it("rejects invalid model names", () => {
-    expect(() => ModelNameSchema.parse("invalid")).toThrow();
+  it("accepts full model IDs", () => {
+    expect(ModelNameSchema.parse("claude-opus-4-6")).toBe("claude-opus-4-6");
+    expect(ModelNameSchema.parse("claude-sonnet-4-6")).toBe("claude-sonnet-4-6");
+  });
+
+  it("rejects empty string", () => {
+    expect(() => ModelNameSchema.parse("")).toThrow();
   });
 });
 
@@ -120,5 +133,145 @@ describe("OverseerConfig in SettingsSchema", () => {
     if (result.success) {
       expect(result.data.overseer.enabled).toBe(true);
     }
+  });
+});
+
+describe("FallbackStrategyConfigSchema", () => {
+  it("produces defaults from empty object", () => {
+    const result = FallbackStrategyConfigSchema.parse({});
+    expect(result).toEqual(FALLBACK_STRATEGY_DEFAULTS);
+  });
+
+  it("accepts valid overrides", () => {
+    const result = FallbackStrategyConfigSchema.parse({
+      retryCount: 2,
+      downshiftChain: ["balanced", "budget"],
+      checkpointBeforeRetry: false,
+    });
+    expect(result.retryCount).toBe(2);
+    expect(result.downshiftChain).toEqual(["balanced", "budget"]);
+    expect(result.checkpointBeforeRetry).toBe(false);
+  });
+
+  it("returns defaults on invalid input via .catch()", () => {
+    const result = FallbackStrategyConfigSchema.parse("garbage");
+    expect(result).toEqual(FALLBACK_STRATEGY_DEFAULTS);
+  });
+
+  it("returns defaults on null via .catch()", () => {
+    const result = FallbackStrategyConfigSchema.parse(null);
+    expect(result).toEqual(FALLBACK_STRATEGY_DEFAULTS);
+  });
+});
+
+describe("ToolPoliciesConfigSchema", () => {
+  it("produces defaults from empty object", () => {
+    const result = ToolPoliciesConfigSchema.parse({});
+    expect(result).toEqual(TOOL_POLICIES_DEFAULTS);
+  });
+
+  it("accepts tool policies with defaults, byTier, and byRole", () => {
+    const result = ToolPoliciesConfigSchema.parse({
+      defaults: { blocked: ["Agent"] },
+      byTier: { S: { blocked: ["Agent"] } },
+      byRole: { "security-auditor": { allowed: ["Read", "Grep", "Glob"] } },
+    });
+    expect(result.defaults.blocked).toEqual(["Agent"]);
+    expect(result.byTier.S?.blocked).toEqual(["Agent"]);
+    expect(result.byRole["security-auditor"]?.allowed).toEqual(["Read", "Grep", "Glob"]);
+  });
+
+  it("returns defaults on invalid input via .catch()", () => {
+    const result = ToolPoliciesConfigSchema.parse("garbage");
+    expect(result).toEqual(TOOL_POLICIES_DEFAULTS);
+  });
+});
+
+describe("WorkflowConfigSchema", () => {
+  it("produces defaults from empty object", () => {
+    const result = WorkflowConfigSchema.parse({});
+    expect(result).toEqual(WORKFLOW_DEFAULTS);
+  });
+
+  it("accepts failure policies with per-phase overrides", () => {
+    const result = WorkflowConfigSchema.parse({
+      failurePolicies: {
+        default: "tolerant",
+        byPhase: { researching: "lenient", executing: "strict" },
+      },
+    });
+    expect(result.failurePolicies.default).toBe("tolerant");
+    expect(result.failurePolicies.byPhase.researching).toBe("lenient");
+    expect(result.failurePolicies.byPhase.executing).toBe("strict");
+  });
+
+  it("returns defaults on invalid input via .catch()", () => {
+    const result = WorkflowConfigSchema.parse(null);
+    expect(result).toEqual(WORKFLOW_DEFAULTS);
+  });
+});
+
+describe("SettingsSchema new sections", () => {
+  it("includes toolPolicies defaults", () => {
+    const result = SettingsSchema.parse({});
+    expect(result.toolPolicies).toEqual(TOOL_POLICIES_DEFAULTS);
+  });
+
+  it("includes workflow defaults", () => {
+    const result = SettingsSchema.parse({});
+    expect(result.workflow).toEqual(WORKFLOW_DEFAULTS);
+  });
+
+  it("includes qualityMetrics defaults", () => {
+    const result = SettingsSchema.parse({});
+    expect(result.qualityMetrics).toEqual(QUALITY_METRICS_DEFAULTS);
+  });
+
+  it("includes stack defaults", () => {
+    const result = SettingsSchema.parse({});
+    expect(result.stack).toEqual(STACK_DEFAULTS);
+  });
+
+  it("recovers corrupted toolPolicies via .catch()", () => {
+    const result = SettingsSchema.parse({ toolPolicies: "garbage" });
+    expect(result.toolPolicies).toEqual(TOOL_POLICIES_DEFAULTS);
+  });
+
+  it("recovers corrupted workflow via .catch()", () => {
+    const result = SettingsSchema.parse({ workflow: 42 });
+    expect(result.workflow).toEqual(WORKFLOW_DEFAULTS);
+  });
+
+  it("accepts stack with detected and overrides", () => {
+    const result = SettingsSchema.parse({
+      stack: {
+        detected: { runtime: "typescript", packageManager: "pnpm" },
+        overrides: { linter: "biome" },
+      },
+    });
+    expect(result.stack.detected.runtime).toBe("typescript");
+    expect(result.stack.detected.packageManager).toBe("pnpm");
+    expect(result.stack.overrides.linter).toBe("biome");
+  });
+});
+
+describe("SettingsSchema fallback field", () => {
+  it("parses settings without fallback (backward compat)", () => {
+    const result = SettingsSchema.parse({});
+    expect(result.fallback).toBeUndefined();
+  });
+
+  it("accepts fallback config with all defaults", () => {
+    const result = SettingsSchema.parse({ fallback: {} });
+    expect(result.fallback).toEqual(FALLBACK_STRATEGY_DEFAULTS);
+  });
+
+  it("accepts fallback config with custom values", () => {
+    const result = SettingsSchema.parse({
+      fallback: { retryCount: 3, checkpointBeforeRetry: false },
+    });
+    expect(result.fallback?.retryCount).toBe(3);
+    expect(result.fallback?.checkpointBeforeRetry).toBe(false);
+    expect(result.fallback?.downshiftChain).toEqual(["quality", "balanced", "budget"]);
   });
 });

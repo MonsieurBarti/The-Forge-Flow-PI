@@ -1,4 +1,4 @@
-import { AutonomyModeSchema } from "@hexagons/settings";
+import { AutonomyModeSchema, FailurePolicyModeSchema } from "@hexagons/settings";
 import { ComplexityTierSchema, IdSchema, TimestampSchema } from "@kernel";
 import { z } from "zod";
 
@@ -49,7 +49,7 @@ export type AutoTransitionDecision = z.infer<typeof AutoTransitionDecisionSchema
 
 export const WorkflowSessionPropsSchema = z.object({
   id: IdSchema,
-  milestoneId: IdSchema,
+  milestoneId: IdSchema.nullable().default(null),
   sliceId: IdSchema.optional(),
   currentPhase: WorkflowPhaseSchema,
   previousPhase: WorkflowPhaseSchema.optional(),
@@ -84,6 +84,7 @@ export const GuardContextSchema = z.object({
   maxRetries: z.number().int().min(0),
   allSlicesClosed: z.boolean(),
   lastError: z.string().nullable().default(null),
+  failurePolicy: FailurePolicyModeSchema.default("strict"),
 });
 export type GuardContext = z.infer<typeof GuardContextSchema>;
 

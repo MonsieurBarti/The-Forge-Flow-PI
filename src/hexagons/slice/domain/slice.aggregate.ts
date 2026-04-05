@@ -5,6 +5,7 @@ import {
   type ComplexityCriteria,
   type ComplexityTier,
   classifyComplexity,
+  type SliceKind,
   type SliceProps,
   SlicePropsSchema,
   type SliceStatus,
@@ -20,8 +21,12 @@ export class Slice extends AggregateRoot<SliceProps> {
     return this.props.id;
   }
 
-  get milestoneId(): string {
+  get milestoneId(): string | null {
     return this.props.milestoneId;
+  }
+
+  get kind(): SliceKind {
+    return this.props.kind;
   }
 
   get label(): string {
@@ -56,6 +61,10 @@ export class Slice extends AggregateRoot<SliceProps> {
     return this.props.researchPath;
   }
 
+  get position(): number {
+    return this.props.position;
+  }
+
   get createdAt(): Date {
     return this.props.createdAt;
   }
@@ -66,15 +75,28 @@ export class Slice extends AggregateRoot<SliceProps> {
 
   static createNew(params: {
     id: Id;
-    milestoneId: Id;
+    milestoneId?: Id;
     label: string;
     title: string;
     description?: string;
+    kind?: SliceKind;
+    position?: number;
     now: Date;
   }): Slice {
+    const kind = params.kind ?? "milestone";
+    const milestoneId = params.milestoneId ?? null;
+
+    if (kind === "milestone" && milestoneId === null) {
+      throw new Error("Milestone slice requires a milestoneId");
+    }
+    if (kind !== "milestone" && milestoneId !== null) {
+      throw new Error(`Ad-hoc slice of kind "${kind}" must not have a milestoneId`);
+    }
+
     const slice = new Slice({
       id: params.id,
-      milestoneId: params.milestoneId,
+      milestoneId,
+      kind,
       label: params.label,
       title: params.title,
       description: params.description ?? "",
@@ -83,6 +105,7 @@ export class Slice extends AggregateRoot<SliceProps> {
       specPath: null,
       planPath: null,
       researchPath: null,
+      position: params.position ?? 0,
       createdAt: params.now,
       updatedAt: params.now,
     });

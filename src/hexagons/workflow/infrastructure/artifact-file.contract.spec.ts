@@ -8,7 +8,7 @@ import { InMemoryArtifactFileAdapter } from "./in-memory-artifact-file.adapter";
 import { NodeArtifactFileAdapter } from "./node-artifact-file.adapter";
 
 // Shared contract — parameterized test suite
-export function artifactFileContractTests(
+function artifactFileContractTests(
   name: string,
   factory: () => { adapter: ArtifactFilePort; cleanup?: () => Promise<void> },
 ) {
@@ -72,4 +72,63 @@ artifactFileContractTests("NodeArtifactFileAdapter", () => {
       rmSync(projectRoot, { recursive: true, force: true });
     },
   };
+});
+
+// Kind-aware path resolution tests for NodeArtifactFileAdapter
+describe("NodeArtifactFileAdapter kind-aware paths", () => {
+  it("resolves milestone artifact path", async () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), "tff-test-"));
+    const adapter = new NodeArtifactFileAdapter(projectRoot);
+
+    const result = await adapter.write("M07", "M07-S01", "spec", "content", "milestone");
+    expect(isOk(result)).toBe(true);
+    if (isOk(result)) {
+      expect(result.data).toBe(
+        join(projectRoot, ".tff", "milestones", "M07", "slices", "M07-S01", "SPEC.md"),
+      );
+    }
+
+    rmSync(projectRoot, { recursive: true, force: true });
+  });
+
+  it("resolves quick artifact path", async () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), "tff-test-"));
+    const adapter = new NodeArtifactFileAdapter(projectRoot);
+
+    const result = await adapter.write(null, "Q-01", "spec", "content", "quick");
+    expect(isOk(result)).toBe(true);
+    if (isOk(result)) {
+      expect(result.data).toBe(join(projectRoot, ".tff", "quick", "Q-01", "SPEC.md"));
+    }
+
+    rmSync(projectRoot, { recursive: true, force: true });
+  });
+
+  it("resolves debug artifact path", async () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), "tff-test-"));
+    const adapter = new NodeArtifactFileAdapter(projectRoot);
+
+    const result = await adapter.write(null, "D-01", "plan", "content", "debug");
+    expect(isOk(result)).toBe(true);
+    if (isOk(result)) {
+      expect(result.data).toBe(join(projectRoot, ".tff", "debug", "D-01", "PLAN.md"));
+    }
+
+    rmSync(projectRoot, { recursive: true, force: true });
+  });
+
+  it("defaults to milestone when kind omitted", async () => {
+    const projectRoot = mkdtempSync(join(tmpdir(), "tff-test-"));
+    const adapter = new NodeArtifactFileAdapter(projectRoot);
+
+    const result = await adapter.write("M07", "M07-S01", "spec", "content");
+    expect(isOk(result)).toBe(true);
+    if (isOk(result)) {
+      expect(result.data).toBe(
+        join(projectRoot, ".tff", "milestones", "M07", "slices", "M07-S01", "SPEC.md"),
+      );
+    }
+
+    rmSync(projectRoot, { recursive: true, force: true });
+  });
 });

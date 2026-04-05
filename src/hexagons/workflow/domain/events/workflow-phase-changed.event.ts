@@ -4,7 +4,7 @@ import type { WorkflowPhase, WorkflowTrigger } from "../workflow-session.schemas
 import { WorkflowPhaseSchema, WorkflowTriggerSchema } from "../workflow-session.schemas";
 
 const WorkflowPhaseChangedEventPropsSchema = DomainEventPropsSchema.extend({
-  milestoneId: z.string().uuid(),
+  milestoneId: z.string().uuid().nullable(),
   sliceId: z.string().uuid().optional(),
   fromPhase: WorkflowPhaseSchema,
   toPhase: WorkflowPhaseSchema,
@@ -16,7 +16,7 @@ type WorkflowPhaseChangedEventProps = z.infer<typeof WorkflowPhaseChangedEventPr
 
 export class WorkflowPhaseChangedEvent extends DomainEvent {
   readonly eventName: EventName = EVENT_NAMES.WORKFLOW_PHASE_CHANGED;
-  readonly milestoneId: string;
+  readonly milestoneId: string | null;
   readonly sliceId?: string;
   readonly fromPhase: WorkflowPhase;
   readonly toPhase: WorkflowPhase;

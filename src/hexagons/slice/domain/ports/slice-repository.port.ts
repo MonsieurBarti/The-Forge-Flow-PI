@@ -1,9 +1,13 @@
 import type { Id, PersistenceError, Result } from "@kernel";
 import type { Slice } from "../slice.aggregate";
+import type { SliceKind } from "../slice.schemas";
 
 export abstract class SliceRepositoryPort {
   abstract save(slice: Slice): Promise<Result<void, PersistenceError>>;
   abstract findById(id: Id): Promise<Result<Slice | null, PersistenceError>>;
   abstract findByLabel(label: string): Promise<Result<Slice | null, PersistenceError>>;
   abstract findByMilestoneId(milestoneId: Id): Promise<Result<Slice[], PersistenceError>>;
+  abstract findByKind(kind: SliceKind): Promise<Result<Slice[], PersistenceError>>;
+  abstract delete(id: Id): Promise<Result<void, PersistenceError>>;
+  abstract reset(): void;
 }

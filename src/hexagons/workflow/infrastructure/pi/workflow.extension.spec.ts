@@ -1,6 +1,6 @@
 import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/in-memory-milestone.repository";
 import { InMemoryProjectRepository } from "@hexagons/project/infrastructure/in-memory-project.repository";
-import { InMemoryReviewUIAdapter } from "@hexagons/review/infrastructure/in-memory-review-ui.adapter";
+import { InMemoryReviewUIAdapter } from "@hexagons/review/infrastructure/adapters/review-ui/in-memory-review-ui.adapter";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
 import { WorkflowSliceTransitionAdapter } from "@hexagons/slice/infrastructure/workflow-slice-transition.adapter";
 import { CreateTasksUseCase } from "@hexagons/task/application/create-tasks.use-case";
@@ -124,5 +124,30 @@ describe("registerWorkflowExtension", () => {
     expect(writeSpecCall).toBeDefined();
     // ReviewUI is injectable and starts with no presentations
     expect(reviewUI.presentations).toHaveLength(0);
+  });
+
+  it("registers tff:quick command", () => {
+    const { api, fns } = createMockExtensionAPI();
+    registerWorkflowExtension(api, makeDeps());
+    expect(fns.registerCommand).toHaveBeenCalledWith(
+      "tff:quick",
+      expect.objectContaining({ description: expect.any(String) }),
+    );
+  });
+
+  it("registers tff:debug command", () => {
+    const { api, fns } = createMockExtensionAPI();
+    registerWorkflowExtension(api, makeDeps());
+    expect(fns.registerCommand).toHaveBeenCalledWith(
+      "tff:debug",
+      expect.objectContaining({ description: expect.any(String) }),
+    );
+  });
+
+  it("registers tff_quick_start tool", () => {
+    const { api, fns } = createMockExtensionAPI();
+    registerWorkflowExtension(api, makeDeps());
+    const toolNames = fns.registerTool.mock.calls.map((call) => call[0].name);
+    expect(toolNames).toContain("tff_quick_start");
   });
 });

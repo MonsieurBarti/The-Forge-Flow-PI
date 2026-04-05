@@ -13,12 +13,15 @@ export interface PlanCommandDeps {
   sessionRepo: WorkflowSessionRepositoryPort;
   artifactFile: ArtifactFilePort;
   suggestNextStep: SuggestNextStepUseCase;
+  withGuard?: () => Promise<void>;
 }
 
 export function registerPlanCommand(api: ExtensionAPI, deps: PlanCommandDeps): void {
   api.registerCommand("tff:plan", {
     description: "Start the planning phase — decompose spec into tasks with wave detection",
-    handler: async (args: string) => {
+    handler: async (args: string, ctx) => {
+      if (ctx?.newSession) await ctx.newSession();
+      await deps.withGuard?.();
       // 1. Resolve target slice from args (label or ID)
       const identifier = args.trim();
       if (!identifier) {
@@ -42,6 +45,10 @@ export function registerPlanCommand(api: ExtensionAPI, deps: PlanCommandDeps): v
       const slice = sliceResult.data;
       if (!slice) {
         api.sendUserMessage(`Slice not found: ${identifier}`);
+        return;
+      }
+      if (!slice.milestoneId) {
+        api.sendUserMessage("Error: ad-hoc slices don't use this command");
         return;
       }
 

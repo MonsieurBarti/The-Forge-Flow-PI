@@ -2,6 +2,7 @@ import { EVENT_NAMES, isErr, isOk } from "@kernel";
 import { describe, expect, it } from "vitest";
 import { Slice } from "./slice.aggregate";
 import { SliceBuilder } from "./slice.builder";
+import { SliceLabelSchema } from "./slice.schemas";
 
 describe("Slice", () => {
   const id = crypto.randomUUID();
@@ -58,6 +59,23 @@ describe("Slice", () => {
       expect(() =>
         Slice.createNew({ id, milestoneId, label: "M01-S01", title: "", now }),
       ).toThrow();
+    });
+
+    it("creates a slice with explicit position", () => {
+      const s = Slice.createNew({
+        id,
+        milestoneId,
+        label: "M01-S01",
+        title: "Schemas",
+        position: 3,
+        now,
+      });
+      expect(s.position).toBe(3);
+    });
+
+    it("defaults position to 0", () => {
+      const s = Slice.createNew({ id, milestoneId, label: "M01-S01", title: "Schemas", now });
+      expect(s.position).toBe(0);
     });
 
     it("throws on invalid id", () => {
@@ -166,10 +184,11 @@ describe("Slice", () => {
         specPath: null,
         planPath: null,
         researchPath: null,
+        position: 0,
         createdAt: now,
         updatedAt: now,
       };
-      const s = Slice.reconstitute(props);
+      const s = Slice.reconstitute({ ...props, kind: "milestone" as const });
 
       expect(s.id).toBe(id);
       expect(s.label).toBe("M01-S01");
@@ -181,6 +200,7 @@ describe("Slice", () => {
         Slice.reconstitute({
           id: "not-a-uuid",
           milestoneId,
+          kind: "milestone" as const,
           label: "M01-S01",
           title: "Schemas",
           description: "",
@@ -189,6 +209,7 @@ describe("Slice", () => {
           specPath: null,
           planPath: null,
           researchPath: null,
+          position: 0,
           createdAt: now,
           updatedAt: now,
         }),
@@ -204,6 +225,7 @@ describe("Slice", () => {
       expect(json).toEqual({
         id,
         milestoneId,
+        kind: "milestone",
         label: "M01-S01",
         title: "Schemas",
         description: "",
@@ -212,6 +234,7 @@ describe("Slice", () => {
         specPath: null,
         planPath: null,
         researchPath: null,
+        position: 0,
         createdAt: now,
         updatedAt: now,
       });
@@ -243,6 +266,7 @@ describe("Slice", () => {
       const s = Slice.reconstitute({
         id,
         milestoneId,
+        kind: "milestone" as const,
         label: "M01-S01",
         title: "Schemas",
         description: "",
@@ -251,6 +275,7 @@ describe("Slice", () => {
         specPath: null,
         planPath: null,
         researchPath: null,
+        position: 0,
         createdAt: now,
         updatedAt: now,
       });
@@ -279,6 +304,52 @@ describe("Slice", () => {
       slice.setPlanPath(".tff/milestones/M03/slices/M03-S07/PLAN.md", now);
       expect(slice.planPath).toBe(".tff/milestones/M03/slices/M03-S07/PLAN.md");
       expect(slice.updatedAt).toEqual(now);
+    });
+  });
+
+  describe("ad-hoc slice kinds", () => {
+    it("creates a quick slice with null milestoneId", () => {
+      const s = Slice.createNew({ id, label: "Q-01", title: "Quick fix", kind: "quick", now });
+      expect(s.kind).toBe("quick");
+      expect(s.milestoneId).toBeNull();
+    });
+
+    it("creates a debug slice with null milestoneId", () => {
+      const s = Slice.createNew({ id, label: "D-01", title: "Debug session", kind: "debug", now });
+      expect(s.kind).toBe("debug");
+      expect(s.milestoneId).toBeNull();
+    });
+
+    it("rejects milestone slice with null milestoneId", () => {
+      expect(() =>
+        Slice.createNew({ id, label: "M01-S01", title: "Schemas", kind: "milestone", now }),
+      ).toThrow();
+    });
+
+    it("rejects quick slice with milestoneId", () => {
+      expect(() =>
+        Slice.createNew({ id, milestoneId, label: "Q-01", title: "Quick fix", kind: "quick", now }),
+      ).toThrow();
+    });
+
+    it("validates Q-01 label", () => {
+      const result = SliceLabelSchema.safeParse("Q-01");
+      expect(result.success).toBe(true);
+    });
+
+    it("validates D-01 label", () => {
+      const result = SliceLabelSchema.safeParse("D-01");
+      expect(result.success).toBe(true);
+    });
+
+    it("still validates M07-S01 label", () => {
+      const result = SliceLabelSchema.safeParse("M07-S01");
+      expect(result.success).toBe(true);
+    });
+
+    it("defaults kind to milestone", () => {
+      const s = Slice.createNew({ id, milestoneId, label: "M01-S01", title: "Schemas", now });
+      expect(s.kind).toBe("milestone");
     });
   });
 });

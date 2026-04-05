@@ -1,6 +1,7 @@
 import type { MilestoneRepositoryPort } from "@hexagons/milestone";
 import type { ProjectRepositoryPort } from "@hexagons/project";
 import type { ReviewUIPort } from "@hexagons/review";
+import type { FailurePoliciesConfig } from "@hexagons/settings";
 import type { SliceRepositoryPort } from "@hexagons/slice";
 import type { CreateTasksPort, TaskRepositoryPort } from "@hexagons/task";
 import type { ExtensionAPI } from "@infrastructure/pi";
@@ -12,18 +13,23 @@ import type { ArtifactFilePort } from "../../domain/ports/artifact-file.port";
 import type { AutonomyModeProvider } from "../../domain/ports/autonomy-mode.provider";
 import type { ContextStagingPort } from "../../domain/ports/context-staging.port";
 import type { SliceTransitionPort } from "../../domain/ports/slice-transition.port";
+import type { WorkflowJournalPort } from "../../domain/ports/workflow-journal.port";
 import type { WorkflowSessionRepositoryPort } from "../../domain/ports/workflow-session.repository.port";
 import { ClassifyComplexityUseCase } from "../../use-cases/classify-complexity.use-case";
 import { GetStatusUseCase, type StatusReport } from "../../use-cases/get-status.use-case";
 import { OrchestratePhaseTransitionUseCase } from "../../use-cases/orchestrate-phase-transition.use-case";
+import { QuickStartUseCase } from "../../use-cases/quick-start.use-case";
 import { StartDiscussUseCase } from "../../use-cases/start-discuss.use-case";
 import { SuggestNextStepUseCase } from "../../use-cases/suggest-next-step.use-case";
 import { WritePlanUseCase } from "../../use-cases/write-plan.use-case";
 import { WriteResearchUseCase } from "../../use-cases/write-research.use-case";
 import { WriteSpecUseCase } from "../../use-cases/write-spec.use-case";
 import { createClassifyComplexityTool } from "./classify-complexity.tool";
+import { registerDebugCommand } from "./debug.command";
 import { registerDiscussCommand } from "./discuss.command";
 import { registerPlanCommand } from "./plan.command";
+import { registerQuickCommand } from "./quick.command";
+import { createQuickStartTool } from "./quick-start.tool";
 import { registerResearchCommand } from "./research.command";
 import { createWorkflowTransitionTool } from "./workflow-transition.tool";
 import { createWritePlanTool } from "./write-plan.tool";
@@ -45,6 +51,11 @@ export interface WorkflowExtensionDeps {
   autonomyModeProvider: AutonomyModeProvider;
   reviewUI: ReviewUIPort;
   maxRetries: number;
+  tffDir?: string;
+  resolveActiveTffDir?: (sliceId?: string) => Promise<string>;
+  withGuard?: () => Promise<void>;
+  workflowJournal?: WorkflowJournalPort;
+  failurePolicies?: FailurePoliciesConfig;
 }
 
 function formatStatusReport(report: StatusReport): string {
@@ -99,7 +110,8 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
 
   api.registerCommand("tff:status", {
     description: "Show current TFF project status",
-    handler: async (_args, ctx) => {
+    handler: async (_args, _ctx) => {
+      await deps.withGuard?.();
       api.sendUserMessage("Fetching project status...");
     },
   });
@@ -159,6 +171,7 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
     deps.sliceTransitionPort,
     deps.eventBus,
     deps.dateProvider,
+    deps.workflowJournal,
   );
 
   // --- Discuss tools ---
@@ -170,6 +183,7 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
       sessionRepo: deps.workflowSessionRepo,
       sliceRepo: deps.sliceRepo,
       maxRetries: deps.maxRetries,
+      failurePolicies: deps.failurePolicies,
     }),
   );
 
@@ -179,6 +193,7 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
     sliceRepo: deps.sliceRepo,
     milestoneRepo: deps.milestoneRepo,
     suggestNextStep,
+    withGuard: deps.withGuard,
   });
 
   // --- Research use case + tool ---
@@ -196,6 +211,7 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
     sessionRepo: deps.workflowSessionRepo,
     artifactFile: deps.artifactFile,
     suggestNextStep,
+    withGuard: deps.withGuard,
   });
 
   // --- Plan use case + tool ---
@@ -214,5 +230,21 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
     sessionRepo: deps.workflowSessionRepo,
     artifactFile: deps.artifactFile,
     suggestNextStep,
+    withGuard: deps.withGuard,
   });
+
+  // --- Quick/Debug use case + commands + tool ---
+  const tffDir = deps.tffDir ?? ".tff";
+  const quickStart = new QuickStartUseCase(
+    deps.sliceRepo,
+    deps.workflowSessionRepo,
+    orchestratePhaseTransition,
+    deps.eventBus,
+    deps.dateProvider,
+    deps.autonomyModeProvider,
+  );
+
+  registerQuickCommand(api, { quickStart, tffDir, withGuard: deps.withGuard });
+  registerDebugCommand(api, { quickStart, tffDir, withGuard: deps.withGuard });
+  api.registerTool(createQuickStartTool({ quickStart, tffDir }));
 }

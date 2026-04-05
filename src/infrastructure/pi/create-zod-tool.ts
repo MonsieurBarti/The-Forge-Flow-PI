@@ -1,5 +1,9 @@
 import type { TSchema } from "@mariozechner/pi-ai";
-import type { AgentToolResult, ExtensionContext, ToolDefinition } from "@mariozechner/pi-coding-agent";
+import type {
+  AgentToolResult,
+  ExtensionContext,
+  ToolDefinition,
+} from "@mariozechner/pi-coding-agent";
 import type { z } from "zod";
 import { toJSONSchema } from "zod";
 

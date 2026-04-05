@@ -8,13 +8,15 @@ export class InMemoryWorkflowSessionRepository extends WorkflowSessionRepository
 
   async save(session: WorkflowSession): Promise<Result<void, PersistenceError>> {
     const props = session.toJSON();
-    for (const [existingId, existingProps] of this.store) {
-      if (existingId !== props.id && existingProps.milestoneId === props.milestoneId) {
-        return err(
-          new PersistenceError(
-            `Milestone cardinality violated: session for milestone "${props.milestoneId}" already exists`,
-          ),
-        );
+    if (props.milestoneId != null) {
+      for (const [existingId, existingProps] of this.store) {
+        if (existingId !== props.id && existingProps.milestoneId === props.milestoneId) {
+          return err(
+            new PersistenceError(
+              `Milestone cardinality violated: session for milestone "${props.milestoneId}" already exists`,
+            ),
+          );
+        }
       }
     }
     this.store.set(props.id, props);
@@ -36,6 +38,19 @@ export class InMemoryWorkflowSessionRepository extends WorkflowSessionRepository
       }
     }
     return ok(null);
+  }
+
+  async findBySliceId(sliceId: Id): Promise<Result<WorkflowSession | null, PersistenceError>> {
+    for (const props of this.store.values()) {
+      if (props.sliceId === sliceId) {
+        return ok(WorkflowSession.reconstitute(props));
+      }
+    }
+    return ok(null);
+  }
+
+  async findAll(): Promise<Result<WorkflowSession[], PersistenceError>> {
+    return ok(Array.from(this.store.values()).map((p) => WorkflowSession.reconstitute(p)));
   }
 
   seed(session: WorkflowSession): void {

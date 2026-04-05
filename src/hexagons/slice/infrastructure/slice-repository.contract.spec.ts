@@ -1,8 +1,10 @@
 import { isErr, isOk } from "@kernel";
+import Database from "better-sqlite3";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { SliceRepositoryPort } from "../domain/ports/slice-repository.port";
 import { SliceBuilder } from "../domain/slice.builder";
 import { InMemorySliceRepository } from "./in-memory-slice.repository";
+import { SqliteSliceRepository } from "./sqlite-slice.repository";
 
 function runContractTests(name: string, factory: () => SliceRepositoryPort & { reset(): void }) {
   describe(`${name} contract`, () => {
@@ -100,7 +102,136 @@ function runContractTests(name: string, factory: () => SliceRepositoryPort & { r
       const result = await repo.save(slice);
       expect(isOk(result)).toBe(true);
     });
+
+    it("finds slices by kind", async () => {
+      const m1 = new SliceBuilder().withKind("milestone").withLabel("M01-S01").build();
+      const m2 = new SliceBuilder().withKind("milestone").withLabel("M01-S02").build();
+      const q1 = new SliceBuilder().withKind("quick").withoutMilestone().withLabel("Q-01").build();
+      await repo.save(m1);
+      await repo.save(m2);
+      await repo.save(q1);
+
+      const result = await repo.findByKind("quick");
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        expect(result.data).toHaveLength(1);
+        expect(result.data[0].id).toBe(q1.id);
+      }
+    });
+
+    it("returns empty array for kind with no slices", async () => {
+      const result = await repo.findByKind("debug");
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        expect(result.data).toEqual([]);
+      }
+    });
+
+    it("saves and retrieves slice with null milestoneId", async () => {
+      const slice = new SliceBuilder()
+        .withKind("quick")
+        .withoutMilestone()
+        .withLabel("Q-02")
+        .build();
+      await repo.save(slice);
+
+      const result = await repo.findById(slice.id);
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        expect(result.data).not.toBeNull();
+        expect(result.data?.milestoneId).toBeNull();
+      }
+    });
+
+    it("save + findById preserves position", async () => {
+      const slice = new SliceBuilder().withPosition(5).build();
+      await repo.save(slice);
+
+      const result = await repo.findById(slice.id);
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        expect(result.data?.position).toBe(5);
+      }
+    });
+
+    it("position defaults to 0", async () => {
+      const slice = new SliceBuilder().build();
+      await repo.save(slice);
+
+      const result = await repo.findById(slice.id);
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        expect(result.data?.position).toBe(0);
+      }
+    });
+
+    it("findByMilestoneId returns slices sorted by position", async () => {
+      const milestoneId = crypto.randomUUID();
+      const s1 = new SliceBuilder()
+        .withMilestoneId(milestoneId)
+        .withLabel("M01-S01")
+        .withPosition(2)
+        .build();
+      const s2 = new SliceBuilder()
+        .withMilestoneId(milestoneId)
+        .withLabel("M01-S02")
+        .withPosition(0)
+        .build();
+      const s3 = new SliceBuilder()
+        .withMilestoneId(milestoneId)
+        .withLabel("M01-S03")
+        .withPosition(1)
+        .build();
+      await repo.save(s1);
+      await repo.save(s2);
+      await repo.save(s3);
+
+      const result = await repo.findByMilestoneId(milestoneId);
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        expect(result.data.map((s) => s.position)).toEqual([0, 1, 2]);
+      }
+    });
+
+    it("delete removes slice by id", async () => {
+      const slice = new SliceBuilder().build();
+      await repo.save(slice);
+
+      const delResult = await repo.delete(slice.id);
+      expect(isOk(delResult)).toBe(true);
+
+      const findResult = await repo.findById(slice.id);
+      expect(isOk(findResult)).toBe(true);
+      if (isOk(findResult)) {
+        expect(findResult.data).toBeNull();
+      }
+    });
+
+    it("delete is idempotent", async () => {
+      const result = await repo.delete(crypto.randomUUID());
+      expect(isOk(result)).toBe(true);
+    });
+
+    it("findByMilestoneId does not return ad-hoc slices", async () => {
+      const milestoneId = crypto.randomUUID();
+      const ms = new SliceBuilder().withMilestoneId(milestoneId).withLabel("M01-S10").build();
+      const qs = new SliceBuilder().withKind("quick").withoutMilestone().withLabel("Q-03").build();
+      await repo.save(ms);
+      await repo.save(qs);
+
+      const result = await repo.findByMilestoneId(milestoneId);
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        expect(result.data).toHaveLength(1);
+        expect(result.data[0].id).toBe(ms.id);
+      }
+    });
   });
 }
 
 runContractTests("InMemorySliceRepository", () => new InMemorySliceRepository());
+
+runContractTests("SqliteSliceRepository", () => {
+  const db = new Database(":memory:");
+  return new SqliteSliceRepository(db);
+});

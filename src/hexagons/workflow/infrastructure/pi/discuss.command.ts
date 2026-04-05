@@ -11,12 +11,15 @@ export interface DiscussCommandDeps {
   sliceRepo: SliceRepositoryPort;
   milestoneRepo: MilestoneRepositoryPort;
   suggestNextStep: SuggestNextStepUseCase;
+  withGuard?: () => Promise<void>;
 }
 
 export function registerDiscussCommand(api: ExtensionAPI, deps: DiscussCommandDeps): void {
   api.registerCommand("tff:discuss", {
     description: "Start the discuss phase for a slice -- multi-turn Q&A producing SPEC.md",
-    handler: async (args: string) => {
+    handler: async (args: string, ctx) => {
+      if (ctx?.newSession) await ctx.newSession();
+      await deps.withGuard?.();
       // 1. Resolve target slice from args (label or ID)
       const identifier = args.trim();
       if (!identifier) {
@@ -42,6 +45,10 @@ export function registerDiscussCommand(api: ExtensionAPI, deps: DiscussCommandDe
         api.sendUserMessage(`Slice not found: ${identifier}`);
         return;
       }
+      if (!slice.milestoneId) {
+        api.sendUserMessage("Error: ad-hoc slices don't use this command");
+        return;
+      }
 
       // 2. Load milestone
       const msResult = await deps.milestoneRepo.findById(slice.milestoneId);
@@ -59,6 +66,7 @@ export function registerDiscussCommand(api: ExtensionAPI, deps: DiscussCommandDe
       const result = await deps.startDiscuss.execute({
         sliceId: slice.id,
         milestoneId: milestone.id,
+        tffDir: "", // Resolved by extension wiring
       });
 
       if (isErr(result)) {

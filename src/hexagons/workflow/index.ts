@@ -1,4 +1,9 @@
 // Domain — Autonomy Policy
+
+export type { MapCodebaseInput, MapCodebaseOutput } from "./application/map-codebase.use-case";
+// Application
+export { MapCodebaseUseCase } from "./application/map-codebase.use-case";
+export { ReplayWorkflowJournalUseCase } from "./application/replay-workflow-journal.use-case";
 export { getHumanGates, shouldAutoTransition } from "./domain/autonomy-policy";
 export { ContextPackageBuilder } from "./domain/context-package.builder";
 export {
@@ -70,8 +75,15 @@ export {
   ContextStagingPort,
   ContextStagingRequestSchema,
 } from "./domain/ports/context-staging.port";
+export type { DocType } from "./domain/ports/doc-writer.port";
+export { DocWriterPort } from "./domain/ports/doc-writer.port";
 export { ModelProfileResolverPort } from "./domain/ports/model-profile-resolver.port";
 export { SliceTransitionPort } from "./domain/ports/slice-transition.port";
+export type { WorkflowJournalEntry } from "./domain/ports/workflow-journal.port";
+export {
+  WorkflowJournalEntrySchema,
+  WorkflowJournalPort,
+} from "./domain/ports/workflow-journal.port";
 export { WorkflowSessionRepositoryPort } from "./domain/ports/workflow-session.repository.port";
 // Domain — Transition Table
 export {
@@ -107,10 +119,11 @@ export {
   WorkflowSessionPropsSchema,
   WorkflowTriggerSchema,
 } from "./domain/workflow-session.schemas";
+export { DefaultContextStagingAdapter } from "./infrastructure/default-context-staging.adapter";
 // Infrastructure — Adapters
 export { InMemoryArtifactFileAdapter } from "./infrastructure/in-memory-artifact-file.adapter";
-export { InMemoryContextStagingAdapter } from "./infrastructure/in-memory-context-staging.adapter";
 export { InMemoryWorkflowSessionRepository } from "./infrastructure/in-memory-workflow-session.repository";
+export { JsonlWorkflowJournalRepository } from "./infrastructure/jsonl-workflow-journal.repository";
 // Infrastructure — PI Tools & Commands
 export { createClassifyComplexityTool } from "./infrastructure/pi/classify-complexity.tool";
 export {
@@ -146,6 +159,9 @@ export {
 export { createWritePlanTool } from "./infrastructure/pi/write-plan.tool";
 export { createWriteResearchTool } from "./infrastructure/pi/write-research.tool";
 export { createWriteSpecTool } from "./infrastructure/pi/write-spec.tool";
+export { PiDocWriterAdapter } from "./infrastructure/pi-doc-writer.adapter";
+export { SettingsModelProfileResolver } from "./infrastructure/settings-model-profile-resolver";
+export { SqliteWorkflowSessionRepository } from "./infrastructure/sqlite-workflow-session.repository";
 
 // Use Cases
 export { ClassifyComplexityUseCase } from "./use-cases/classify-complexity.use-case";
@@ -159,6 +175,11 @@ export {
   OrchestratePhaseTransitionUseCase,
   WorkflowSessionNotFoundError,
 } from "./use-cases/orchestrate-phase-transition.use-case";
+export {
+  type QuickStartInput,
+  type QuickStartOutput,
+  QuickStartUseCase,
+} from "./use-cases/quick-start.use-case";
 export {
   type StartDiscussInput,
   type StartDiscussOutput,

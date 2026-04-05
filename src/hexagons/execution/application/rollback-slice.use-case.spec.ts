@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { JournalEntryBuilder } from "../domain/journal-entry.builder";
 import { JournalEntrySchema } from "../domain/journal-entry.schemas";
 import type { PhaseTransitionPort } from "../domain/ports/phase-transition.port";
-import { InMemoryJournalRepository } from "../infrastructure/in-memory-journal.repository";
+import { InMemoryJournalRepository } from "../infrastructure/repositories/journal/in-memory-journal.repository";
 import { type RollbackInput, RollbackSliceUseCase } from "./rollback-slice.use-case";
 
 // ---------------------------------------------------------------------------

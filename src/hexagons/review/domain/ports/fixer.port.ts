@@ -1,7 +1,7 @@
 import type { Result } from "@kernel";
 import { z } from "zod";
 import type { FixerError } from "../errors/fixer.error";
-import { FindingPropsSchema } from "../review.schemas";
+import { FindingPropsSchema } from "../schemas/review.schemas";
 
 export const FixRequestSchema = z.object({
   sliceId: z.string().min(1),

@@ -7,7 +7,11 @@ import type {
   HotkeysConfig,
   ModelRoutingConfig,
   OverseerConfig,
+  QualityMetricsConfig,
   SettingsProps,
+  StackConfig,
+  ToolPoliciesConfig,
+  WorkflowConfig,
 } from "./project-settings.schemas";
 import {
   AUTO_LEARN_DEFAULTS,
@@ -17,6 +21,10 @@ import {
   HOTKEYS_DEFAULTS,
   MODEL_ROUTING_DEFAULTS,
   OVERSEER_DEFAULTS,
+  QUALITY_METRICS_DEFAULTS,
+  STACK_DEFAULTS,
+  TOOL_POLICIES_DEFAULTS,
+  WORKFLOW_DEFAULTS,
 } from "./project-settings.schemas";
 import { ProjectSettings } from "./project-settings.value-object";
 
@@ -28,6 +36,10 @@ export class ProjectSettingsBuilder {
   private _guardrails: GuardrailsConfig = { ...GUARDRAILS_DEFAULTS };
   private _overseer: OverseerConfig = { ...OVERSEER_DEFAULTS };
   private _hotkeys: HotkeysConfig = { ...HOTKEYS_DEFAULTS };
+  private _toolPolicies: ToolPoliciesConfig = { ...TOOL_POLICIES_DEFAULTS };
+  private _workflow: WorkflowConfig = { ...WORKFLOW_DEFAULTS };
+  private _qualityMetrics: QualityMetricsConfig = { ...QUALITY_METRICS_DEFAULTS };
+  private _stack: StackConfig = { ...STACK_DEFAULTS };
 
   withModelRouting(config: Partial<ModelRoutingConfig>): this {
     Object.assign(this._modelRouting, config);
@@ -87,6 +99,10 @@ export class ProjectSettingsBuilder {
       guardrails: this._guardrails,
       overseer: this._overseer,
       hotkeys: this._hotkeys,
+      toolPolicies: this._toolPolicies,
+      workflow: this._workflow,
+      qualityMetrics: this._qualityMetrics,
+      stack: this._stack,
     };
   }
 }

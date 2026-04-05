@@ -6,7 +6,7 @@ import {
   IdSchema,
 } from "@kernel";
 import { z } from "zod";
-import { ReviewRoleSchema, ReviewVerdictSchema } from "../review.schemas";
+import { ReviewRoleSchema, ReviewVerdictSchema } from "../schemas/review.schemas";
 
 const ReviewPipelineCompletedEventPropsSchema = DomainEventPropsSchema.extend({
   sliceId: IdSchema,

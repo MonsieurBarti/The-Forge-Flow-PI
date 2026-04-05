@@ -1,8 +1,8 @@
 import { isOk, ok, type Result } from "@kernel";
-import type { WorktreeError } from "../domain/errors/worktree.error";
+import type { WorktreeError } from "@kernel/errors/worktree.error";
+import type { WorktreePort } from "@kernel/ports/worktree.port";
+import type { CleanupReport } from "@kernel/ports/worktree.schemas";
 import type { SliceStatusProvider } from "../domain/ports/slice-status-provider.port";
-import type { WorktreePort } from "../domain/ports/worktree.port";
-import type { CleanupReport } from "../domain/worktree.schemas";
 
 export class CleanupOrphanedWorktreesUseCase {
   constructor(
