@@ -7,6 +7,7 @@ describe("SliceStatusVO", () => {
   describe("valid transitions", () => {
     const validTransitions: [SliceStatus, SliceStatus][] = [
       ["discussing", "researching"],
+      ["discussing", "planning"],
       ["researching", "planning"],
       ["planning", "planning"],
       ["planning", "executing"],
@@ -35,7 +36,6 @@ describe("SliceStatusVO", () => {
   describe("invalid transitions", () => {
     const invalidTransitions: [SliceStatus, SliceStatus][] = [
       ["discussing", "closed"],
-      ["discussing", "planning"],
       ["researching", "executing"],
       ["closed", "discussing"],
       ["closed", "closed"],

@@ -171,6 +171,11 @@ export {
   WorkflowSessionNotFoundError,
 } from "./use-cases/orchestrate-phase-transition.use-case";
 export {
+  type QuickStartInput,
+  type QuickStartOutput,
+  QuickStartUseCase,
+} from "./use-cases/quick-start.use-case";
+export {
   type StartDiscussInput,
   type StartDiscussOutput,
   StartDiscussUseCase,
