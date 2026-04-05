@@ -8,8 +8,13 @@ export interface UpdateSettingToolDeps {
   projectRoot: string;
 }
 
+const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+
 function deepSet(obj: Record<string, unknown>, path: string, value: unknown): void {
   const parts = path.split(".");
+  for (const part of parts) {
+    if (FORBIDDEN_KEYS.has(part)) return;
+  }
   let current: Record<string, unknown> = obj;
   for (let i = 0; i < parts.length - 1; i++) {
     const key = parts[i];

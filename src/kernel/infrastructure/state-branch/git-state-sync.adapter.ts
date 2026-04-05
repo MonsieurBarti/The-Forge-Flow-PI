@@ -348,6 +348,7 @@ export class GitStateSyncAdapter extends StateSyncPort {
     if (!existsSync(dir)) return;
     const entries = readdirSync(dir, { withFileTypes: true });
     for (const entry of entries) {
+      if (entry.isSymbolicLink()) continue;
       const fullPath = join(dir, entry.name);
       if (entry.isDirectory()) {
         this.walkDir(fullPath, callback);
