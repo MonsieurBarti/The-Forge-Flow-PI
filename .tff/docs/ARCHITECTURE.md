@@ -177,6 +177,15 @@ WorkflowTransitionTool -> OrchestratePhaseTransitionUseCase
 - Cross-hexagon coordination happens in the CLI composition root or via event bus subscriptions
 - The `SliceTransitionPort` in the workflow hexagon is implemented by an adapter in the slice hexagon, maintaining boundary separation
 
+## Resolved: Cross-Hexagon Boundary Violations (M08-S02)
+
+The critical bidirectional imports were fixed:
+- `SliceTransitionPort` + `SliceTransitionError` moved from workflow domain to `@kernel` (shared contract)
+- `review → workflow` MapCodebaseUseCase import replaced with inline port type
+- Workflow hexagon re-exports for backwards compatibility
+
+Remaining cross-hexagon imports (workflow → slice, workflow → task, etc.) are the expected orchestrator pattern — workflow is the coordination layer that naturally depends on entity hexagons.
+
 ---
 
-*Last generated: 2026-04-04*
+*Last updated: 2026-04-06*
