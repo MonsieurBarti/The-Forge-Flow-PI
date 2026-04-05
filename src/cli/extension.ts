@@ -574,7 +574,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
         api.sendUserMessage(`Slice not found: ${sliceLabel}`);
         return;
       }
-      const milestoneLabel = (sliceResult.data.milestoneId ?? "").replace(/^.*?(M\d+).*$/, "$1");
+      const milestoneLabel = sliceLabel.replace(/-S\d+$/, "");
       const result = await shipSliceUseCase.execute({
         sliceId: sliceResult.data.id,
         workingDirectory: options.projectRoot,
