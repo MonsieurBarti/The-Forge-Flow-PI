@@ -67,6 +67,35 @@ describe("RecordTaskMetricsUseCase", () => {
     }
   });
 
+  it("persists turns from agentResult into TaskMetrics", async () => {
+    const turns = [
+      { turnIndex: 0, toolCalls: [], durationMs: 1200 },
+      { turnIndex: 1, toolCalls: [{ toolCallId: "tc-1", toolName: "Read", durationMs: 50, isError: false }], durationMs: 800 },
+    ];
+    const agentResult = new AgentResultBuilder().withTurns(turns).build();
+
+    await bus.publish(
+      new TaskExecutionCompletedEvent({
+        id: crypto.randomUUID(),
+        aggregateId: crypto.randomUUID(),
+        occurredAt: new Date(),
+        taskId: agentResult.taskId,
+        sliceId: crypto.randomUUID(),
+        milestoneId: crypto.randomUUID(),
+        waveIndex: 0,
+        modelProfile: "balanced",
+        agentResult,
+      }),
+    );
+
+    const result = await repo.readAll();
+    expect(isOk(result)).toBe(true);
+    if (isOk(result)) {
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].turns).toEqual(turns);
+    }
+  });
+
   it("records failed dispatches too (AC1)", async () => {
     const agentResult = new AgentResultBuilder().asBlocked("timeout").build();
 
