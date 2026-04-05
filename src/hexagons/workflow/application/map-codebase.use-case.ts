@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { err, ok, type Result } from "@kernel";
 import type { LoggerPort } from "@kernel/ports";
@@ -50,6 +50,7 @@ export class MapCodebaseUseCase {
 
   async execute(input: MapCodebaseInput): Promise<Result<MapCodebaseOutput, DocWriterError>> {
     const docsDir = join(input.tffDir, "docs");
+    mkdirSync(docsDir, { recursive: true });
 
     if (input.mode === "full") {
       return this.executeFull(input.workingDirectory, docsDir);
