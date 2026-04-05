@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ExecuteSliceUseCase } from "@hexagons/execution/application/execute-slice.use-case";
 import { GetSliceExecutorsUseCase } from "@hexagons/execution/application/get-slice-executors.use-case";
@@ -181,11 +181,20 @@ function detectPlannotator(): string | undefined {
   }
 }
 
+function resolveResourceRoot(projectRoot: string): string {
+  const distResources = join(projectRoot, "dist", "resources");
+  if (existsSync(distResources)) return distResources;
+  return join(projectRoot, "src", "resources");
+}
+
 export interface TffExtensionOptions {
   projectRoot: string;
 }
 
 export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptions): void {
+  // --- Resource resolution (dist/resources/ for production, src/resources/ for dev) ---
+  const resourceRoot = resolveResourceRoot(options.projectRoot);
+
   // --- Shared infrastructure ---
   const logger = new ConsoleLoggerAdapter();
   const eventBus = new InProcessEventBus(logger);
@@ -196,10 +205,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   // --- Agent registry ---
   if (!isAgentRegistryInitialized()) {
     const agentLoader = new AgentResourceLoader();
-    const agentRegistryResult = AgentRegistry.loadFromResources(
-      agentLoader,
-      join(options.projectRoot, "src/resources"),
-    );
+    const agentRegistryResult = AgentRegistry.loadFromResources(agentLoader, resourceRoot);
     if (!agentRegistryResult.ok) {
       throw new Error(`Failed to load agent registry: ${agentRegistryResult.error.message}`);
     }
@@ -243,8 +249,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     : new TerminalReviewUIAdapter();
 
   // --- Shared: modelResolver + templateLoader (needed by execution & review) ---
-  const templateLoader = (path: string) =>
-    readFileSync(join(options.projectRoot, "src/resources", path), "utf-8");
+  const templateLoader = (path: string) => readFileSync(join(resourceRoot, path), "utf-8");
 
   const mergeSettingsForModel = new MergeSettingsUseCase();
   const settingsForModel = mergeSettingsForModel.execute({
@@ -323,10 +328,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     new WorktreeStateRule(worktreeStateGitOps),
     new BudgetCheckRule(),
   ]);
-  const executeProtocol = readFileSync(
-    join(options.projectRoot, "src/resources/protocols/execute.md"),
-    "utf-8",
-  );
+  const executeProtocol = readFileSync(join(resourceRoot, "protocols/execute.md"), "utf-8");
 
   const executeSlice = new ExecuteSliceUseCase({
     taskRepository: taskRepo,
