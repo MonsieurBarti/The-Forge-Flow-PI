@@ -29,7 +29,9 @@ import type {
   GuardrailViolationEntry,
   OverseerInterventionEntry,
   PreDispatchBlockedEntry,
+  ReflectionEntry,
 } from "../domain/journal-entry.schemas";
+import type { ReflectionResult } from "../domain/reflection.schemas";
 import type { OverseerConfig, OverseerVerdict } from "../domain/overseer.schemas";
 import type { PreDispatchGuardrailPort } from "../domain/ports/pre-dispatch-guardrail.port";
 import type { CheckpointRepositoryPort } from "../domain/ports/checkpoint-repository.port";
@@ -42,6 +44,7 @@ import type { WorktreePort } from "@kernel/ports/worktree.port";
 import { DomainRouter } from "./domain-router";
 import type { ExecuteSliceInput, ExecuteSliceResult } from "./execute-slice.schemas";
 import { JournalEventHandler } from "./journal-event-handler";
+import { buildReflectionConfig } from "./build-reflection-config";
 import { PromptBuilder } from "./prompt-builder";
 import { RecordTaskMetricsUseCase } from "./record-task-metrics.use-case";
 
@@ -369,7 +372,48 @@ export class ExecuteSliceUseCase {
         }),
       );
 
-      // 6e-bis. Wave-level guardrail validation
+      // 6e-bis. Run reflection per completed task (sequential)
+      for (let i = 0; i < settled.length; i++) {
+        const settlement = settled[i];
+        const task = waveTasks[i];
+        if (!settlement || !task || settlement.status !== "fulfilled" || !settlement.value.ok)
+          continue;
+        const agentResult = settlement.value.data;
+        if (!isSuccessfulStatus(agentResult.status)) continue;
+
+        const reflectionResult = await this.runReflection(
+          task,
+          agentResult,
+          configs[i]!,
+          input,
+          waveIndex,
+        );
+
+        // Journal reflection
+        const reflectionEntry: Omit<ReflectionEntry, "seq"> = {
+          type: "reflection" as const,
+          sliceId: input.sliceId,
+          timestamp: this.deps.dateProvider.now(),
+          taskId: task.id,
+          waveIndex,
+          tier: reflectionResult.tier,
+          passed: reflectionResult.passed,
+          issues: reflectionResult.issues,
+          triggeredRetry: reflectionResult.issues.some((iss) => iss.severity === "blocker"),
+        };
+        await this.deps.journalRepository.append(input.sliceId, reflectionEntry);
+
+        // If blocker issues found, mark as reflection-failed
+        if (reflectionResult.issues.some((iss) => iss.severity === "blocker")) {
+          // Replace the settled result to prevent completion
+          settled[i] = {
+            status: "fulfilled",
+            value: err(AgentDispatchError.unexpectedFailure(task.id, "Reflection blocker")),
+          };
+        }
+      }
+
+      // 6e-ter. Wave-level guardrail validation
       const waveFailedTasks: string[] = [];
       let guardrailBlocked = false;
 
@@ -576,5 +620,91 @@ export class ExecuteSliceUseCase {
       totalWaves: waves.length,
       aborted,
     });
+  }
+
+  private async runReflection(
+    task: Task,
+    agentResult: AgentResult,
+    originalConfig: AgentDispatchConfig,
+    input: ExecuteSliceInput,
+    _waveIndex: number,
+  ): Promise<ReflectionResult> {
+    // Fast path: check selfReview dimensions
+    const allPassed = agentResult.selfReview.dimensions.every((d) => d.passed);
+    const noConcerns = agentResult.concerns.length === 0;
+    const isDone = agentResult.status === "DONE";
+    const isSTier = input.complexity === "S";
+
+    // S-tier: always fast path
+    // F-lite with clean self-review: fast path
+    if (isSTier || (allPassed && noConcerns && isDone)) {
+      return {
+        passed: true,
+        tier: "fast",
+        issues: [],
+        reflectedAt: this.deps.dateProvider.now().toISOString(),
+      };
+    }
+
+    // F-full always gets full path, F-lite with concerns gets full path
+    try {
+      const gitDiff = await this.deps.gitPort.diff(input.workingDirectory);
+      const reflectionConfig = buildReflectionConfig({
+        originalConfig,
+        acceptanceCriteria: task.acceptanceCriteria,
+        gitDiff: gitDiff.ok ? gitDiff.data : "",
+      });
+
+      const result = await this.deps.agentDispatch.dispatch(reflectionConfig);
+      if (!result.ok) {
+        return {
+          passed: true,
+          tier: "full",
+          issues: [{ severity: "warning", description: "Reflection dispatch failed" }],
+          reflectedAt: this.deps.dateProvider.now().toISOString(),
+        };
+      }
+
+      return this.parseReflectionReport(result.data.output);
+    } catch {
+      return {
+        passed: true,
+        tier: "full",
+        issues: [{ severity: "warning", description: "Reflection parse failure" }],
+        reflectedAt: this.deps.dateProvider.now().toISOString(),
+      };
+    }
+  }
+
+  private parseReflectionReport(output: string): ReflectionResult {
+    const match = output.match(
+      /<!-- TFF_REFLECTION_REPORT -->\s*([\s\S]*?)\s*<!-- \/TFF_REFLECTION_REPORT -->/,
+    );
+    if (!match?.[1]) {
+      return {
+        passed: true,
+        tier: "full",
+        issues: [{ severity: "warning", description: "No reflection report found in output" }],
+        reflectedAt: new Date().toISOString(),
+      };
+    }
+    try {
+      const parsed = JSON.parse(match[1]);
+      return {
+        passed: parsed.passed ?? true,
+        tier: "full",
+        issues: Array.isArray(parsed.issues) ? parsed.issues : [],
+        reflectedAt: new Date().toISOString(),
+      };
+    } catch {
+      return {
+        passed: true,
+        tier: "full",
+        issues: [
+          { severity: "warning", description: "Failed to parse reflection report JSON" },
+        ],
+        reflectedAt: new Date().toISOString(),
+      };
+    }
   }
 }

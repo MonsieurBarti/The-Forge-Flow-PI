@@ -1243,4 +1243,199 @@ describe("ExecuteSliceUseCase", () => {
       expect(result.data.completedTasks).toContain(T2_ID);
     });
   });
+
+  // -----------------------------------------------------------------------
+  // Reflection step (T12)
+  // -----------------------------------------------------------------------
+  describe("reflection step", () => {
+    it("S-tier: fast path, no second dispatch", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(new AgentResultBuilder().withTaskId(T1_ID).asDone().build()),
+      );
+
+      const result = await useCase.execute(makeInput({ complexity: "S" }));
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.completedTasks).toContain(T1_ID);
+
+      // Only 1 dispatch (no reflection dispatch for S-tier)
+      expect(agentDispatch.dispatchedConfigs.length).toBe(1);
+
+      // Journal should contain a reflection entry with tier=fast
+      const journalResult = await journalRepo.readAll(SLICE_ID);
+      expect(journalResult.ok).toBe(true);
+      if (!journalResult.ok) return;
+      const reflectionEntries = journalResult.data.filter((e) => e.type === "reflection");
+      expect(reflectionEntries.length).toBe(1);
+      const entry = reflectionEntries[0];
+      if (entry?.type !== "reflection") return;
+      expect(entry.tier).toBe("fast");
+      expect(entry.passed).toBe(true);
+    });
+
+    it("F-lite clean self-review: fast path", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      // Default AgentResultBuilder has all dimensions passed, no concerns, status DONE
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(new AgentResultBuilder().withTaskId(T1_ID).asDone().build()),
+      );
+
+      const result = await useCase.execute(makeInput({ complexity: "F-lite" }));
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.completedTasks).toContain(T1_ID);
+
+      // Only 1 dispatch (clean self-review → fast path)
+      expect(agentDispatch.dispatchedConfigs.length).toBe(1);
+    });
+
+    it("F-full with concerns: full reflection path dispatched", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      // Agent result with concerns → triggers full reflection
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(
+          new AgentResultBuilder()
+            .withTaskId(T1_ID)
+            .asDoneWithConcerns([
+              { area: "quality", description: "Missing tests", severity: "warning" },
+            ])
+            .build(),
+        ),
+      );
+
+      // Reflection dispatch will return a result (default OK from InMemory)
+      // The reflection taskId will be T1_ID-reflection — use it as key for mock
+      agentDispatch.givenResult(
+        `${T1_ID}-reflection`,
+        ok(
+          new AgentResultBuilder()
+            .withTaskId(T1_ID)
+            .asDone()
+            .withOutput(
+              '<!-- TFF_REFLECTION_REPORT -->\n{"passed": true, "issues": []}\n<!-- /TFF_REFLECTION_REPORT -->',
+            )
+            .build(),
+        ),
+      );
+
+      const result = await useCase.execute(makeInput({ complexity: "F-full" }));
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.completedTasks).toContain(T1_ID);
+
+      // 2 dispatches: original + reflection
+      expect(agentDispatch.dispatchedConfigs.length).toBe(2);
+      expect(agentDispatch.dispatchedConfigs[1]?.taskId).toBe(`${T1_ID}-reflection`);
+    });
+
+    it("reflection blocker: task enters failed list", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      // Agent result with failed dimension → triggers full reflection
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(
+          new AgentResultBuilder()
+            .withTaskId(T1_ID)
+            .asDoneWithConcerns([
+              { area: "quality", description: "Issue", severity: "warning" },
+            ])
+            .build(),
+        ),
+      );
+
+      // Reflection finds a blocker
+      agentDispatch.givenResult(
+        `${T1_ID}-reflection`,
+        ok(
+          new AgentResultBuilder()
+            .withTaskId(T1_ID)
+            .asDone()
+            .withOutput(
+              '<!-- TFF_REFLECTION_REPORT -->\n{"passed": false, "issues": [{"severity": "blocker", "description": "AC not met"}]}\n<!-- /TFF_REFLECTION_REPORT -->',
+            )
+            .build(),
+        ),
+      );
+
+      const result = await useCase.execute(makeInput({ complexity: "F-full" }));
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.failedTasks).toContain(T1_ID);
+
+      // Journal should show reflection with triggeredRetry=true
+      const journalResult = await journalRepo.readAll(SLICE_ID);
+      expect(journalResult.ok).toBe(true);
+      if (!journalResult.ok) return;
+      const reflectionEntries = journalResult.data.filter((e) => e.type === "reflection");
+      expect(reflectionEntries.length).toBe(1);
+      const entry = reflectionEntries[0];
+      if (entry?.type !== "reflection") return;
+      expect(entry.triggeredRetry).toBe(true);
+      expect(entry.passed).toBe(false);
+    });
+
+    it("reflection parse failure: warning, task proceeds", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      // Agent result with concerns → triggers full reflection
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(
+          new AgentResultBuilder()
+            .withTaskId(T1_ID)
+            .asDoneWithConcerns([
+              { area: "quality", description: "Issue", severity: "warning" },
+            ])
+            .build(),
+        ),
+      );
+
+      // Reflection output has no report tag → parse failure → warning
+      agentDispatch.givenResult(
+        `${T1_ID}-reflection`,
+        ok(
+          new AgentResultBuilder()
+            .withTaskId(T1_ID)
+            .asDone()
+            .withOutput("No report here, just some text")
+            .build(),
+        ),
+      );
+
+      const result = await useCase.execute(makeInput({ complexity: "F-full" }));
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      // Task should complete (parse failure is a warning, not a blocker)
+      expect(result.data.completedTasks).toContain(T1_ID);
+
+      // Journal should show reflection with passed=true and warning issue
+      const journalResult = await journalRepo.readAll(SLICE_ID);
+      expect(journalResult.ok).toBe(true);
+      if (!journalResult.ok) return;
+      const reflectionEntries = journalResult.data.filter((e) => e.type === "reflection");
+      expect(reflectionEntries.length).toBe(1);
+      const entry = reflectionEntries[0];
+      if (entry?.type !== "reflection") return;
+      expect(entry.passed).toBe(true);
+      expect(entry.triggeredRetry).toBe(false);
+    });
+  });
 });
