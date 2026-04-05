@@ -6,6 +6,7 @@ import type { CreateTasksPort, TaskRepositoryPort } from "@hexagons/task";
 import type { ExtensionAPI } from "@infrastructure/pi";
 import { createZodTool } from "@infrastructure/pi";
 import type { DateProviderPort, EventBusPort } from "@kernel";
+import type { WorkflowJournalPort } from "../../domain/ports/workflow-journal.port";
 import { z } from "zod";
 import type { NextStepSuggestionProps } from "../../domain/next-step-suggestion.vo";
 import type { ArtifactFilePort } from "../../domain/ports/artifact-file.port";
@@ -47,6 +48,7 @@ export interface WorkflowExtensionDeps {
   maxRetries: number;
   resolveActiveTffDir?: (sliceId?: string) => Promise<string>;
   withGuard?: () => Promise<void>;
+  workflowJournal?: WorkflowJournalPort;
 }
 
 function formatStatusReport(report: StatusReport): string {
@@ -162,6 +164,7 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
     deps.sliceTransitionPort,
     deps.eventBus,
     deps.dateProvider,
+    deps.workflowJournal,
   );
 
   // --- Discuss tools ---

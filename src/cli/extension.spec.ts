@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createMockExtensionAPI } from "@infrastructure/pi/testing";
@@ -14,6 +14,10 @@ describe("createTffExtension", () => {
 
   beforeEach(() => {
     projectRoot = mkdtempSync(join(tmpdir(), "tff-ext-test-"));
+    // Create the protocol file required by ExecuteSliceUseCase wiring
+    const protocolDir = join(projectRoot, "src/resources/protocols");
+    mkdirSync(protocolDir, { recursive: true });
+    writeFileSync(join(protocolDir, "execute.md"), "# Execute Protocol\n", "utf-8");
   });
 
   afterEach(() => {

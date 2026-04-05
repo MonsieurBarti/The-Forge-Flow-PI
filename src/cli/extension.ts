@@ -1,11 +1,29 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { ExecuteSliceUseCase } from "@hexagons/execution/application/execute-slice.use-case";
+import { ExecuteSliceUseCase } from "@hexagons/execution/application/execute-slice.use-case";
+import { GetSliceExecutorsUseCase } from "@hexagons/execution/application/get-slice-executors.use-case";
 import { ReplayJournalUseCase } from "@hexagons/execution/application/replay-journal.use-case";
 import { GitWorktreeAdapter } from "@kernel/infrastructure/worktree/git-worktree.adapter";
-import { InMemoryCheckpointRepository } from "@hexagons/execution/infrastructure/repositories/checkpoint/in-memory-checkpoint.repository";
-import { InMemoryJournalRepository } from "@hexagons/execution/infrastructure/repositories/journal/in-memory-journal.repository";
+import { JsonlJournalRepository } from "@hexagons/execution/infrastructure/repositories/journal/jsonl-journal.repository";
+import { MarkdownCheckpointRepository } from "@hexagons/execution/infrastructure/repositories/checkpoint/markdown-checkpoint.repository";
+import { JsonlMetricsRepository } from "@hexagons/execution/infrastructure/repositories/metrics/jsonl-metrics.repository";
+import { ComposableGuardrailAdapter } from "@hexagons/execution/infrastructure/adapters/guardrails/composable-guardrail.adapter";
+import { ComposableOverseerAdapter } from "@hexagons/execution/infrastructure/adapters/overseer/composable-overseer.adapter";
+import { ComposablePreDispatchAdapter } from "@hexagons/execution/infrastructure/adapters/pre-dispatch/composable-pre-dispatch.adapter";
+import { DefaultRetryPolicy } from "@hexagons/execution/infrastructure/policies/default-retry-policy";
+import { TimeoutStrategy } from "@hexagons/execution/infrastructure/policies/timeout-strategy";
+import { OverseerConfigSchema } from "@hexagons/execution/domain/overseer.schemas";
+import { DangerousCommandRule } from "@hexagons/execution/infrastructure/adapters/guardrails/rules/dangerous-command.rule";
+import { CredentialExposureRule } from "@hexagons/execution/infrastructure/adapters/guardrails/rules/credential-exposure.rule";
+import { DestructiveGitRule } from "@hexagons/execution/infrastructure/adapters/guardrails/rules/destructive-git.rule";
+import { FileScopeRule } from "@hexagons/execution/infrastructure/adapters/guardrails/rules/file-scope.rule";
+import { SuspiciousContentRule } from "@hexagons/execution/infrastructure/adapters/guardrails/rules/suspicious-content.rule";
+import { ScopeContainmentRule } from "@hexagons/execution/infrastructure/adapters/pre-dispatch/rules/scope-containment.rule";
+import { DependencyCheckRule } from "@hexagons/execution/infrastructure/adapters/pre-dispatch/rules/dependency-check.rule";
+import { ToolPolicyRule } from "@hexagons/execution/infrastructure/adapters/pre-dispatch/rules/tool-policy.rule";
+import { WorktreeStateRule, type WorktreeStateGitOps } from "@hexagons/execution/infrastructure/adapters/pre-dispatch/rules/worktree-state.rule";
+import { BudgetCheckRule } from "@hexagons/execution/infrastructure/adapters/pre-dispatch/rules/budget-check.rule";
 import { MarkdownExecutionSessionAdapter } from "@hexagons/execution/infrastructure/adapters/execution-session/markdown-execution-session.adapter";
 import { registerExecutionExtension } from "@hexagons/execution/infrastructure/pi/execution.extension";
 import { PiAgentDispatchAdapter } from "@hexagons/execution/infrastructure/adapters/agent-dispatch/pi-agent-dispatch.adapter";
@@ -24,9 +42,8 @@ import { FreshReviewerService } from "@hexagons/review/domain/services/fresh-rev
 import { BeadSliceSpecAdapter } from "@hexagons/review/infrastructure/adapters/slice-spec/bead-slice-spec.adapter";
 import { CachedExecutorQueryAdapter } from "@hexagons/review/infrastructure/adapters/executor-query/cached-executor-query.adapter";
 import { GitChangedFilesAdapter } from "@hexagons/review/infrastructure/adapters/changed-files/git-changed-files.adapter";
-import { InMemoryReviewRepository } from "@hexagons/review/infrastructure/repositories/review/in-memory-review.repository";
-import { InMemoryReviewUIAdapter } from "@hexagons/review/infrastructure/adapters/review-ui/in-memory-review-ui.adapter";
-import { InMemoryVerificationRepository } from "@hexagons/review/infrastructure/repositories/verification/in-memory-verification.repository";
+import { SqliteReviewRepository } from "@hexagons/review/infrastructure/repositories/review/sqlite-review.repository";
+import { SqliteVerificationRepository } from "@hexagons/review/infrastructure/repositories/verification/sqlite-verification.repository";
 import { MilestoneQueryAdapter } from "@hexagons/review/infrastructure/adapters/milestone/milestone-query.adapter";
 import { MilestoneTransitionAdapter } from "@hexagons/review/infrastructure/adapters/milestone/milestone-transition.adapter";
 import { PiAuditAdapter } from "@hexagons/review/infrastructure/adapters/audit/pi-audit.adapter";
@@ -43,10 +60,10 @@ import { CreateTasksUseCase } from "@hexagons/task/application/create-tasks.use-
 import { DetectWavesUseCase } from "@hexagons/task/domain/detect-waves.use-case";
 import { SqliteTaskRepository } from "@hexagons/task/infrastructure/sqlite-task.repository";
 import {
-  type ContextPackage,
-  type ContextStagingError,
-  ContextStagingPort,
-  InMemoryWorkflowSessionRepository,
+  DefaultContextStagingAdapter,
+  JsonlWorkflowJournalRepository,
+  SettingsModelProfileResolver,
+  SqliteWorkflowSessionRepository,
   registerWorkflowExtension,
 } from "@hexagons/workflow";
 import { NodeArtifactFileAdapter } from "@hexagons/workflow/infrastructure/node-artifact-file.adapter";
@@ -97,12 +114,6 @@ function detectPlannotator(): string | undefined {
     return execFileSync("which", ["plannotator"], { encoding: "utf-8" }).trim() || undefined;
   } catch {
     return undefined;
-  }
-}
-
-class NoOpContextStaging extends ContextStagingPort {
-  async stage(): Promise<Result<ContextPackage, ContextStagingError>> {
-    throw new Error("ContextStagingPort: not yet implemented");
   }
 }
 
@@ -159,7 +170,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
 
   const sliceTransitionPort = new WorkflowSliceTransitionAdapter(sliceRepo, dateProvider);
   const artifactFile = new NodeArtifactFileAdapter(options.projectRoot);
-  const workflowSessionRepo = new InMemoryWorkflowSessionRepository();
+  const workflowSessionRepo = new SqliteWorkflowSessionRepository(stateDb);
   const autonomyModeProvider = { getAutonomyMode: () => "plan-to-pr" as const };
 
   const plannotatorPath = detectPlannotator();
@@ -167,28 +178,83 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     ? new PlannotatorReviewUIAdapter(plannotatorPath)
     : new TerminalReviewUIAdapter();
 
+  // --- Shared: modelResolver + templateLoader (needed by execution & review) ---
+  const templateLoader = (path: string) =>
+    readFileSync(join(options.projectRoot, "src/resources", path), "utf-8");
+  const modelResolver = (_profile: ModelProfileName): ResolvedModel => ({
+    provider: "anthropic",
+    modelId: "claude-opus-4-6",
+  });
+
   // --- Execution extension ---
-  // Pause and resume tools are immediately usable via session persistence.
-  // The execute tool delegates to ExecuteSliceUseCase, which requires the full
-  // agent dispatch stack (worktree, guardrail, overseer, metrics, git).
-  // The TFF workflow orchestrator assembles that stack at runtime.
-  // TODO(M05): Replace the stub below with the fully-wired ExecuteSliceUseCase.
-  const journalRepo = new InMemoryJournalRepository();
-  const checkpointRepo = new InMemoryCheckpointRepository();
-  const resolveSlicePath = (sliceId: string): Promise<Result<string, PersistenceError>> =>
-    Promise.resolve(
-      err(new PersistenceError(`Slice path resolver not configured for: ${sliceId}`)),
-    );
+  const journalRepo = new JsonlJournalRepository(join(rootTffDir, "journal"));
+  const checkpointRepo = new MarkdownCheckpointRepository(
+    options.projectRoot,
+    async (sliceId) => {
+      if (await worktreeAdapter.exists(sliceId)) {
+        return { ok: true as const, data: join(".tff", "worktrees", sliceId) };
+      }
+      return err(new PersistenceError(`No worktree for slice: ${sliceId}`));
+    },
+  );
+  const resolveSlicePath = async (sliceId: string): Promise<Result<string, PersistenceError>> => {
+    if (await worktreeAdapter.exists(sliceId)) {
+      return { ok: true as const, data: join(".tff", "worktrees", sliceId) };
+    }
+    return err(new PersistenceError(`No worktree for slice: ${sliceId}`));
+  };
   const sessionRepo = new MarkdownExecutionSessionAdapter(options.projectRoot, resolveSlicePath);
   const replayJournal = new ReplayJournalUseCase(journalRepo);
-  const executeSliceStub: Pick<ExecuteSliceUseCase, "execute"> = {
-    execute: () => Promise.reject(new Error("ExecuteSliceUseCase not wired — use TFF workflow")),
+
+  // --- ExecuteSliceUseCase full wiring ---
+  const metricsRepo = new JsonlMetricsRepository(join(rootTffDir, "metrics.jsonl"));
+  const overseerConfig = OverseerConfigSchema.parse({});
+  const guardrail = new ComposableGuardrailAdapter(
+    [new DangerousCommandRule(), new CredentialExposureRule(), new DestructiveGitRule(), new FileScopeRule(), new SuspiciousContentRule()],
+    new Map(),
+    gitPort,
+  );
+  const overseer = new ComposableOverseerAdapter([new TimeoutStrategy(overseerConfig)]);
+  const retryPolicy = new DefaultRetryPolicy(2, overseerConfig.retryLoop.threshold);
+  const worktreeStateGitOps: WorktreeStateGitOps = {
+    async statusAt(cwd: string) {
+      const result = await gitPort.statusAt(cwd);
+      if (!result.ok) return { ok: false as const, error: result.error };
+      return { ok: true as const, value: { branch: result.data.branch, clean: result.data.clean } };
+    },
   };
+  const preDispatchGuardrail = new ComposablePreDispatchAdapter([
+    new ScopeContainmentRule(), new DependencyCheckRule(), new ToolPolicyRule(),
+    new WorktreeStateRule(worktreeStateGitOps), new BudgetCheckRule(),
+  ]);
+  const executeProtocol = readFileSync(join(options.projectRoot, "src/resources/protocols/execute.md"), "utf-8");
+
+  const executeSlice = new ExecuteSliceUseCase({
+    taskRepository: taskRepo,
+    waveDetection: new DetectWavesUseCase(),
+    checkpointRepository: checkpointRepo,
+    agentDispatch: sharedAgentDispatch,
+    worktree: worktreeAdapter,
+    eventBus,
+    journalRepository: journalRepo,
+    metricsRepository: metricsRepo,
+    dateProvider,
+    logger,
+    templateContent: executeProtocol,
+    guardrail,
+    gitPort,
+    overseer,
+    retryPolicy,
+    overseerConfig,
+    preDispatchGuardrail,
+    modelResolver,
+    checkpointBeforeRetry: true,
+  });
 
   registerExecutionExtension(api, {
     sessionRepository: sessionRepo,
     pauseSignal: new ProcessSignalPauseAdapter(),
-    executeSlice: executeSliceStub,
+    executeSlice,
     replayJournal,
     checkpointRepository: checkpointRepo,
     eventBus,
@@ -197,20 +263,14 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   });
 
   // --- Review pipeline wiring ---
-  const reviewRepository = new InMemoryReviewRepository();
-  const executorQueryAdapter = new CachedExecutorQueryAdapter(async (_sliceId) => {
-    // Stub: returns empty set. Real implementation will query execution session.
-    return { ok: true as const, data: new Set<string>() };
-  });
+  const reviewRepository = new SqliteReviewRepository(stateDb);
+  const getSliceExecutors = new GetSliceExecutorsUseCase(checkpointRepo);
+  const executorQueryAdapter = new CachedExecutorQueryAdapter(
+    async (sliceId) => getSliceExecutors.execute(sliceId),
+  );
   const freshReviewerService = new FreshReviewerService(executorQueryAdapter);
   const critiqueReflectionService = new CritiqueReflectionService();
-  const templateLoader = (path: string) =>
-    readFileSync(join(options.projectRoot, "src/resources", path), "utf-8");
   const reviewPromptBuilder = new ReviewPromptBuilder(templateLoader);
-  const modelResolver = (_profile: ModelProfileName): ResolvedModel => ({
-    provider: "anthropic",
-    modelId: "claude-opus-4-6",
-  });
   const beadSliceSpecAdapter = new BeadSliceSpecAdapter(
     (milestoneLabel, sliceLabel) => artifactFile.read(milestoneLabel, sliceLabel, "spec"),
     (sliceId) => {
@@ -273,14 +333,14 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   );
 
   // --- Verify pipeline wiring ---
-  const verificationRepository = new InMemoryVerificationRepository();
+  const verificationRepository = new SqliteVerificationRepository(stateDb);
   const verifyUseCase = new VerifyAcceptanceCriteriaUseCase(
     beadSliceSpecAdapter,
     freshReviewerService,
     sharedAgentDispatch,
     piFixerAdapter,
     verificationRepository,
-    new InMemoryReviewUIAdapter(), // TODO(M05-S09): wire ReviewUIPort adapter selection
+    reviewUI,
     modelResolver,
     eventBus,
     dateProvider,
@@ -439,6 +499,10 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     withGuard,
   });
 
+  const settingsResolver = new SettingsModelProfileResolver(new MergeSettingsUseCase());
+  const contextStaging = new DefaultContextStagingAdapter({ modelProfileResolver: settingsResolver });
+  const workflowJournal = new JsonlWorkflowJournalRepository(join(rootTffDir, "workflow-journal.jsonl"));
+
   registerWorkflowExtension(api, {
     projectRepo,
     milestoneRepo,
@@ -448,7 +512,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     sliceTransitionPort,
     eventBus,
     dateProvider,
-    contextStaging: new NoOpContextStaging(),
+    contextStaging,
     artifactFile,
     workflowSessionRepo,
     autonomyModeProvider,
@@ -456,6 +520,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     maxRetries: 2,
     resolveActiveTffDir,
     withGuard,
+    workflowJournal,
   });
 
   // --- /tff:sync command ---
