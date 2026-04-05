@@ -21,6 +21,20 @@ export interface ZodToolConfig<T extends z.ZodObject<z.ZodRawShape>> {
   ) => Promise<AgentToolResult<undefined>>;
 }
 
+function stripAdditionalProperties(schema: unknown): void {
+  if (schema === null || typeof schema !== "object") return;
+  const obj = schema as Record<string, unknown>;
+  delete obj.additionalProperties;
+  if (typeof obj.properties === "object" && obj.properties !== null) {
+    for (const prop of Object.values(obj.properties as Record<string, unknown>)) {
+      stripAdditionalProperties(prop);
+    }
+  }
+  if (typeof obj.items === "object") {
+    stripAdditionalProperties(obj.items);
+  }
+}
+
 export function createZodTool<T extends z.ZodObject<z.ZodRawShape>>(
   config: ZodToolConfig<T>,
 ): ToolDefinition {
@@ -29,11 +43,9 @@ export function createZodTool<T extends z.ZodObject<z.ZodRawShape>>(
     unrepresentable: "any",
   });
   // PI SDK uses TypeBox which doesn't emit additionalProperties.
-  // Zod does — strip it to match PI's expected schema shape and avoid
-  // AJV rejecting hallucinated extra properties from LLMs.
-  if ("additionalProperties" in jsonSchema) {
-    delete (jsonSchema as Record<string, unknown>).additionalProperties;
-  }
+  // Zod does — strip it recursively to match PI's expected schema shape
+  // and avoid AJV rejecting hallucinated extra properties from LLMs.
+  stripAdditionalProperties(jsonSchema);
 
   return {
     name: config.name,
