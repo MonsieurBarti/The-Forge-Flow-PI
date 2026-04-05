@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { InMemoryMetricsRepository } from "@hexagons/execution/infrastructure/repositories/metrics/in-memory-metrics.repository";
 import { Slice } from "@hexagons/slice/domain/slice.aggregate";
 import type { SliceStatus } from "@hexagons/slice/domain/slice.schemas";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
@@ -329,6 +330,69 @@ describe("OrchestratePhaseTransitionUseCase", () => {
     expect(entry.milestoneId).toBe(session.milestoneId);
     expect(entry.fromPhase).toBe("discussing");
     expect(entry.toPhase).toBe("researching");
+  });
+
+  it("writes quality snapshot when metricsRepository provided", async () => {
+    const { sessionRepo, sliceRepo, sliceTransitionPort, eventBus, dateProvider } = setup();
+    const metricsRepo = new InMemoryMetricsRepository();
+
+    const useCase = new OrchestratePhaseTransitionUseCase(
+      sessionRepo,
+      sliceTransitionPort,
+      eventBus,
+      dateProvider,
+      undefined,
+      metricsRepo,
+    );
+
+    const sliceId = faker.string.uuid();
+    const session = new WorkflowSessionBuilder()
+      .withCurrentPhase("discussing")
+      .withSliceId(sliceId)
+      .build();
+    sessionRepo.seed(session);
+    seedSlice(sliceRepo, sliceId, "discussing");
+
+    const result = await useCase.execute({
+      milestoneId: session.milestoneId as string,
+      trigger: "next",
+      guardContext: { ...DEFAULT_GUARD_CTX, complexityTier: "F-lite" },
+    });
+
+    expect(isOk(result)).toBe(true);
+
+    const snapshots = await metricsRepo.readQualitySnapshots(sliceId);
+    expect(isOk(snapshots)).toBe(true);
+    if (isOk(snapshots)) {
+      expect(snapshots.data).toHaveLength(1);
+      const snap = snapshots.data[0];
+      expect(snap.sliceId).toBe(sliceId);
+      expect(snap.milestoneId).toBe(session.milestoneId);
+      expect(snap.metrics.testsPassed).toBe(0);
+      expect(snap.metrics.testsFailed).toBe(0);
+      expect(snap.metrics.lintErrors).toBe(0);
+      expect(snap.metrics.typeErrors).toBe(0);
+    }
+  });
+
+  it("does not write quality snapshot when metricsRepository not provided", async () => {
+    const { useCase, sessionRepo, sliceRepo } = setup();
+    const sliceId = faker.string.uuid();
+    const session = new WorkflowSessionBuilder()
+      .withCurrentPhase("discussing")
+      .withSliceId(sliceId)
+      .build();
+    sessionRepo.seed(session);
+    seedSlice(sliceRepo, sliceId, "discussing");
+
+    // setup() creates the use case without metricsRepository — should not throw
+    const result = await useCase.execute({
+      milestoneId: session.milestoneId as string,
+      trigger: "next",
+      guardContext: { ...DEFAULT_GUARD_CTX, complexityTier: "F-lite" },
+    });
+
+    expect(isOk(result)).toBe(true);
   });
 });
 

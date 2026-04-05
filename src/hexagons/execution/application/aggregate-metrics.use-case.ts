@@ -23,6 +23,27 @@ export class AggregateMetricsUseCase {
     return ok(this.aggregate(result.data, { milestoneId }));
   }
 
+  async aggregateByPhase(
+    sliceId: string,
+  ): Promise<Result<Record<string, AggregatedMetrics>, PersistenceError>> {
+    const result = await this.metricsRepo.readBySlice(sliceId);
+    if (!result.ok) return result;
+
+    const groups = new Map<string, TaskMetrics[]>();
+    for (const entry of result.data) {
+      const phase = entry.phase ?? "unknown";
+      const list = groups.get(phase) ?? [];
+      list.push(entry);
+      groups.set(phase, list);
+    }
+
+    const aggregated: Record<string, AggregatedMetrics> = {};
+    for (const [phase, entries] of groups) {
+      aggregated[phase] = this.aggregate(entries, { sliceId });
+    }
+    return ok(aggregated);
+  }
+
   private aggregate(
     entries: TaskMetrics[],
     groupKey: { sliceId?: string; milestoneId?: string },

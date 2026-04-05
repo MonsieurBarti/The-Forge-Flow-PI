@@ -101,6 +101,63 @@ describe("RecordTaskMetricsUseCase", () => {
     }
   });
 
+  it("records phase from currentPhase resolver", async () => {
+    const phaseRepo = new InMemoryMetricsRepository();
+    const phaseBus = new InProcessEventBus(new SilentLoggerAdapter());
+    const phaseUseCase = new RecordTaskMetricsUseCase(phaseRepo, () => "verifying");
+    phaseUseCase.register(phaseBus);
+
+    const sliceId = crypto.randomUUID();
+    const agentResult = new AgentResultBuilder().build();
+
+    await phaseBus.publish(
+      new TaskExecutionCompletedEvent({
+        id: crypto.randomUUID(),
+        aggregateId: crypto.randomUUID(),
+        occurredAt: new Date(),
+        taskId: agentResult.taskId,
+        sliceId,
+        milestoneId: crypto.randomUUID(),
+        waveIndex: 0,
+        modelProfile: "balanced",
+        agentResult,
+      }),
+    );
+
+    const result = await phaseRepo.readBySlice(sliceId);
+    expect(isOk(result)).toBe(true);
+    if (isOk(result)) {
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].phase).toBe("verifying");
+    }
+  });
+
+  it("defaults phase to 'executing' when no resolver provided", async () => {
+    const sliceId = crypto.randomUUID();
+    const agentResult = new AgentResultBuilder().build();
+
+    await bus.publish(
+      new TaskExecutionCompletedEvent({
+        id: crypto.randomUUID(),
+        aggregateId: crypto.randomUUID(),
+        occurredAt: new Date(),
+        taskId: agentResult.taskId,
+        sliceId,
+        milestoneId: crypto.randomUUID(),
+        waveIndex: 0,
+        modelProfile: "balanced",
+        agentResult,
+      }),
+    );
+
+    const result = await repo.readBySlice(sliceId);
+    expect(isOk(result)).toBe(true);
+    if (isOk(result)) {
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].phase).toBe("executing");
+    }
+  });
+
   it("records failed dispatches too (AC1)", async () => {
     const sliceId = crypto.randomUUID();
     const agentResult = new AgentResultBuilder().asBlocked("timeout").build();

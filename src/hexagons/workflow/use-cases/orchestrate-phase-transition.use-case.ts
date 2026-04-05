@@ -1,3 +1,5 @@
+import type { MetricsRepositoryPort } from "@hexagons/execution/domain/ports/metrics-repository.port";
+import type { QualitySnapshot } from "@hexagons/execution/domain/task-metrics.schemas";
 import type { DateProviderPort, EventBusPort, PersistenceError, Result } from "@kernel";
 import { err, isErr, ok } from "@kernel";
 import type { SliceTransitionError } from "../domain/errors/slice-transition.error";
@@ -56,6 +58,7 @@ export class OrchestratePhaseTransitionUseCase {
     private readonly eventBus: EventBusPort,
     private readonly dateProvider: DateProviderPort,
     private readonly workflowJournal?: WorkflowJournalPort,
+    private readonly metricsRepository?: MetricsRepositoryPort,
   ) {}
 
   async execute(
@@ -167,6 +170,25 @@ export class OrchestratePhaseTransitionUseCase {
         if (isErr(transitionResult)) return transitionResult;
         sliceTransitioned = true;
       }
+    }
+
+    // 3b. Capture quality snapshot for the departing phase
+    if (this.metricsRepository && capturedSliceId) {
+      const milestoneIdForSnapshot = input.milestoneId ?? session.milestoneId ?? capturedSliceId;
+      const snapshot: QualitySnapshot = {
+        type: "quality-snapshot",
+        sliceId: capturedSliceId,
+        milestoneId: milestoneIdForSnapshot,
+        taskId: crypto.randomUUID(),
+        metrics: {
+          testsPassed: 0,
+          testsFailed: 0,
+          lintErrors: 0,
+          typeErrors: 0,
+        },
+        timestamp: now,
+      };
+      await this.metricsRepository.append(snapshot);
     }
 
     // 4. Save session

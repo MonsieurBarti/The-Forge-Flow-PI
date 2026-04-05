@@ -14,6 +14,7 @@ export const TaskMetricsSchema = z.object({
   taskId: IdSchema,
   sliceId: IdSchema,
   milestoneId: IdSchema,
+  phase: z.string().optional(),
   model: TaskMetricsModelSchema,
   tokens: z.object({
     input: z.number().int().nonnegative(),
