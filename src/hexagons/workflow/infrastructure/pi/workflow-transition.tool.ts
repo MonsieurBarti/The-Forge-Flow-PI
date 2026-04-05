@@ -55,6 +55,7 @@ export function createWorkflowTransitionTool(deps: WorkflowTransitionToolDeps) {
           maxRetries: deps.maxRetries,
           allSlicesClosed,
           lastError: session.lastEscalation?.lastError ?? null,
+          failurePolicy: "strict",
         },
       });
 

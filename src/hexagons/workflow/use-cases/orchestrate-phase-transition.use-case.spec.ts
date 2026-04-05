@@ -36,6 +36,7 @@ const DEFAULT_GUARD_CTX: GuardContext = {
   maxRetries: 2,
   allSlicesClosed: false,
   lastError: null,
+  failurePolicy: "strict",
 };
 
 function setup() {

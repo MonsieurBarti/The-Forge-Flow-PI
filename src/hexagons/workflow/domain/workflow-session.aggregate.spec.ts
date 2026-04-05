@@ -12,6 +12,7 @@ const defaultCtx: GuardContext = {
   maxRetries: 2,
   allSlicesClosed: false,
   lastError: null,
+  failurePolicy: "strict",
 };
 
 describe("WorkflowSession", () => {
@@ -449,6 +450,7 @@ describe("WorkflowSession", () => {
         maxRetries: 2,
         allSlicesClosed: false,
         lastError: "Test failed: expected 1 but got 2",
+        failurePolicy: "strict",
       };
 
       const result = session.trigger("fail", ctx, new Date());
@@ -485,6 +487,7 @@ describe("WorkflowSession", () => {
         maxRetries: 2,
         allSlicesClosed: false,
         lastError: null,
+        failurePolicy: "strict",
       };
 
       session.trigger("fail", ctx, new Date());

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ArtifactWrittenEntrySchema,
   CheckpointSavedEntrySchema,
+  FailureRecordedEntrySchema,
   FileWrittenEntrySchema,
   JournalEntrySchema,
   ModelDownshiftEntrySchema,
@@ -509,7 +510,19 @@ describe("JournalEntrySchema", () => {
     expect(entry.type).toBe("pre-dispatch-blocked");
   });
 
-  it("accepts all 16 entry types in the union", () => {
+  it("routes failure-recorded correctly", () => {
+    const entry = JournalEntrySchema.parse({
+      ...baseFields,
+      type: "failure-recorded",
+      phase: "executing",
+      policy: "tolerant",
+      action: "retried",
+      error: "timeout",
+    });
+    expect(entry.type).toBe("failure-recorded");
+  });
+
+  it("accepts all 17 entry types in the union", () => {
     const types = [
       "task-started",
       "task-completed",
@@ -527,8 +540,9 @@ describe("JournalEntrySchema", () => {
       "model-downshift",
       "task-escalated",
       "pre-dispatch-blocked",
+      "failure-recorded",
     ];
-    expect(types).toHaveLength(16);
+    expect(types).toHaveLength(17);
   });
 });
 
@@ -835,5 +849,60 @@ describe("PreDispatchBlockedEntrySchema", () => {
     expect(() =>
       PreDispatchBlockedEntrySchema.parse({ ...valid, type: "phase-changed" }),
     ).toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FailureRecordedEntrySchema
+// ---------------------------------------------------------------------------
+describe("FailureRecordedEntrySchema", () => {
+  const valid = {
+    ...baseFields,
+    type: "failure-recorded" as const,
+    phase: "executing",
+    policy: "tolerant" as const,
+    action: "retried" as const,
+    error: "Task timed out",
+  };
+
+  it("parses a valid failure-recorded entry with all fields", () => {
+    const result = FailureRecordedEntrySchema.parse(valid);
+    expect(result.type).toBe("failure-recorded");
+    expect(result.phase).toBe("executing");
+    expect(result.policy).toBe("tolerant");
+    expect(result.action).toBe("retried");
+    expect(result.error).toBe("Task timed out");
+  });
+
+  it("accepts all policy values", () => {
+    for (const policy of ["strict", "tolerant", "lenient"]) {
+      const result = FailureRecordedEntrySchema.safeParse({ ...valid, policy });
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it("accepts all action values", () => {
+    for (const action of ["retried", "continued", "blocked"]) {
+      const result = FailureRecordedEntrySchema.safeParse({ ...valid, action });
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it("accepts optional error omitted", () => {
+    const { error: _, ...noError } = valid;
+    const result = FailureRecordedEntrySchema.parse(noError);
+    expect(result.error).toBeUndefined();
+  });
+
+  it("rejects invalid policy", () => {
+    expect(() => FailureRecordedEntrySchema.parse({ ...valid, policy: "yolo" })).toThrow();
+  });
+
+  it("rejects invalid action", () => {
+    expect(() => FailureRecordedEntrySchema.parse({ ...valid, action: "ignored" })).toThrow();
+  });
+
+  it("rejects wrong type literal", () => {
+    expect(() => FailureRecordedEntrySchema.parse({ ...valid, type: "task-failed" })).toThrow();
   });
 });

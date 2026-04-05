@@ -52,6 +52,7 @@ function contractSuite(name: string, factory: () => WorkflowSessionRepositoryPor
         maxRetries: 3,
         allSlicesClosed: false,
         lastError: "build failed",
+        failurePolicy: "strict" as const,
       };
       session.trigger("fail", ctx, new Date());
 
