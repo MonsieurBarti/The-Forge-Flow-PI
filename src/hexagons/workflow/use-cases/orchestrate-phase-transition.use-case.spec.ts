@@ -12,8 +12,9 @@ import {
   isOk,
   SilentLoggerAdapter,
 } from "@kernel";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { WorkflowPhaseChangedEvent } from "../domain/events/workflow-phase-changed.event";
+import type { WorkflowJournalEntry, WorkflowJournalPort } from "../domain/ports/workflow-journal.port";
 import { WorkflowSessionBuilder } from "../domain/workflow-session.builder";
 import type { GuardContext } from "../domain/workflow-session.schemas";
 import { InMemoryWorkflowSessionRepository } from "../infrastructure/in-memory-workflow-session.repository";
@@ -209,5 +210,45 @@ describe("OrchestratePhaseTransitionUseCase", () => {
     });
 
     expect(isErr(result)).toBe(true);
+  });
+
+  it("appends phase-transition entry to workflow journal", async () => {
+    const { sessionRepo, sliceRepo, sliceTransitionPort, eventBus, dateProvider } = setup();
+    const appendSpy = vi.fn(async () => ({ data: undefined }) as { data: undefined });
+    const mockJournal: WorkflowJournalPort = {
+      append: appendSpy,
+      readAll: async () => ({ data: [] }) as { data: WorkflowJournalEntry[] },
+    } as WorkflowJournalPort;
+
+    const useCase = new OrchestratePhaseTransitionUseCase(
+      sessionRepo,
+      sliceTransitionPort,
+      eventBus,
+      dateProvider,
+      mockJournal,
+    );
+
+    const sliceId = faker.string.uuid();
+    const session = new WorkflowSessionBuilder()
+      .withCurrentPhase("discussing")
+      .withSliceId(sliceId)
+      .build();
+    sessionRepo.seed(session);
+    seedSlice(sliceRepo, sliceId, "discussing");
+
+    const result = await useCase.execute({
+      milestoneId: session.milestoneId,
+      trigger: "next",
+      guardContext: { ...DEFAULT_GUARD_CTX, complexityTier: "F-lite" },
+    });
+
+    expect(isOk(result)).toBe(true);
+    expect(appendSpy).toHaveBeenCalledOnce();
+    const entry = appendSpy.mock.calls[0][0];
+    expect(entry.type).toBe("phase-transition");
+    expect(entry.sessionId).toBe(session.id);
+    expect(entry.milestoneId).toBe(session.milestoneId);
+    expect(entry.fromPhase).toBe("discussing");
+    expect(entry.toPhase).toBe("researching");
   });
 });

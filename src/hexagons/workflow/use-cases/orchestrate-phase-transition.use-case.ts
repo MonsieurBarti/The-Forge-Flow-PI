@@ -1,4 +1,5 @@
 import type { DateProviderPort, EventBusPort, PersistenceError, Result } from "@kernel";
+import type { WorkflowJournalPort } from "../domain/ports/workflow-journal.port";
 import { err, isErr, ok } from "@kernel";
 import type { SliceTransitionError } from "../domain/errors/slice-transition.error";
 import { WorkflowBaseError } from "../domain/errors/workflow-base.error";
@@ -43,6 +44,7 @@ export class OrchestratePhaseTransitionUseCase {
     private readonly sliceTransitionPort: SliceTransitionPort,
     private readonly eventBus: EventBusPort,
     private readonly dateProvider: DateProviderPort,
+    private readonly workflowJournal?: WorkflowJournalPort,
   ) {}
 
   async execute(
@@ -92,6 +94,20 @@ export class OrchestratePhaseTransitionUseCase {
     // 4. Save session
     const saveResult = await this.sessionRepo.save(session);
     if (isErr(saveResult)) return saveResult;
+
+    // Write-through to workflow journal
+    if (this.workflowJournal) {
+      await this.workflowJournal.append({
+        type: "phase-transition",
+        sessionId: session.id,
+        milestoneId: input.milestoneId,
+        sliceId: session.sliceId,
+        fromPhase,
+        toPhase: session.currentPhase,
+        trigger: input.trigger,
+        timestamp: this.dateProvider.now(),
+      });
+    }
 
     // 5. Publish domain events
     const events = session.pullEvents();
