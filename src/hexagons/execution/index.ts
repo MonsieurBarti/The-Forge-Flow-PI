@@ -3,6 +3,9 @@
 // Domain -- Ports
 export { AgentDispatchError, AgentDispatchPort } from "@kernel/agents";
 export { AggregateMetricsUseCase } from "./application/aggregate-metrics.use-case";
+// Application -- Reflection
+export { buildReflectionConfig } from "./application/build-reflection-config";
+export type { BuildReflectionConfigParams } from "./application/build-reflection-config";
 export { CleanupOrphanedWorktreesUseCase } from "./application/cleanup-orphaned-worktrees.use-case";
 // Application -- Collaborators
 export { DomainRouter } from "./application/domain-router";
@@ -96,6 +99,30 @@ export {
 } from "./domain/guardrail.schemas";
 // Domain -- Guardrail Rule Interface
 export type { GuardrailRule } from "./domain/guardrail-rule";
+// Domain -- Pre-dispatch
+export { PreDispatchGuardrailPort } from "./domain/ports/pre-dispatch-guardrail.port";
+export type { PreDispatchGuardrailRule } from "./domain/pre-dispatch-guardrail-rule";
+export {
+  PreDispatchContextSchema,
+  PreDispatchViolationSchema,
+  PreDispatchReportSchema,
+} from "./domain/pre-dispatch.schemas";
+export type {
+  PreDispatchContext,
+  PreDispatchViolation,
+  PreDispatchReport,
+} from "./domain/pre-dispatch.schemas";
+// Domain -- Reflection + Fallback
+export {
+  ReflectionResultSchema,
+  ReflectionIssueSchema,
+} from "./domain/reflection.schemas";
+export type { ReflectionResult, ReflectionIssue } from "./domain/reflection.schemas";
+export {
+  FallbackStrategySchema,
+  ModelResolutionSchema,
+} from "./domain/fallback.schemas";
+export type { FallbackStrategy, ModelResolution } from "./domain/fallback.schemas";
 // Domain -- Overseer Journal Entry
 // Domain -- Journal Extension
 export type {
@@ -105,11 +132,17 @@ export type {
   FileWrittenEntry,
   GuardrailViolationEntry,
   JournalEntry,
+  ModelDownshiftEntry,
   OverseerInterventionEntry,
   PhaseChangedEntry,
+  PreDispatchBlockedEntry,
+  ReflectionEntry,
   TaskCompletedEntry,
+  TaskEscalatedEntry,
   TaskFailedEntry,
   TaskStartedEntry,
+  ToolExecutionEntry,
+  TurnBoundaryEntry,
 } from "./domain/journal-entry.schemas";
 export {
   ArtifactWrittenEntrySchema,
@@ -118,11 +151,17 @@ export {
   FileWrittenEntrySchema,
   GuardrailViolationEntrySchema,
   JournalEntrySchema,
+  ModelDownshiftEntrySchema,
   OverseerInterventionEntrySchema,
   PhaseChangedEntrySchema,
+  PreDispatchBlockedEntrySchema,
+  ReflectionEntrySchema,
   TaskCompletedEntrySchema,
+  TaskEscalatedEntrySchema,
   TaskFailedEntrySchema,
   TaskStartedEntrySchema,
+  ToolExecutionEntrySchema,
+  TurnBoundaryEntrySchema,
 } from "./domain/journal-entry.schemas";
 // Domain -- Overseer Schemas
 export type {
@@ -176,6 +215,16 @@ export {
   WorktreeHealthSchema,
   WorktreeInfoSchema,
 } from "@kernel/ports/worktree.schemas";
+// Infrastructure -- Pre-dispatch Adapters
+export { ComposablePreDispatchAdapter } from "./infrastructure/adapters/pre-dispatch/composable-pre-dispatch.adapter";
+export { InMemoryPreDispatchAdapter } from "./infrastructure/adapters/pre-dispatch/in-memory-pre-dispatch.adapter";
+// Infrastructure -- Pre-dispatch Rules
+export { ScopeContainmentRule } from "./infrastructure/adapters/pre-dispatch/rules/scope-containment.rule";
+export { DependencyCheckRule } from "./infrastructure/adapters/pre-dispatch/rules/dependency-check.rule";
+export { WorktreeStateRule } from "./infrastructure/adapters/pre-dispatch/rules/worktree-state.rule";
+export type { WorktreeStateGitOps } from "./infrastructure/adapters/pre-dispatch/rules/worktree-state.rule";
+export { BudgetCheckRule } from "./infrastructure/adapters/pre-dispatch/rules/budget-check.rule";
+export { ToolPolicyRule } from "./infrastructure/adapters/pre-dispatch/rules/tool-policy.rule";
 // Infrastructure -- Guardrail Adapters
 export { ComposableGuardrailAdapter } from "./infrastructure/adapters/guardrails/composable-guardrail.adapter";
 // Infrastructure -- Overseer Adapters
