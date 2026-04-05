@@ -1,4 +1,4 @@
-import type { ExtensionAPI } from "@infrastructure/pi";
+import type { ExtensionAPI, ExtensionCommandContext } from "@infrastructure/pi";
 import type { MapCodebaseUseCase } from "../../application/map-codebase.use-case";
 
 export interface MapCodebaseCommandDeps {
@@ -10,7 +10,7 @@ export interface MapCodebaseCommandDeps {
 export function registerMapCodebaseCommand(api: ExtensionAPI, deps: MapCodebaseCommandDeps): void {
   api.registerCommand("tff:map-codebase", {
     description: "Generate or update codebase documentation",
-    handler: async (args: string) => {
+    handler: async (args: string, _ctx: ExtensionCommandContext) => {
       const mode = args.includes("--mode incremental")
         ? ("incremental" as const)
         : ("full" as const);
