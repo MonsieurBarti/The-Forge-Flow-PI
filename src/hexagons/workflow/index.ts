@@ -153,6 +153,9 @@ export { createWritePlanTool } from "./infrastructure/pi/write-plan.tool";
 export { createWriteResearchTool } from "./infrastructure/pi/write-research.tool";
 export { createWriteSpecTool } from "./infrastructure/pi/write-spec.tool";
 
+// Application
+export { ReplayWorkflowJournalUseCase } from "./application/replay-workflow-journal.use-case";
+
 // Use Cases
 export { ClassifyComplexityUseCase } from "./use-cases/classify-complexity.use-case";
 export type { StatusReport } from "./use-cases/get-status.use-case";
