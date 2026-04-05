@@ -103,7 +103,7 @@ import { registerSettingsCommand } from "@hexagons/workflow/infrastructure/pi/se
 import { createReadSettingsTool } from "@hexagons/workflow/infrastructure/pi/settings-read.tool";
 import { createUpdateSettingTool } from "@hexagons/workflow/infrastructure/pi/settings-update.tool";
 import { PiDocWriterAdapter } from "@hexagons/workflow/infrastructure/pi-doc-writer.adapter";
-import type { ExtensionAPI } from "@infrastructure/pi";
+import type { ExtensionAPI, ExtensionCommandContext } from "@infrastructure/pi";
 import type { Result } from "@kernel";
 import {
   AgentRegistry,
@@ -469,7 +469,34 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     logger,
     templateLoader,
   );
-  void verifyUseCase; // Available for verify command wiring
+  api.registerCommand("tff:verify", {
+    description: "Verify acceptance criteria for the current slice",
+    handler: async (args: string, _ctx: ExtensionCommandContext) => {
+      const sliceLabel = args.trim();
+      if (!sliceLabel) {
+        api.sendUserMessage("Usage: /tff:verify <slice-label>");
+        return;
+      }
+      const sliceResult = await sliceRepo.findByLabel(sliceLabel);
+      if (!sliceResult.ok || !sliceResult.data) {
+        api.sendUserMessage(`Slice not found: ${sliceLabel}`);
+        return;
+      }
+      const result = await verifyUseCase.execute({
+        sliceId: sliceResult.data.id,
+        workingDirectory: options.projectRoot,
+        timeoutMs: 300_000,
+        maxFixCycles: 2,
+      });
+      if (!result.ok) {
+        api.sendUserMessage(`Verification failed: ${result.error.message}`);
+        return;
+      }
+      api.sendUserMessage(
+        `Verification complete: ${result.data.finalVerdict} (${result.data.verifications.length} verification rounds)`,
+      );
+    },
+  });
 
   // --- State sync wiring (moved before ship/complete for dependency injection) ---
   const ghCliAdapter = new GhCliAdapter(options.projectRoot);
@@ -534,7 +561,34 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     gitStateSyncAdapter,
     options.projectRoot,
   );
-  void shipSliceUseCase;
+  api.registerCommand("tff:ship", {
+    description: "Ship the current slice — review, create PR, merge gate",
+    handler: async (args: string, _ctx: ExtensionCommandContext) => {
+      const sliceLabel = args.trim();
+      if (!sliceLabel) {
+        api.sendUserMessage("Usage: /tff:ship <slice-label>");
+        return;
+      }
+      const sliceResult = await sliceRepo.findByLabel(sliceLabel);
+      if (!sliceResult.ok || !sliceResult.data) {
+        api.sendUserMessage(`Slice not found: ${sliceLabel}`);
+        return;
+      }
+      const milestoneLabel = (sliceResult.data.milestoneId ?? "").replace(/^.*?(M\d+).*$/, "$1");
+      const result = await shipSliceUseCase.execute({
+        sliceId: sliceResult.data.id,
+        workingDirectory: options.projectRoot,
+        baseBranch: `milestone/${milestoneLabel}`,
+        headBranch: `slice/${sliceLabel}`,
+        maxFixCycles: 2,
+      });
+      if (!result.ok) {
+        api.sendUserMessage(`Ship failed: ${result.error.message}`);
+        return;
+      }
+      api.sendUserMessage(`Ship complete: PR ${result.data.prUrl ?? "created"}`);
+    },
+  });
 
   // --- Complete milestone pipeline wiring ---
   const milestoneQueryAdapter = new MilestoneQueryAdapter(
@@ -569,7 +623,40 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     gitStateSyncAdapter,
     mapCodebaseUseCase,
   );
-  void completeMilestoneUseCase;
+  api.registerCommand("tff:complete-milestone", {
+    description: "Complete the active milestone — audit, create PR, merge gate",
+    handler: async (_args: string, _ctx: ExtensionCommandContext) => {
+      const project = await projectRepo.findSingleton();
+      if (!project.ok || !project.data) {
+        api.sendUserMessage("No project found.");
+        return;
+      }
+      const milestones = await milestoneRepo.findByProjectId(project.data.id);
+      if (!milestones.ok) {
+        api.sendUserMessage("Failed to load milestones.");
+        return;
+      }
+      const active = milestones.data.find((m) => m.status === "in_progress");
+      if (!active) {
+        api.sendUserMessage("No active milestone found.");
+        return;
+      }
+      const result = await completeMilestoneUseCase.execute({
+        milestoneId: active.id,
+        milestoneLabel: active.label,
+        milestoneTitle: active.title,
+        headBranch: `milestone/${active.label}`,
+        baseBranch: "main",
+        workingDirectory: options.projectRoot,
+        maxFixCycles: 2,
+      });
+      if (!result.ok) {
+        api.sendUserMessage(`Milestone completion failed: ${result.error.message}`);
+        return;
+      }
+      api.sendUserMessage(`Milestone ${active.label} completed`);
+    },
+  });
 
   // --- Restore + guard wiring ---
   const backupService = new BackupService();
