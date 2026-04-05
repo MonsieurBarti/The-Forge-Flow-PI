@@ -1,6 +1,7 @@
 import type { MilestoneRepositoryPort } from "@hexagons/milestone";
 import type { ProjectRepositoryPort } from "@hexagons/project";
 import type { ReviewUIPort } from "@hexagons/review";
+import type { FailurePoliciesConfig } from "@hexagons/settings";
 import type { SliceRepositoryPort } from "@hexagons/slice";
 import type { CreateTasksPort, TaskRepositoryPort } from "@hexagons/task";
 import type { ExtensionAPI } from "@infrastructure/pi";
@@ -54,6 +55,7 @@ export interface WorkflowExtensionDeps {
   resolveActiveTffDir?: (sliceId?: string) => Promise<string>;
   withGuard?: () => Promise<void>;
   workflowJournal?: WorkflowJournalPort;
+  failurePolicies?: FailurePoliciesConfig;
 }
 
 function formatStatusReport(report: StatusReport): string {
@@ -181,6 +183,7 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
       sessionRepo: deps.workflowSessionRepo,
       sliceRepo: deps.sliceRepo,
       maxRetries: deps.maxRetries,
+      failurePolicies: deps.failurePolicies,
     }),
   );
 

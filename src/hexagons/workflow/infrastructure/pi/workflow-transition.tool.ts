@@ -1,3 +1,4 @@
+import type { FailurePoliciesConfig } from "@hexagons/settings";
 import { ComplexityTierSchema, type SliceRepositoryPort } from "@hexagons/slice";
 import { createZodTool, textResult } from "@infrastructure/pi";
 import { isErr } from "@kernel";
@@ -17,6 +18,7 @@ export interface WorkflowTransitionToolDeps {
   sessionRepo: WorkflowSessionRepositoryPort;
   sliceRepo: SliceRepositoryPort;
   maxRetries: number;
+  failurePolicies?: FailurePoliciesConfig;
 }
 
 export function createWorkflowTransitionTool(deps: WorkflowTransitionToolDeps) {
@@ -45,7 +47,12 @@ export function createWorkflowTransitionTool(deps: WorkflowTransitionToolDeps) {
       if (isErr(slicesResult)) return textResult(`Error: ${slicesResult.error.message}`);
       const allSlicesClosed = slicesResult.data.every((s) => s.status === "closed");
 
-      // 4. Call use case with assembled guard context
+      // 4. Resolve failure policy from settings
+      const currentPhase = session.currentPhase;
+      const failurePolicy =
+        deps.failurePolicies?.byPhase[currentPhase] ?? deps.failurePolicies?.default ?? "strict";
+
+      // 5. Call use case with assembled guard context
       const result = await deps.orchestratePhaseTransition.execute({
         milestoneId: params.milestoneId,
         trigger: params.trigger,
@@ -55,7 +62,7 @@ export function createWorkflowTransitionTool(deps: WorkflowTransitionToolDeps) {
           maxRetries: deps.maxRetries,
           allSlicesClosed,
           lastError: session.lastEscalation?.lastError ?? null,
-          failurePolicy: "strict",
+          failurePolicy,
         },
       });
 
