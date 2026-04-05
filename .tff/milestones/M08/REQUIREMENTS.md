@@ -87,11 +87,15 @@ Make TFF-PI releasable — fix packaging/build issues, wire the CLI entry point 
 - Add `release-please-config.json` with changelog sections, bump strategy
 - Add `.release-please-manifest.json` tracking current version (0.1.0)
 - Ensure conventional commits are enforced — add `commitlint` with `@commitlint/config-conventional` + lefthook `commit-msg` hook
+- Add npm publish step: on GitHub Release created, run `npm publish` with `NPM_TOKEN` secret
+- Add `files` field to package.json (dist/, src/resources/, package.json, README.md, LICENSE)
+- Add `.npmrc` with `//registry.npmjs.org/:_authToken=${NPM_TOKEN}` for CI publishing
 
 **AC:**
 - Push to main triggers release-please PR creation
 - Release-please PR bumps version in package.json and updates CHANGELOG.md
 - Merging release-please PR creates a GitHub Release with tag
+- GitHub Release triggers npm publish to `@the-forge-flow/pi`
 - Conventional commit format enforced on commit-msg hook
 - CI passes with new workflow
 
@@ -105,3 +109,23 @@ Make TFF-PI releasable — fix packaging/build issues, wire the CLI entry point 
 - Budget tracking is not silently bypassed (either real tracking or logged warning)
 - No unexplained skipped tests
 - Zero lint warnings (`npm run lint` clean)
+
+### R07: Standalone CLI Packaging
+
+- Add `bin` field to package.json pointing to `dist/loader.js`
+- Create `src/cli/loader.ts` with shebang (`#!/usr/bin/env node`) as the CLI entry point:
+  - Fast-path `--version` and `--help` before heavy imports
+  - Validate Node >= 22
+  - Set env vars (`PI_PACKAGE_DIR`, etc.) before PI SDK loads
+  - Dynamic `import('./main.js')` for deferred heavy initialization
+- Following gsd-2 pattern: thin loader → heavy bootstrap separation
+- Add `files` field to package.json listing what ships (dist/, src/resources/, package.json)
+- Add `chmod +x dist/loader.js` to build pipeline
+- Ensure `npm pack` produces a working installable package
+
+**AC:**
+- `npx @the-forge-flow/pi` launches a PI session with TFF extensions loaded
+- `--version` prints version without loading PI SDK
+- `--help` prints usage without loading PI SDK
+- Package installs globally and `tff` command works
+- Node < 22 shows clear error message
