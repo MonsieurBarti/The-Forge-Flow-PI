@@ -56,4 +56,36 @@ describe("InMemoryWorkflowSessionRepository", () => {
     const result = await repo.save(session);
     expect(result.ok).toBe(true);
   });
+
+  it("finds session by sliceId", async () => {
+    const sliceId = faker.string.uuid();
+    const session = new WorkflowSessionBuilder().withSliceId(sliceId).build();
+    await repo.save(session);
+
+    const result = await repo.findBySliceId(sliceId);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data).not.toBeNull();
+      expect(result.data?.sliceId).toBe(sliceId);
+    }
+  });
+
+  it("returns null for unknown sliceId", async () => {
+    const result = await repo.findBySliceId(faker.string.uuid());
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data).toBeNull();
+  });
+
+  it("saves and retrieves session with null milestoneId", async () => {
+    const session = new WorkflowSessionBuilder().withNullMilestoneId().build();
+    const saveResult = await repo.save(session);
+    expect(saveResult.ok).toBe(true);
+
+    const findResult = await repo.findById(session.id);
+    expect(findResult.ok).toBe(true);
+    if (findResult.ok) {
+      expect(findResult.data).not.toBeNull();
+      expect(findResult.data?.milestoneId).toBeNull();
+    }
+  });
 });

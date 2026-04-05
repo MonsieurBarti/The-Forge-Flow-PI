@@ -229,6 +229,80 @@ describe("FreshCloneStrategy", () => {
     }
   });
 
+  // TC-Q: quick/<label> → parent is tff-state/main
+  it("TC-Q: restores from tff-state/main for quick/ branch", async () => {
+    const scenario = makeScenario({
+      currentBranch: "quick/Q-01",
+      backupPaths: [],
+      stateBranchExists: false,
+    });
+
+    const strategy = new FreshCloneStrategy(
+      makeBackupService(),
+      makeStateBranchOps({ "tff-state/main": true }),
+      makeRestoreUseCase(ok({ ...restoreReport, restoredBranch: "main", filesRestored: 2 })),
+      makeHealthCheckService(),
+      "/project",
+    );
+
+    const result = await strategy.execute(scenario, "/project/.tff");
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.action).toBe("restored");
+    expect(result.data.source).toBe("tff-state/main");
+  });
+
+  // TC-D: debug/<label> → parent is tff-state/main
+  it("TC-D: restores from tff-state/main for debug/ branch", async () => {
+    const scenario = makeScenario({
+      currentBranch: "debug/D-01",
+      backupPaths: [],
+      stateBranchExists: false,
+    });
+
+    const strategy = new FreshCloneStrategy(
+      makeBackupService(),
+      makeStateBranchOps({ "tff-state/main": true }),
+      makeRestoreUseCase(ok({ ...restoreReport, restoredBranch: "main", filesRestored: 2 })),
+      makeHealthCheckService(),
+      "/project",
+    );
+
+    const result = await strategy.execute(scenario, "/project/.tff");
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.action).toBe("restored");
+    expect(result.data.source).toBe("tff-state/main");
+  });
+
+  // TC-QS: existing slice/ pattern still works after quick/debug additions
+  it("TC-QS: slice/M07-S05 still resolves to tff-state/milestone/M07", async () => {
+    const scenario = makeScenario({
+      currentBranch: "slice/M07-S05",
+      backupPaths: [],
+      stateBranchExists: false,
+    });
+
+    const strategy = new FreshCloneStrategy(
+      makeBackupService(),
+      makeStateBranchOps({ "tff-state/milestone/M07": true }),
+      makeRestoreUseCase(
+        ok({ ...restoreReport, restoredBranch: "milestone/M07", filesRestored: 3 }),
+      ),
+      makeHealthCheckService(),
+      "/project",
+    );
+
+    const result = await strategy.execute(scenario, "/project/.tff");
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.action).toBe("restored");
+    expect(result.data.source).toBe("tff-state/milestone/M07");
+  });
+
   // TC6: non-conventional branch feature/foo → no parent → scaffold
   it("TC6: scaffolds fresh .tff/ for non-conventional branch", async () => {
     let tempDir: string | null = null;

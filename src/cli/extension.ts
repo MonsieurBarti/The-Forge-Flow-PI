@@ -56,8 +56,11 @@ import { SqliteCompletionRecordRepository } from "@hexagons/review/infrastructur
 import { SqliteReviewRepository } from "@hexagons/review/infrastructure/repositories/review/sqlite-review.repository";
 import { SqliteShipRecordRepository } from "@hexagons/review/infrastructure/repositories/ship-record/sqlite-ship-record.repository";
 import { SqliteVerificationRepository } from "@hexagons/review/infrastructure/repositories/verification/sqlite-verification.repository";
-import { HOTKEYS_DEFAULTS, MergeSettingsUseCase } from "@hexagons/settings";
+import { HOTKEYS_DEFAULTS, LoadSettingsUseCase, MergeSettingsUseCase } from "@hexagons/settings";
+import { FormatSettingsCascadeService } from "@hexagons/settings/domain/services/format-settings-cascade.service";
 import { AlwaysUnderBudgetAdapter } from "@hexagons/settings/infrastructure/always-under-budget.adapter";
+import { FsSettingsFileAdapter } from "@hexagons/settings/infrastructure/fs-settings-file.adapter";
+import { ProcessEnvVarAdapter } from "@hexagons/settings/infrastructure/process-env-var.adapter";
 import { SqliteSliceRepository } from "@hexagons/slice/infrastructure/sqlite-slice.repository";
 import { WorkflowSliceTransitionAdapter } from "@hexagons/slice/infrastructure/workflow-slice-transition.adapter";
 import { CreateTasksUseCase } from "@hexagons/task/application/create-tasks.use-case";
@@ -65,12 +68,21 @@ import { DetectWavesUseCase } from "@hexagons/task/domain/detect-waves.use-case"
 import { SqliteTaskRepository } from "@hexagons/task/infrastructure/sqlite-task.repository";
 import {
   DefaultContextStagingAdapter,
+  GetStatusUseCase,
   JsonlWorkflowJournalRepository,
   registerWorkflowExtension,
   SettingsModelProfileResolver,
   SqliteWorkflowSessionRepository,
 } from "@hexagons/workflow";
 import { NodeArtifactFileAdapter } from "@hexagons/workflow/infrastructure/node-artifact-file.adapter";
+import { registerHealthCommand } from "@hexagons/workflow/infrastructure/pi/health.command";
+import { createHealthCheckTool } from "@hexagons/workflow/infrastructure/pi/health-check.tool";
+import { registerHelpCommand } from "@hexagons/workflow/infrastructure/pi/help.command";
+import { registerProgressCommand } from "@hexagons/workflow/infrastructure/pi/progress.command";
+import { createProgressTool } from "@hexagons/workflow/infrastructure/pi/progress.tool";
+import { registerSettingsCommand } from "@hexagons/workflow/infrastructure/pi/settings.command";
+import { createReadSettingsTool } from "@hexagons/workflow/infrastructure/pi/settings-read.tool";
+import { createUpdateSettingTool } from "@hexagons/workflow/infrastructure/pi/settings-update.tool";
 import type { ExtensionAPI } from "@infrastructure/pi";
 import type { Result } from "@kernel";
 import {
@@ -536,6 +548,11 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     gitPort,
     hookScriptContent: hookScript,
     projectRoot: options.projectRoot,
+    worktreePort: worktreeAdapter,
+    sliceRepo,
+    taskRepo,
+    journalRepo,
+    artifactFile,
   });
 
   const strategies = new Map<RecoveryType, RecoveryStrategy>([
@@ -606,10 +623,51 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     autonomyModeProvider,
     reviewUI,
     maxRetries: 2,
+    tffDir: rootTffDir,
     resolveActiveTffDir,
     withGuard,
     workflowJournal,
   });
+
+  // --- Health command + tool ---
+  registerHealthCommand(api, { healthCheck: healthCheckService, tffDir: rootTffDir });
+  api.registerTool(createHealthCheckTool({ healthCheck: healthCheckService, tffDir: rootTffDir }));
+
+  // --- Progress command + tool ---
+  const getStatusForProgress = new GetStatusUseCase(
+    projectRepo,
+    milestoneRepo,
+    sliceRepo,
+    taskRepo,
+  );
+  registerProgressCommand(api, { getStatus: getStatusForProgress, tffDir: rootTffDir });
+  api.registerTool(createProgressTool({ getStatus: getStatusForProgress }));
+
+  // --- Settings command + tools ---
+  const loadSettings = new LoadSettingsUseCase(
+    new FsSettingsFileAdapter(),
+    new ProcessEnvVarAdapter(),
+  );
+  const mergeSettingsForSettings = new MergeSettingsUseCase();
+  const formatCascade = new FormatSettingsCascadeService();
+  registerSettingsCommand(api, {
+    loadSettings,
+    mergeSettings: mergeSettingsForSettings,
+    formatCascade,
+    projectRoot: options.projectRoot,
+  });
+  api.registerTool(
+    createReadSettingsTool({
+      loadSettings,
+      mergeSettings: mergeSettingsForSettings,
+      formatCascade,
+      projectRoot: options.projectRoot,
+    }),
+  );
+  api.registerTool(createUpdateSettingTool({ projectRoot: options.projectRoot }));
+
+  // --- Help command ---
+  registerHelpCommand(api);
 
   // --- /tff:sync command ---
   api.registerCommand("tff:sync", {

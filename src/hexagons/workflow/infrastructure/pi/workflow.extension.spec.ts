@@ -125,4 +125,29 @@ describe("registerWorkflowExtension", () => {
     // ReviewUI is injectable and starts with no presentations
     expect(reviewUI.presentations).toHaveLength(0);
   });
+
+  it("registers tff:quick command", () => {
+    const { api, fns } = createMockExtensionAPI();
+    registerWorkflowExtension(api, makeDeps());
+    expect(fns.registerCommand).toHaveBeenCalledWith(
+      "tff:quick",
+      expect.objectContaining({ description: expect.any(String) }),
+    );
+  });
+
+  it("registers tff:debug command", () => {
+    const { api, fns } = createMockExtensionAPI();
+    registerWorkflowExtension(api, makeDeps());
+    expect(fns.registerCommand).toHaveBeenCalledWith(
+      "tff:debug",
+      expect.objectContaining({ description: expect.any(String) }),
+    );
+  });
+
+  it("registers tff_quick_start tool", () => {
+    const { api, fns } = createMockExtensionAPI();
+    registerWorkflowExtension(api, makeDeps());
+    const toolNames = fns.registerTool.mock.calls.map((call) => call[0].name);
+    expect(toolNames).toContain("tff_quick_start");
+  });
 });

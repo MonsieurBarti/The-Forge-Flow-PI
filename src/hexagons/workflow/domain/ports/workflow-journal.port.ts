@@ -5,7 +5,7 @@ import { z } from "zod";
 export const WorkflowJournalEntrySchema = z.object({
   type: z.enum(["session-created", "phase-transition", "escalation"]),
   sessionId: z.string().min(1),
-  milestoneId: z.string().min(1),
+  milestoneId: z.string().min(1).nullable().default(null),
   sliceId: z.string().optional(),
   fromPhase: z.string().optional(),
   toPhase: z.string().optional(),

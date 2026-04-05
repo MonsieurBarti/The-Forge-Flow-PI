@@ -1,7 +1,7 @@
 import { err, type Id, ok, PersistenceError, type Result } from "@kernel";
 import { SliceRepositoryPort } from "../domain/ports/slice-repository.port";
 import { Slice } from "../domain/slice.aggregate";
-import type { SliceProps } from "../domain/slice.schemas";
+import type { SliceKind, SliceProps } from "../domain/slice.schemas";
 
 export class InMemorySliceRepository extends SliceRepositoryPort {
   private store = new Map<string, SliceProps>();
@@ -42,6 +42,13 @@ export class InMemorySliceRepository extends SliceRepositoryPort {
       }
     }
     return ok(results);
+  }
+
+  async findByKind(kind: SliceKind): Promise<Result<Slice[], PersistenceError>> {
+    const matches = [...this.store.values()]
+      .filter((props) => props.kind === kind)
+      .map((props) => Slice.reconstitute(props));
+    return ok(matches);
   }
 
   seed(slice: Slice): void {

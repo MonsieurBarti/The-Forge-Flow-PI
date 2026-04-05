@@ -12,6 +12,8 @@ import type { RestoreStateUseCase } from "@kernel/services/restore-state.use-cas
 
 const SLICE_PATTERN = /^slice\/(M\d+)-S\d+$/;
 const MILESTONE_PATTERN = /^milestone\/(M\d+)$/;
+const QUICK_PATTERN = /^quick\//;
+const DEBUG_PATTERN = /^debug\//;
 
 function resolveParentStateBranch(currentBranch: string): string | null {
   const sliceMatch = SLICE_PATTERN.exec(currentBranch);
@@ -19,6 +21,9 @@ function resolveParentStateBranch(currentBranch: string): string | null {
 
   const milestoneMatch = MILESTONE_PATTERN.exec(currentBranch);
   if (milestoneMatch) return "tff-state/main";
+
+  if (QUICK_PATTERN.test(currentBranch)) return "tff-state/main";
+  if (DEBUG_PATTERN.test(currentBranch)) return "tff-state/main";
 
   return null;
 }

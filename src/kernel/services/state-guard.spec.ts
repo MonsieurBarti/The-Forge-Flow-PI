@@ -62,7 +62,7 @@ class StubHealthCheckService {
 
   async runAll(_tffDir: string): Promise<Result<HealthCheckReport, Error>> {
     this.runAllCallCount++;
-    return ok({ fixed: [], warnings: [] });
+    return ok({ fixed: [], warnings: [], driftDetails: [] });
   }
 }
 

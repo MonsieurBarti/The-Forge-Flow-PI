@@ -1,6 +1,7 @@
 import type { ComplexityTier } from "@kernel";
 import { ComplexityTierSchema, IdSchema, TimestampSchema } from "@kernel";
 import { z } from "zod";
+import { SliceKindSchema } from "./slice-kind.schemas";
 
 export const SliceStatusSchema = z.enum([
   "discussing",
@@ -14,7 +15,7 @@ export const SliceStatusSchema = z.enum([
 ]);
 export type SliceStatus = z.infer<typeof SliceStatusSchema>;
 
-export const SliceLabelSchema = z.string().regex(/^M\d{2,}-S\d{2,}$/);
+export const SliceLabelSchema = z.string().regex(/^(M\d{2,}-S\d{2,}|Q-\d{2,}|D-\d{2,})$/);
 export type SliceLabel = z.infer<typeof SliceLabelSchema>;
 
 export const ArchitectureImpactSchema = z.enum(["none", "low", "high"]);
@@ -34,7 +35,8 @@ export const ComplexityCriteriaSchema = z.object({
 export type ComplexityCriteria = z.infer<typeof ComplexityCriteriaSchema>;
 
 export type { ComplexityTier } from "@kernel";
-export { ComplexityTierSchema };
+export type { SliceKind } from "./slice-kind.schemas";
+export { ComplexityTierSchema, SliceKindSchema };
 
 export function classifyComplexity(criteria: ComplexityCriteria): ComplexityTier {
   if (
@@ -56,7 +58,8 @@ export function classifyComplexity(criteria: ComplexityCriteria): ComplexityTier
 
 export const SlicePropsSchema = z.object({
   id: IdSchema,
-  milestoneId: IdSchema,
+  milestoneId: IdSchema.nullable().default(null),
+  kind: SliceKindSchema.default("milestone"),
   label: SliceLabelSchema,
   title: z.string().min(1),
   description: z.string().default(""),

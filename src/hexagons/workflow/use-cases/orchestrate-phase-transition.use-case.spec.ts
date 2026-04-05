@@ -58,6 +58,7 @@ function seedSlice(repo: InMemorySliceRepository, id: string, status: SliceStatu
     Slice.reconstitute({
       id,
       milestoneId: faker.string.uuid(),
+      kind: "milestone" as const,
       label: "M01-S01",
       title: "Test",
       description: "",
@@ -84,7 +85,7 @@ describe("OrchestratePhaseTransitionUseCase", () => {
     seedSlice(sliceRepo, sliceId, "discussing");
 
     const result = await useCase.execute({
-      milestoneId: session.milestoneId,
+      milestoneId: session.milestoneId as string,
       trigger: "next",
       guardContext: { ...DEFAULT_GUARD_CTX, complexityTier: "F-lite" },
     });
@@ -112,7 +113,7 @@ describe("OrchestratePhaseTransitionUseCase", () => {
     seedSlice(sliceRepo, sliceId, "completing");
 
     const result = await useCase.execute({
-      milestoneId: session.milestoneId,
+      milestoneId: session.milestoneId as string,
       trigger: "next",
       guardContext: DEFAULT_GUARD_CTX,
     });
@@ -139,7 +140,7 @@ describe("OrchestratePhaseTransitionUseCase", () => {
     seedSlice(sliceRepo, sliceId, "executing");
 
     const result = await useCase.execute({
-      milestoneId: session.milestoneId,
+      milestoneId: session.milestoneId as string,
       trigger: "abort",
       guardContext: DEFAULT_GUARD_CTX,
     });
@@ -171,7 +172,7 @@ describe("OrchestratePhaseTransitionUseCase", () => {
     });
 
     await useCase.execute({
-      milestoneId: session.milestoneId,
+      milestoneId: session.milestoneId as string,
       trigger: "next",
       guardContext: { ...DEFAULT_GUARD_CTX, complexityTier: "F-lite" },
     });
@@ -191,7 +192,7 @@ describe("OrchestratePhaseTransitionUseCase", () => {
     sessionRepo.seed(session);
 
     const result = await useCase.execute({
-      milestoneId: session.milestoneId,
+      milestoneId: session.milestoneId as string,
       trigger: "start",
       guardContext: DEFAULT_GUARD_CTX,
     });
@@ -213,6 +214,71 @@ describe("OrchestratePhaseTransitionUseCase", () => {
     });
 
     expect(isErr(result)).toBe(true);
+  });
+
+  it("finds session by sliceId when milestoneId not provided", async () => {
+    const { useCase, sessionRepo, sliceRepo } = setup();
+    const sliceId = faker.string.uuid();
+    const session = new WorkflowSessionBuilder()
+      .withNullMilestoneId()
+      .withCurrentPhase("discussing")
+      .withSliceId(sliceId)
+      .build();
+    sessionRepo.seed(session);
+    seedSlice(sliceRepo, sliceId, "discussing");
+
+    const result = await useCase.execute({
+      sliceId,
+      trigger: "next",
+      guardContext: { ...DEFAULT_GUARD_CTX, complexityTier: "F-lite" },
+    });
+
+    expect(isOk(result)).toBe(true);
+    if (isOk(result)) {
+      expect(result.data.fromPhase).toBe("discussing");
+      expect(result.data.toPhase).toBe("researching");
+    }
+  });
+
+  it("returns error when neither milestoneId nor sliceId provided", async () => {
+    const { useCase } = setup();
+
+    const result = await useCase.execute({
+      trigger: "next",
+      guardContext: DEFAULT_GUARD_CTX,
+    });
+
+    expect(isErr(result)).toBe(true);
+  });
+
+  it("prefers milestoneId over sliceId when both provided", async () => {
+    const { useCase, sessionRepo, sliceRepo } = setup();
+    const sliceId = faker.string.uuid();
+    const milestoneSession = new WorkflowSessionBuilder()
+      .withCurrentPhase("discussing")
+      .withSliceId(sliceId)
+      .build();
+    const sliceOnlySession = new WorkflowSessionBuilder()
+      .withNullMilestoneId()
+      .withCurrentPhase("executing")
+      .withSliceId(sliceId)
+      .build();
+    sessionRepo.seed(milestoneSession);
+    sessionRepo.seed(sliceOnlySession);
+    seedSlice(sliceRepo, sliceId, "discussing");
+
+    const result = await useCase.execute({
+      milestoneId: milestoneSession.milestoneId as string,
+      sliceId,
+      trigger: "next",
+      guardContext: { ...DEFAULT_GUARD_CTX, complexityTier: "F-lite" },
+    });
+
+    expect(isOk(result)).toBe(true);
+    if (isOk(result)) {
+      // milestoneSession starts at "discussing", not "executing"
+      expect(result.data.fromPhase).toBe("discussing");
+    }
   });
 
   it("appends phase-transition entry to workflow journal", async () => {
@@ -243,7 +309,7 @@ describe("OrchestratePhaseTransitionUseCase", () => {
     seedSlice(sliceRepo, sliceId, "discussing");
 
     const result = await useCase.execute({
-      milestoneId: session.milestoneId,
+      milestoneId: session.milestoneId as string,
       trigger: "next",
       guardContext: { ...DEFAULT_GUARD_CTX, complexityTier: "F-lite" },
     });

@@ -4,7 +4,7 @@ import type { WorkflowPhase, WorkflowSessionProps } from "./workflow-session.sch
 
 export class WorkflowSessionBuilder {
   private _id: string = faker.string.uuid();
-  private _milestoneId: string = faker.string.uuid();
+  private _milestoneId: string | null = faker.string.uuid();
   private _sliceId: string | undefined = undefined;
   private _currentPhase: WorkflowPhase = "idle";
   private _previousPhase: WorkflowPhase | undefined = undefined;
@@ -19,6 +19,11 @@ export class WorkflowSessionBuilder {
 
   withMilestoneId(milestoneId: string): this {
     this._milestoneId = milestoneId;
+    return this;
+  }
+
+  withNullMilestoneId(): this {
+    this._milestoneId = null;
     return this;
   }
 

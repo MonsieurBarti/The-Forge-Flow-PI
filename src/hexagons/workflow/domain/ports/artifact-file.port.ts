@@ -1,3 +1,4 @@
+import type { SliceKind } from "@hexagons/slice";
 import type { Result } from "@kernel";
 import { z } from "zod";
 import type { FileIOError } from "../errors/file-io.error";
@@ -14,15 +15,17 @@ export const ARTIFACT_FILENAMES: Record<ArtifactType, string> = {
 
 export abstract class ArtifactFilePort {
   abstract write(
-    milestoneLabel: string,
+    milestoneLabel: string | null,
     sliceLabel: string,
     artifactType: ArtifactType,
     content: string,
+    kind?: SliceKind,
   ): Promise<Result<string, FileIOError>>;
 
   abstract read(
-    milestoneLabel: string,
+    milestoneLabel: string | null,
     sliceLabel: string,
     artifactType: ArtifactType,
+    kind?: SliceKind,
   ): Promise<Result<string | null, FileIOError>>;
 }

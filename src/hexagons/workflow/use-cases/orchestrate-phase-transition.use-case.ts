@@ -13,7 +13,8 @@ import type {
 } from "../domain/workflow-session.schemas";
 
 export interface PhaseTransitionInput {
-  milestoneId: string;
+  milestoneId?: string;
+  sliceId?: string;
   trigger: WorkflowTrigger;
   guardContext: GuardContext;
 }
@@ -52,11 +53,21 @@ export class OrchestratePhaseTransitionUseCase {
   ): Promise<Result<PhaseTransitionResult, OrchestrationError>> {
     const now = this.dateProvider.now();
 
-    // 1. Load session
-    const findResult = await this.sessionRepo.findByMilestoneId(input.milestoneId);
+    // 1. Load session (milestoneId takes precedence, fallback to sliceId)
+    let findResult: Result<
+      import("../domain/workflow-session.aggregate").WorkflowSession | null,
+      PersistenceError
+    >;
+    if (input.milestoneId) {
+      findResult = await this.sessionRepo.findByMilestoneId(input.milestoneId);
+    } else if (input.sliceId) {
+      findResult = await this.sessionRepo.findBySliceId(input.sliceId);
+    } else {
+      return err(new WorkflowSessionNotFoundError("no milestoneId or sliceId provided"));
+    }
     if (isErr(findResult)) return findResult;
     if (!findResult.data) {
-      return err(new WorkflowSessionNotFoundError(input.milestoneId));
+      return err(new WorkflowSessionNotFoundError(input.milestoneId ?? input.sliceId ?? "unknown"));
     }
 
     const session = findResult.data;
@@ -100,7 +111,7 @@ export class OrchestratePhaseTransitionUseCase {
       await this.workflowJournal.append({
         type: "phase-transition",
         sessionId: session.id,
-        milestoneId: input.milestoneId,
+        milestoneId: input.milestoneId ?? null,
         sliceId: session.sliceId,
         fromPhase,
         toPhase: session.currentPhase,

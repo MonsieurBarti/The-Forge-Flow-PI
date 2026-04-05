@@ -3,11 +3,12 @@ import type { ComplexityTier } from "@kernel/schemas";
 import type Database from "better-sqlite3";
 import { SliceRepositoryPort } from "../domain/ports/slice-repository.port";
 import { Slice } from "../domain/slice.aggregate";
-import type { SliceProps, SliceStatus } from "../domain/slice.schemas";
+import type { SliceKind, SliceProps, SliceStatus } from "../domain/slice.schemas";
 
 interface SliceRow {
   id: string;
-  milestone_id: string;
+  milestone_id: string | null;
+  kind: string;
   label: string;
   title: string;
   description: string;
@@ -26,7 +27,8 @@ export class SqliteSliceRepository extends SliceRepositoryPort {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS slices (
         id            TEXT NOT NULL PRIMARY KEY,
-        milestone_id  TEXT NOT NULL,
+        milestone_id  TEXT,
+        kind          TEXT NOT NULL DEFAULT 'milestone',
         label         TEXT NOT NULL UNIQUE,
         title         TEXT NOT NULL,
         description   TEXT NOT NULL DEFAULT '',
@@ -61,6 +63,7 @@ export class SqliteSliceRepository extends SliceRepositoryPort {
       .prepare<
         [
           string,
+          string | null,
           string,
           string,
           string,
@@ -74,12 +77,13 @@ export class SqliteSliceRepository extends SliceRepositoryPort {
           string,
         ]
       >(
-        `INSERT OR REPLACE INTO slices (id, milestone_id, label, title, description, status, complexity, spec_path, plan_path, research_path, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT OR REPLACE INTO slices (id, milestone_id, kind, label, title, description, status, complexity, spec_path, plan_path, research_path, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         props.id,
         props.milestoneId,
+        props.kind,
         props.label,
         props.title,
         props.description,
@@ -115,6 +119,13 @@ export class SqliteSliceRepository extends SliceRepositoryPort {
     return ok(rows.map((row) => Slice.reconstitute(this.toProps(row))));
   }
 
+  async findByKind(kind: SliceKind): Promise<Result<Slice[], PersistenceError>> {
+    const rows = this.db
+      .prepare<[string], SliceRow>("SELECT * FROM slices WHERE kind = ?")
+      .all(kind);
+    return ok(rows.map((row) => Slice.reconstitute(this.toProps(row))));
+  }
+
   reset(): void {
     this.db.exec("DELETE FROM slices");
   }
@@ -123,6 +134,7 @@ export class SqliteSliceRepository extends SliceRepositoryPort {
     return {
       id: row.id,
       milestoneId: row.milestone_id,
+      kind: (row.kind ?? "milestone") as SliceProps["kind"],
       label: row.label,
       title: row.title,
       description: row.description,
