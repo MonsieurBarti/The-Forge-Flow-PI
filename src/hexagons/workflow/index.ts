@@ -114,6 +114,7 @@ export {
 export { InMemoryArtifactFileAdapter } from "./infrastructure/in-memory-artifact-file.adapter";
 export { DefaultContextStagingAdapter } from "./infrastructure/default-context-staging.adapter";
 export { InMemoryWorkflowSessionRepository } from "./infrastructure/in-memory-workflow-session.repository";
+export { SettingsModelProfileResolver } from "./infrastructure/settings-model-profile-resolver";
 // Infrastructure — PI Tools & Commands
 export { createClassifyComplexityTool } from "./infrastructure/pi/classify-complexity.tool";
 export {
