@@ -1,8 +1,8 @@
 # State — Team Collaboration, Polish & Platform Commands
 
 ## Progress
-- Slices: 4/10 completed
-- Tasks: 15/31 completed
+- Slices: 9/11 completed
+- Tasks: 15/34 completed
 
 ## Slices
 | Slice | Status | Tasks | Progress |
@@ -11,9 +11,10 @@
 | State Branch CRUD + JSON Export/Import | closed | 15/15 | 100% |
 | Restore + Post-Checkout Hook + Fallback | closed | 0/0 | 0% |
 | Worktree Isolation + Rename + Merge-Back | closed | 0/10 | 0% |
-| State Reconstruction + /tff:sync | completing | 0/0 | 0% |
-| Execution Pipeline Improvements (G-pre, A, B) | discussing | 0/0 | 0% |
-| Compressor Notation | discussing | 0/0 | 0% |
-| Platform Commands Batch 1 (Daily Use) | discussing | 0/0 | 0% |
+| State Reconstruction + /tff:sync | closed | 0/0 | 0% |
+| Execution Pipeline Improvements (G-pre, A, B) | closed | 0/0 | 0% |
+| Compressor Notation | closed | 0/0 | 0% |
+| Platform Commands Batch 1 (Daily Use) | closed | 0/0 | 0% |
 | Platform Commands Batch 2 (Management) | discussing | 0/0 | 0% |
 | Gap Features (G09, G04, G02, G03) | discussing | 0/0 | 0% |
+| Production Wiring Completeness | closed | 0/0 | 0% |
