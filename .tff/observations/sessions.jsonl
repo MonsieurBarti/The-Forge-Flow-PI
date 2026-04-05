@@ -7632,3 +7632,66 @@ EOF
 {"ts":"2026-04-05T21:10:17Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Agent","args":"","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
 {"ts":"2026-04-05T21:10:22Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Read","args":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI/.tff/milestones/M08/slices/M08-S01/VERIFICATION.md","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
 {"ts":"2026-04-05T21:10:35Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Skill","args":"","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:10:59Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Bash","args":"node /Users/monsieurbarti/.claude/plugins/marketplaces/the-forge-flow/tools/dist/tff-tools.cjs slice:transition M08-S01 reviewing","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:11:03Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Skill","args":"","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:11:14Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Read","args":"/Users/monsieurbarti/.claude/plugins/marketplaces/the-forge-flow/workflows/ship-slice.md","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:11:34Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Bash","args":"node /Users/monsieurbarti/.claude/plugins/marketplaces/the-forge-flow/tools/dist/tff-tools.cjs review:check-fresh M08-S01 spec-reviewer && node /Users/monsieurbarti/.claude/plugins/marketplaces/the-forge-flow/tools/dist/tff-tools.cjs review:check-fresh M08-S01 code-reviewer && node /Users/monsieurbarti/.claude/plugins/marketplaces/the-forge-flow/tools/dist/tff-tools.cjs review:check-fresh M08-S01 security-auditor","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:11:39Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Bash","args":"rtk git log --oneline milestone/M08..main","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:11:44Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Bash","args":"rtk git branch -l slice/M08-S01 2>/dev/null && echo "exists" || echo "not found"","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:11:50Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Bash","args":"rtk git log --oneline slice/M08-S01 -3","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:12:11Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Bash","args":"node /Users/monsieurbarti/.claude/plugins/marketplaces/the-forge-flow/tools/dist/tff-tools.cjs worktree:delete M08-S01","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:12:18Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Bash","args":"rtk git branch -f slice/M08-S01 main","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:12:25Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Bash","args":"rtk git diff milestone/M08..slice/M08-S01","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:12:44Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Read","args":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI/package.json","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:12:45Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Read","args":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI/tsconfig.json","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:12:45Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Glob","args":"","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:12:55Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Read","args":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI/package.json","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:12:55Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Read","args":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI/package.json","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:12:55Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Read","args":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI/tsconfig.json","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:12:56Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Read","args":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI/tsconfig.build.json","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:12:56Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Read","args":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI/tsconfig.build.json","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:12:56Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Read","args":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI/tsconfig.build.json","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:12:56Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Glob","args":"","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:12:56Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Glob","args":"","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:12:56Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Read","args":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI/src/hexagons/workflow/infrastructure/pi/settings.command.spec.ts","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:12:57Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Glob","args":"","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:13:00Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Read","args":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI/src/hexagons/workflow/infrastructure/pi/settings.command.spec.ts","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:13:00Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Read","args":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI/tsconfig.json","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:13:02Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Bash","args":"rtk git log --oneline -5","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:13:03Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Grep","args":"","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:13:05Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Bash","args":"rtk npm run build 2>&1 | tail -5","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:13:08Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Bash","args":"rtk npm run typecheck 2>&1 | tail -10","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:13:09Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Grep","args":"","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:13:10Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Glob","args":"","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:13:10Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Glob","args":"","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:13:13Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Bash","args":"find /Users/monsieurbarti/Projects/The-Forge-Flow-PI/dist -name "*.spec.*" -o -name "test-setup*" 2>&1 | head -20","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:13:14Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Bash","args":"rtk npm run lint 2>&1 | tail -10","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:13:19Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Bash","args":"rtk tsc -p tsconfig.build.json --noEmit 2>&1 | tail -20","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:13:19Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Agent","args":"","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:13:22Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Bash","args":"rtk vitest run src/hexagons/workflow/infrastructure/pi/settings.command.spec.ts 2>&1 | tail -20","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:13:29Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Read","args":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI/src/hexagons/workflow/infrastructure/pi/settings.command.spec.ts","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:13:33Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Bash","args":"npm test 2>&1 | tail -20","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:13:44Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Agent","args":"","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:13:45Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Agent","args":"","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:14:10Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Bash","args":"rtk git push -u origin slice/M08-S01 milestone/M08 2>&1","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:14:19Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Bash","args":"gh pr create --base milestone/M08 --head slice/M08-S01 --title "M08-S01: Build Hygiene & Dependency Fix" --body "$(cat <<'EOF'
+## Summary
+- Add `tsconfig.build.json` excluding spec/test files from production build (dist/ ~13MB → 7.6MB)
+- Move `better-sqlite3` from devDependencies to dependencies (runtime import in extension.ts)
+- Fix unused variable lint warning in settings.command.spec.ts
+
+## Acceptance Criteria
+- [x] `npm run build` produces dist/ without `.spec.ts` or `test-setup` files
+- [x] `npm run typecheck` still type-checks test files (uses base tsconfig)
+- [x] `better-sqlite3` in `dependencies`, `@types/better-sqlite3` in `devDependencies`
+- [x] `npm run lint` zero warnings
+- [x] All tests pass
+
+## Reviews
+- Spec review: APPROVE
+- Code review: APPROVE
+- Security audit: APPROVE
+EOF
+)"","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:18:42Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"AskUserQuestion","args":"","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
+{"ts":"2026-04-05T21:18:47Z","session":"35da9e1d-4bdd-4328-9890-5f049e27f020","tool":"Bash","args":"node /Users/monsieurbarti/.claude/plugins/marketplaces/the-forge-flow/tools/dist/tff-tools.cjs slice:close M08-S01 --reason "Slice PR merged"","project":"/Users/monsieurbarti/Projects/The-Forge-Flow-PI"}
