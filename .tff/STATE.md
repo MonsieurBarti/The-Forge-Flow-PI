@@ -1,7 +1,7 @@
 # State — Team Collaboration, Polish & Platform Commands
 
 ## Progress
-- Slices: 6/11 completed
+- Slices: 7/11 completed
 - Tasks: 15/31 completed
 
 ## Slices
@@ -12,7 +12,7 @@
 | Restore + Post-Checkout Hook + Fallback | closed | 0/0 | 0% |
 | Worktree Isolation + Rename + Merge-Back | closed | 0/10 | 0% |
 | State Reconstruction + /tff:sync | closed | 0/0 | 0% |
-| Execution Pipeline Improvements (G-pre, A, B) | discussing | 0/0 | 0% |
+| Execution Pipeline Improvements (G-pre, A, B) | closed | 14/14 | 100% |
 | Compressor Notation | closed | 0/0 | 0% |
 | Platform Commands Batch 1 (Daily Use) | discussing | 0/0 | 0% |
 | Platform Commands Batch 2 (Management) | discussing | 0/0 | 0% |

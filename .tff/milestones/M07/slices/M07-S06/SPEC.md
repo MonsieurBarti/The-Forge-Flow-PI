@@ -113,7 +113,7 @@ The reflection dispatch config:
 - `taskId`: `{originalTaskId}-reflection` (distinct ID for journaling)
 - `agentType`: same as original task agent
 - `systemPrompt`: reflection-specific prompt (review focus, not implementation)
-- `taskPrompt`: includes task ACs + `git diff HEAD~1` output + original task description
+- `taskPrompt`: includes task ACs + `git diff &lt;baseCommit&gt;..HEAD` output + original task description
 - `model`: same model as the original dispatch (or downshifted model on retry)
 - `tools`: read-only subset (`Read`, `Glob`, `Grep`, `Bash` for git diff)
 
@@ -143,7 +143,7 @@ ReflectionIssueSchema = z.object({
 
 2. **Full path** (triggered by fast-path concern OR F-full tier):
    - Fresh `agentDispatch.dispatch(reflectionConfig)` — new session, read-only tools
-   - `reflectionConfig.taskPrompt` includes task ACs + `git diff HEAD~1` output from worktree
+   - `reflectionConfig.taskPrompt` includes task ACs + `git diff &lt;baseCommit&gt;..HEAD` output from worktree
    - Parse structured response → `ReflectionResult`
    - BLOCKER → enter retry/downshift chain (B). Journal `reflection` with `triggeredRetry: true`.
    - WARNING → record in journal, proceed
@@ -232,8 +232,7 @@ abstract class RetryPolicy {
 
 ModelResolutionSchema = z.object({
   action: z.enum(["retry", "downshift", "escalate"]),
-  profile: z.string(),       // resolved profile name
-  model: z.string(),         // resolved model ID (after fallbackChain)
+  profile: z.string(),       // profile name — caller resolves to ResolvedModel via ResolveModelUseCase
   attempt: z.number(),       // current attempt within this profile
 });
 ```
@@ -246,42 +245,83 @@ ModelResolutionSchema = z.object({
 
 ---
 
-### Integration: Modified executeTaskWithOverseer()
+### Integration: Wave-Level Architecture
+
+**Key constraint:** Tasks within a wave run in parallel via `Promise.allSettled`. Per-task worktree restore (`git checkout .`) during parallel execution would corrupt sibling tasks' work. Therefore retry/downshift operates **between waves**, not within them.
+
+#### Two distinct retry scopes
+
+| Scope | When | What | Existing? |
+|---|---|---|---|
+| Overseer retry | Mid-dispatch (timeout/abort) | Same model, same wave, single task | Yes — existing loop in `executeTaskWithOverseer()` |
+| Downshift retry | Post-wave (after all tasks settle) | Different model, retry wave | New — added by this slice |
+
+The overseer retry loop stays unchanged. It handles mid-execution intervention within a single task dispatch. The new downshift chain wraps around at the wave level.
+
+#### Modified execution flow
 
 ```
-PRE-DISPATCH GUARD
-│ preDispatchGuardrail.validate(context)
-│ blocker? → skip, journal, return failure
-│ warning? → journal, continue
-↓
-CHECKPOINT (if fallback.checkpointBeforeRetry)
-│ git commit on worktree branch
-↓
-DISPATCH + OVERSEER RACE (existing, session disposed on completion)
-│ success? ↓
-│ timeout/intervention? → enter retry chain
-↓
-REFLECTION (new step, fresh context)
-│ fast path: parse selfReview from AgentResult
-│ full path: fresh dispatch() w/ git diff + ACs (read-only tools)
-│ blocker? → enter retry chain
-│ warning? → journal, continue
-↓
-POST-DISPATCH GUARDRAIL (existing)
-│ violation? → enter retry chain
-↓
-SUCCESS → record metrics, return
+FOR EACH WAVE:
+  ┌─ PRE-DISPATCH GUARD (per task, parallel-safe — no side effects)
+  │  preDispatchGuardrail.validate(context)
+  │  blocker? → mark task as pre-dispatch-failed, skip dispatch
+  │  warning? → journal, continue
+  │
+  ├─ CHECKPOINT (if fallback.checkpointBeforeRetry, once per wave)
+  │  git commit on worktree branch
+  │
+  ├─ DISPATCH ALL TASKS IN WAVE (parallel, existing)
+  │  Each task: dispatch + overseer race (existing loop)
+  │  Collect results via Promise.allSettled
+  │
+  ├─ REFLECTION (per completed task, sequential — after wave settles)
+  │  fast path: parse selfReview from AgentResult
+  │  full path: fresh dispatch() w/ git diff + ACs (read-only)
+  │  blocker? → mark task as reflection-failed
+  │  warning? → journal, continue
+  │  parse failure? → treat as warning, proceed
+  │
+  ├─ POST-DISPATCH GUARDRAIL (existing, per wave)
+  │  violation? → mark task(s) as guardrail-failed
+  │
+  └─ COLLECT FAILURES
+     all passed? → next wave
+     any failed? → RETRY PASS (below)
 
-RETRY CHAIN (unified):
-│ retryPolicy.resolveModel(taskId, profile, attempt)
-│ action = 'retry'     → checkpoint commit, restore worktree, loop
-│ action = 'downshift'  → checkpoint commit, journal model-downshift, loop
-│ action = 'escalate'   → journal task-escalated, mark failed, return
+RETRY PASS (sequential, after wave):
+  FOR EACH FAILED TASK:
+    retryPolicy.resolveModel(taskId, profile, attempt)
+    action = 'retry'     → checkpoint, git checkout ., re-dispatch (safe: sequential)
+    action = 'downshift'  → checkpoint, journal model-downshift, re-dispatch
+    action = 'escalate'   → journal task-escalated, mark failed permanently
+  After retry pass: if any task still failed → escalate; else merge into next wave
 ```
+
+**Why sequential retry:** After the parallel wave completes, retries run one-at-a-time. This makes `git checkout .` safe — no sibling tasks are running. Retried tasks that succeed have their changes committed before the next retry starts.
+
+#### Scope data: `sliceFilePaths`
+
+`sliceFilePaths` is computed at execution start: union of all task `filePaths` in the slice. Not stored on the Slice aggregate — derived from the task list at runtime.
+
+#### Tier for reflection routing
+
+Reflection tier routing uses the **slice-level** complexity tier (S, F-lite, F-full). All tasks in a slice share the same tier. This is slice metadata from `ExecuteSliceInput.complexity`, not per-task.
+
+#### Git diff range for reflection
+
+Reflection uses `git diff <baseCommit>..HEAD` where `baseCommit` is the checkpoint commit hash (already stored in `Checkpoint.baseCommit`), not `HEAD~1`. This correctly captures all agent changes regardless of commit count.
+
+#### ModelResolution → dispatch config
+
+`RetryPolicy.resolveModel()` returns a `profile` name (string). The caller (`ExecuteSliceUseCase`) then calls `ResolveModelUseCase.execute({ profile })` to resolve it to a `ResolvedModel` (provider + modelId), applying per-profile `fallbackChain` as needed. This keeps `RetryPolicy` as a pure domain port with no infrastructure dependencies.
 
 #### Constructor change
 
 `ExecuteSliceUseCase` gains 1 new dependency: `preDispatchGuardrail: PreDispatchGuardrailPort`
+
+#### Wave-level behavior change
+
+Current behavior: any guardrail blocker aborts the entire execution (`aborted = true; break`). New behavior: guardrail blockers and reflection failures are per-task. Failed tasks enter the retry pass. Only escalated tasks (end of downshift chain) are permanently failed. Wave continues with remaining tasks. **This is a behavioral change to existing code** — wave-level abort is replaced with task-level failure collection.
 
 #### Wiring (execution.extension.ts)
 
@@ -326,7 +366,7 @@ execution/infrastructure/
 execution/domain/ports/retry-policy.port.ts        — add resolveModel() (existing methods unchanged)
 execution/domain/task-metrics.schemas.ts            — reflectionTier, finalProfile, totalAttempts
 execution/domain/journal-entry.schemas.ts           — 4 new entry types with waveIndex
-execution/application/execute-slice.use-case.ts     — new flow: pre-dispatch → dispatch → reflect (fresh) → guardrail → retry chain
+execution/application/execute-slice.use-case.ts     — significant rewrite: wave-level retry pass, per-task failure collection, reflection step, pre-dispatch guard. Replaces wave-level abort with task-level failure.
 execution/infrastructure/policies/default-retry-policy.ts — implement resolveModel() with downshift chain
 execution/infrastructure/pi/execution.extension.ts  — wire PreDispatchGuardrailPort + fallback config
 settings/domain/project-settings.schemas.ts         — add fallback: FallbackStrategySchema to ProjectSettingsSchema
@@ -341,9 +381,10 @@ settings/domain/project-settings.schemas.ts         — add fallback: FallbackSt
 - **AC5:** Layered reflection respects tier — S-tier: fast path only, never full review. F-lite with clean self-review: fast path, no second dispatch. F-lite with concern: full path via fresh `dispatch()` with read-only tools. F-full: always full path
 - **AC6:** Reflection blocker enters retry chain — full-path review returns blocker issue → `RetryPolicy.resolveModel()` called → task re-dispatched or escalated. Journal entry `reflection` emitted with `triggeredRetry: true`
 - **AC7:** Downshift chain end-to-end — with `retryCount: 1`, task fails on quality → retry quality (attempt 2) → fail → downshift to balanced → retry balanced → fail → downshift to budget → retry budget → fail → escalate. Task marked failed. Journal entries: `model-downshift` for each shift, `task-escalated` at terminal
-- **AC8:** Checkpoint committed to worktree branch before each retry attempt and before each downshift. When `checkpointBeforeRetry: false`, no checkpoint commit is created
-- **AC9:** All 4 new journal entry types (`reflection`, `model-downshift`, `task-escalated`, `pre-dispatch-blocked`) emitted with all fields defined in spec (including `waveIndex`). All entries accepted by `ReplayJournalUseCase` without validation errors
-- **AC10:** Pre-dispatch blocker is task-level — blocked task is marked failed, remaining tasks in the wave continue executing
+- **AC8:** Checkpoint committed to worktree branch before each wave and before each sequential retry. When `checkpointBeforeRetry: false`, no checkpoint commit is created. Checkpoint commit verifiable by counting commits between dispatch attempts
+- **AC9:** All 4 new journal entry types (`reflection`, `model-downshift`, `task-escalated`, `pre-dispatch-blocked`) emitted with all fields defined in spec (including `waveIndex`). All entries added to `JournalEntrySchema` discriminated union and accepted by `ReplayJournalUseCase` without validation errors
+- **AC10:** Pre-dispatch blocker is task-level — blocked task is marked failed, remaining tasks in the wave continue executing. Wave-level abort replaced with task-level failure collection
+- **AC11:** Retry pass runs sequentially after wave completes — `git checkout .` is safe because no sibling tasks are executing. Parallel wave tasks are never interrupted by retry
 
 ## Non-Goals
 
