@@ -1,5 +1,3 @@
-import { SliceTransitionError } from "@hexagons/workflow/domain/errors/slice-transition.error";
-import type { SliceTransitionPort } from "@hexagons/workflow/domain/ports/slice-transition.port";
 import {
   type DomainEvent,
   err,
@@ -7,6 +5,8 @@ import {
   ok,
   type Result,
   SilentLoggerAdapter,
+  SliceTransitionError,
+  type SliceTransitionPort,
 } from "@kernel";
 import { GitError } from "@kernel/errors";
 import { WorktreeError } from "@kernel/errors/worktree.error";

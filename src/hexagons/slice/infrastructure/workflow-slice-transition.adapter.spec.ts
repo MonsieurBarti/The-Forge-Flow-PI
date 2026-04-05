@@ -1,6 +1,5 @@
 import { faker } from "@faker-js/faker";
-import { SliceTransitionError } from "@hexagons/workflow/domain/errors/slice-transition.error";
-import { DateProviderPort, isErr, isOk } from "@kernel";
+import { DateProviderPort, isErr, isOk, SliceTransitionError } from "@kernel";
 import { describe, expect, it } from "vitest";
 import { Slice } from "../domain/slice.aggregate";
 import type { SliceStatus } from "../domain/slice.schemas";
