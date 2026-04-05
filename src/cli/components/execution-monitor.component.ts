@@ -39,6 +39,7 @@ export function buildMarkdown(state: ExecutionMonitorState): string {
 export class ExecutionMonitorComponent implements Component {
   private readonly markdown: Markdown;
   private readonly tui: TUI;
+  // biome-ignore lint/correctness/noUnusedPrivateClassMembers: retained to prevent GC of subscription
   private readonly _unsubscribe: () => void;
 
   private state: ExecutionMonitorState = {
@@ -87,7 +88,8 @@ export class ExecutionMonitorComponent implements Component {
         if (!this.state.toolCounts.has(event.toolName)) {
           this.state.toolCounts.set(event.toolName, { total: 0, errors: 0 });
         }
-        this.state.toolCounts.get(event.toolName)!.total++;
+        const toolEntry = this.state.toolCounts.get(event.toolName);
+        if (toolEntry) toolEntry.total++;
         break;
       }
       case "tool_execution_end":

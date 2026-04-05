@@ -388,7 +388,7 @@ export class ExecuteSliceUseCase {
         const reflectionResult = await this.runReflection(
           task,
           agentResult,
-          configs[i]!,
+          configs[i] ?? configs[0],
           input,
           waveIndex,
         );

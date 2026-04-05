@@ -118,7 +118,8 @@ describe("buildMarkdown", () => {
         isExecuting: true,
       }),
     );
-    const toolLine = md.split("\n").find((l) => l.startsWith("**Tools:**"))!;
+    const toolLine = md.split("\n").find((l) => l.startsWith("**Tools:**"));
+    if (!toolLine) throw new Error("Expected toolLine to be defined");
     const readIdx = toolLine.indexOf("Read");
     const bashIdx = toolLine.indexOf("Bash");
     const editIdx = toolLine.indexOf("Edit");

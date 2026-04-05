@@ -108,7 +108,9 @@ describe("GitStateSyncAdapter", () => {
     const call = (mockBranchOps.syncToStateBranch as ReturnType<typeof vi.fn>).mock.calls[0];
     const filesMap: Map<string, string> = call[1];
     expect(filesMap.has("branch-meta.json")).toBe(true);
-    const meta = JSON.parse(filesMap.get("branch-meta.json")!);
+    const metaJson = filesMap.get("branch-meta.json");
+    if (!metaJson) throw new Error("Expected branch-meta.json in filesMap");
+    const meta = JSON.parse(metaJson);
     expect(meta.codeBranch).toBe("milestone/M07");
     expect(meta.parentStateBranch).toBe("tff-state/main");
   });

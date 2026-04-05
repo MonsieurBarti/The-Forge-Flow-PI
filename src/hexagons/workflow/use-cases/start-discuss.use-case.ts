@@ -118,9 +118,12 @@ export class StartDiscussUseCase {
     input: StartDiscussInput,
     milestoneId: string,
   ): Promise<Result<void, StartDiscussError>> {
-    const worktreePort = this.worktreePort!;
-    const stateSyncPort = this.stateSyncPort!;
-    const milestoneRepo = this.milestoneRepo!;
+    if (!this.worktreePort || !this.stateSyncPort || !this.milestoneRepo) {
+      return err(new PersistenceError("Required ports not available for workspace creation"));
+    }
+    const worktreePort = this.worktreePort;
+    const stateSyncPort = this.stateSyncPort;
+    const milestoneRepo = this.milestoneRepo;
 
     // Load milestone to derive branch names
     const msResult = await milestoneRepo.findById(milestoneId);

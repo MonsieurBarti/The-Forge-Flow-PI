@@ -117,7 +117,8 @@ function runContractTests(name: string, factory: () => ReviewRepositoryPort & { 
       const findResult = await repo.findById(review.id);
       expect(isOk(findResult)).toBe(true);
       if (isOk(findResult)) {
-        const found = findResult.data!;
+        if (!findResult.data) throw new Error("Expected findResult.data to be defined");
+        const found = findResult.data;
         expect(found.findings).toHaveLength(2);
         expect(found.findings[0].severity).toBe("critical");
         expect(found.findings[0].message).toBe("Memory leak detected");

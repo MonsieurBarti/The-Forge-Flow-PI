@@ -77,7 +77,7 @@ export class CrashRecoveryStrategy implements RecoveryStrategy {
 
     if (useStateBranch) {
       // Restore via RestoreStateUseCase (state branch is newer)
-      const restoreResult = await this.restoreUseCase.execute(scenario.currentBranch!);
+      const restoreResult = await this.restoreUseCase.execute(scenario.currentBranch as string);
       if (!restoreResult.ok) {
         return ok(this.degradationReport(restoreResult.error.message));
       }
@@ -90,7 +90,7 @@ export class CrashRecoveryStrategy implements RecoveryStrategy {
       return ok({
         type: "crash",
         action: "restored",
-        source: `tff-state/${scenario.currentBranch!}`,
+        source: `tff-state/${scenario.currentBranch}`,
         filesRestored: restoreResult.data.filesRestored,
         warnings: [],
       });

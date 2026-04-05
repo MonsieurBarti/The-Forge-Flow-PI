@@ -14,7 +14,7 @@ export class MismatchRecoveryStrategy implements RecoveryStrategy {
     scenario: RecoveryScenario,
     _tffDir: string,
   ): Promise<Result<RecoveryReport, SyncError>> {
-    const branch = scenario.currentBranch!;
+    const branch = scenario.currentBranch as string;
     const source = `tff-state/${branch}`;
 
     const restoreResult = await this.restoreUseCase.execute(branch);

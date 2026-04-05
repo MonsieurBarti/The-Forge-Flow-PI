@@ -250,7 +250,9 @@ describe("OrchestratePhaseTransitionUseCase", () => {
 
     expect(isOk(result)).toBe(true);
     expect(appendSpy).toHaveBeenCalledOnce();
-    const entry = appendSpy.mock.calls[0]![0];
+    const firstCall = appendSpy.mock.calls[0];
+    if (!firstCall) throw new Error("Expected appendSpy to have been called");
+    const entry = firstCall[0];
     expect(entry.type).toBe("phase-transition");
     expect(entry.sessionId).toBe(session.id);
     expect(entry.milestoneId).toBe(session.milestoneId);

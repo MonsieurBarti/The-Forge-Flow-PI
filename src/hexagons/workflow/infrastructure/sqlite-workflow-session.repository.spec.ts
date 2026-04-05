@@ -26,8 +26,8 @@ function contractSuite(name: string, factory: () => WorkflowSessionRepositoryPor
       const findResult = await repo.findById(session.id);
       expect(findResult.ok).toBe(true);
       if (findResult.ok) {
-        expect(findResult.data).not.toBeNull();
-        const found = findResult.data!;
+        if (!findResult.data) throw new Error("Expected findResult.data to be defined");
+        const found = findResult.data;
         expect(found.id).toBe(session.id);
         expect(found.milestoneId).toBe(session.milestoneId);
         expect(found.sliceId).toBe(session.sliceId);
@@ -61,7 +61,8 @@ function contractSuite(name: string, factory: () => WorkflowSessionRepositoryPor
       const findResult = await repo.findById(session.id);
       expect(findResult.ok).toBe(true);
       if (findResult.ok) {
-        const found = findResult.data!;
+        if (!findResult.data) throw new Error("Expected findResult.data to be defined");
+        const found = findResult.data;
         expect(found.lastEscalation).not.toBeNull();
         expect(found.lastEscalation?.phase).toBe("executing");
       }
