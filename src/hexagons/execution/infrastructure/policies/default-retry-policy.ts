@@ -1,3 +1,4 @@
+import type { ModelResolution } from "../../domain/fallback.schemas";
 import type { RetryDecision } from "../../domain/overseer.schemas";
 import { RetryPolicy } from "../../domain/ports/retry-policy.port";
 
@@ -7,6 +8,8 @@ export class DefaultRetryPolicy extends RetryPolicy {
   constructor(
     private readonly maxRetries: number,
     private readonly retryLoopThreshold: number,
+    private readonly downshiftChain: readonly string[] = ["quality", "balanced", "budget"],
+    private readonly retryCountPerProfile: number = 1,
   ) {
     super();
   }
@@ -39,5 +42,20 @@ export class DefaultRetryPolicy extends RetryPolicy {
 
   reset(taskId: string): void {
     this.failures.delete(taskId);
+  }
+
+  resolveModel(_taskId: string, currentProfile: string, attempt: number): ModelResolution {
+    if (attempt <= this.retryCountPerProfile) {
+      return { action: "retry", profile: currentProfile, attempt };
+    }
+
+    const currentIndex = this.downshiftChain.indexOf(currentProfile);
+    const nextIndex = currentIndex + 1;
+
+    if (nextIndex < this.downshiftChain.length && currentIndex >= 0) {
+      return { action: "downshift", profile: this.downshiftChain[nextIndex], attempt: 0 };
+    }
+
+    return { action: "escalate", profile: currentProfile, attempt };
   }
 }
