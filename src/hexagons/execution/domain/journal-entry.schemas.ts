@@ -122,6 +122,52 @@ export const TurnBoundaryEntrySchema = JournalEntryBaseSchema.extend({
 });
 export type TurnBoundaryEntry = z.infer<typeof TurnBoundaryEntrySchema>;
 
+export const ReflectionEntrySchema = JournalEntryBaseSchema.extend({
+  type: z.literal("reflection"),
+  taskId: IdSchema,
+  waveIndex: z.number().int().min(0),
+  tier: z.enum(["fast", "full"]),
+  passed: z.boolean(),
+  issues: z.array(z.object({
+    severity: z.enum(["blocker", "warning"]),
+    description: z.string().min(1),
+    filePath: z.string().optional(),
+  })).default([]),
+  triggeredRetry: z.boolean(),
+});
+export type ReflectionEntry = z.infer<typeof ReflectionEntrySchema>;
+
+export const ModelDownshiftEntrySchema = JournalEntryBaseSchema.extend({
+  type: z.literal("model-downshift"),
+  taskId: IdSchema,
+  waveIndex: z.number().int().min(0),
+  fromProfile: z.string().min(1),
+  toProfile: z.string().min(1),
+  reason: z.string().min(1),
+  attempt: z.number().int().min(0),
+});
+export type ModelDownshiftEntry = z.infer<typeof ModelDownshiftEntrySchema>;
+
+export const TaskEscalatedEntrySchema = JournalEntryBaseSchema.extend({
+  type: z.literal("task-escalated"),
+  taskId: IdSchema,
+  waveIndex: z.number().int().min(0),
+  reason: z.string().min(1),
+  totalAttempts: z.number().int().min(0),
+  profilesAttempted: z.array(z.string()),
+});
+export type TaskEscalatedEntry = z.infer<typeof TaskEscalatedEntrySchema>;
+
+export const PreDispatchBlockedEntrySchema = JournalEntryBaseSchema.extend({
+  type: z.literal("pre-dispatch-blocked"),
+  taskId: IdSchema,
+  waveIndex: z.number().int().min(0),
+  ruleId: z.string().min(1),
+  severity: z.enum(["blocker", "warning"]),
+  message: z.string().min(1),
+});
+export type PreDispatchBlockedEntry = z.infer<typeof PreDispatchBlockedEntrySchema>;
+
 // ---------------------------------------------------------------------------
 // Discriminated union
 // ---------------------------------------------------------------------------
@@ -138,5 +184,9 @@ export const JournalEntrySchema = z.discriminatedUnion("type", [
   ExecutionLifecycleEntrySchema,
   ToolExecutionEntrySchema,
   TurnBoundaryEntrySchema,
+  ReflectionEntrySchema,
+  ModelDownshiftEntrySchema,
+  TaskEscalatedEntrySchema,
+  PreDispatchBlockedEntrySchema,
 ]);
 export type JournalEntry = z.infer<typeof JournalEntrySchema>;
