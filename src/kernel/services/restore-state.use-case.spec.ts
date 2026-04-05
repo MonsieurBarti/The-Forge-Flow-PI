@@ -39,7 +39,7 @@ function buildTffDir(root: string): string {
 }
 
 const MINIMAL_SNAPSHOT: StateSnapshot = {
-  version: 1,
+  version: 2,
   exportedAt: new Date("2026-01-01T00:00:00.000Z"),
   project: null,
   milestones: [],
@@ -47,6 +47,9 @@ const MINIMAL_SNAPSHOT: StateSnapshot = {
   tasks: [],
   shipRecords: [],
   completionRecords: [],
+  workflowSessions: [],
+  reviews: [],
+  verifications: [],
 };
 
 function makeSnapshot(seed = "a"): StateSnapshot {

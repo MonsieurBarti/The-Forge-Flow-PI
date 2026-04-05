@@ -1,7 +1,11 @@
 import { CompletionRecord } from "@hexagons/review/domain/aggregates/completion-record.aggregate";
+import { Review } from "@hexagons/review/domain/aggregates/review.aggregate";
 import { ShipRecord } from "@hexagons/review/domain/aggregates/ship-record.aggregate";
+import { Verification } from "@hexagons/review/domain/aggregates/verification.aggregate";
 import type { CompletionRecordRepositoryPort } from "@hexagons/review/domain/ports/completion-record-repository.port";
+import type { ReviewRepositoryPort } from "@hexagons/review/domain/ports/review-repository.port";
 import type { ShipRecordRepositoryPort } from "@hexagons/review/domain/ports/ship-record-repository.port";
+import type { VerificationRepositoryPort } from "@hexagons/review/domain/ports/verification-repository.port";
 import { Milestone } from "@hexagons/milestone/domain/milestone.aggregate";
 import type { MilestoneRepositoryPort } from "@hexagons/milestone/domain/ports/milestone-repository.port";
 import { Project } from "@hexagons/project/domain/project.aggregate";
@@ -10,6 +14,8 @@ import { Slice } from "@hexagons/slice/domain/slice.aggregate";
 import type { SliceRepositoryPort } from "@hexagons/slice/domain/ports/slice-repository.port";
 import { Task } from "@hexagons/task/domain/task.aggregate";
 import type { TaskRepositoryPort } from "@hexagons/task/domain/ports/task-repository.port";
+import { WorkflowSession } from "@hexagons/workflow/domain/workflow-session.aggregate";
+import type { WorkflowSessionRepositoryPort } from "@hexagons/workflow/domain/ports/workflow-session.repository.port";
 import { SyncError } from "@kernel/errors";
 import { err, ok, type Result } from "@kernel/result";
 import {
@@ -25,6 +31,9 @@ export interface StateImporterDeps {
   taskRepo: TaskRepositoryPort;
   shipRecordRepo: ShipRecordRepositoryPort;
   completionRecordRepo: CompletionRecordRepositoryPort;
+  workflowSessionRepo: WorkflowSessionRepositoryPort;
+  reviewRepo: ReviewRepositoryPort;
+  verificationRepo: VerificationRepositoryPort;
 }
 
 export class StateImporter {
@@ -46,6 +55,9 @@ export class StateImporter {
       taskRepo.reset();
       shipRecordRepo.reset();
       completionRecordRepo.reset();
+      this.deps.workflowSessionRepo.reset();
+      this.deps.reviewRepo.reset();
+      this.deps.verificationRepo.reset();
 
       // Import in dependency order: project → milestones → slices → tasks → records
       if (snapshot.project) {
@@ -81,6 +93,24 @@ export class StateImporter {
       for (const crProps of snapshot.completionRecords) {
         const record = CompletionRecord.reconstitute(crProps);
         const result = await completionRecordRepo.save(record);
+        if (!result.ok) return err(new SyncError("IMPORT_FAILED", result.error.message));
+      }
+
+      for (const wsProps of snapshot.workflowSessions) {
+        const session = WorkflowSession.reconstitute(wsProps);
+        const result = await this.deps.workflowSessionRepo.save(session);
+        if (!result.ok) return err(new SyncError("IMPORT_FAILED", result.error.message));
+      }
+
+      for (const rvProps of snapshot.reviews) {
+        const review = Review.reconstitute(rvProps);
+        const result = await this.deps.reviewRepo.save(review);
+        if (!result.ok) return err(new SyncError("IMPORT_FAILED", result.error.message));
+      }
+
+      for (const vfProps of snapshot.verifications) {
+        const verification = Verification.reconstitute(vfProps);
+        const result = await this.deps.verificationRepo.save(verification);
         if (!result.ok) return err(new SyncError("IMPORT_FAILED", result.error.message));
       }
 

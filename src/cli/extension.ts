@@ -306,6 +306,9 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     taskRepo,
     shipRecordRepo: shipRecordRepository,
     completionRecordRepo: completionRecordRepository,
+    workflowSessionRepo,
+    reviewRepo: reviewRepository,
+    verificationRepo: verificationRepository,
   });
   const stateImporter = new StateImporter({
     projectRepo,
@@ -314,6 +317,9 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     taskRepo,
     shipRecordRepo: shipRecordRepository,
     completionRecordRepo: completionRecordRepository,
+    workflowSessionRepo,
+    reviewRepo: reviewRepository,
+    verificationRepo: verificationRepository,
   });
   const gitStateSyncAdapter = new GitStateSyncAdapter({
     stateBranchOps,

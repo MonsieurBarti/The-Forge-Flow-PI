@@ -5,9 +5,12 @@ import { SlicePropsSchema } from "@hexagons/slice/domain/slice.schemas";
 import { TaskPropsSchema } from "@hexagons/task/domain/task.schemas";
 import { ShipRecordPropsSchema } from "@hexagons/review/domain/schemas/ship.schemas";
 import { CompletionRecordPropsSchema } from "@hexagons/review/domain/schemas/completion.schemas";
+import { WorkflowSessionPropsSchema } from "@hexagons/workflow/domain/workflow-session.schemas";
+import { ReviewPropsSchema } from "@hexagons/review/domain/schemas/review.schemas";
+import { VerificationPropsSchema } from "@hexagons/review/domain/schemas/verification.schemas";
 import { z } from "zod";
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export const StateSnapshotSchema = z.object({
   version: z.number().int().positive(),
@@ -18,6 +21,9 @@ export const StateSnapshotSchema = z.object({
   tasks: z.array(TaskPropsSchema),
   shipRecords: z.array(ShipRecordPropsSchema).default([]),
   completionRecords: z.array(CompletionRecordPropsSchema).default([]),
+  workflowSessions: z.array(WorkflowSessionPropsSchema).default([]),
+  reviews: z.array(ReviewPropsSchema).default([]),
+  verifications: z.array(VerificationPropsSchema).default([]),
 });
 export type StateSnapshot = z.infer<typeof StateSnapshotSchema>;
 
@@ -27,7 +33,7 @@ export { BranchMetaSchema, type BranchMeta } from "@kernel/schemas/branch-meta.s
 type Migration = (old: Record<string, unknown>) => Record<string, unknown>;
 
 const MIGRATIONS: Record<number, Migration> = {
-  // Future migrations go here: e.g. 1 → 2
+  1: (old) => ({ ...old, workflowSessions: [], reviews: [], verifications: [] }),
 };
 
 export function migrateSnapshot(raw: Record<string, unknown>): Record<string, unknown> {

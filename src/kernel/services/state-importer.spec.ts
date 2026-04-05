@@ -1,9 +1,15 @@
 import { InMemoryCompletionRecordRepository } from "@hexagons/review/infrastructure/repositories/completion-record/in-memory-completion-record.repository";
+import { InMemoryReviewRepository } from "@hexagons/review/infrastructure/repositories/review/in-memory-review.repository";
 import { InMemoryShipRecordRepository } from "@hexagons/review/infrastructure/repositories/ship-record/in-memory-ship-record.repository";
+import { InMemoryVerificationRepository } from "@hexagons/review/infrastructure/repositories/verification/in-memory-verification.repository";
+import { ReviewBuilder } from "@hexagons/review/domain/builders/review.builder";
+import { Verification } from "@hexagons/review/domain/aggregates/verification.aggregate";
 import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/in-memory-milestone.repository";
 import { InMemoryProjectRepository } from "@hexagons/project/infrastructure/in-memory-project.repository";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
 import { InMemoryTaskRepository } from "@hexagons/task/infrastructure/in-memory-task.repository";
+import { InMemoryWorkflowSessionRepository } from "@hexagons/workflow/infrastructure/in-memory-workflow-session.repository";
+import { WorkflowSessionBuilder } from "@hexagons/workflow/domain/workflow-session.builder";
 import { MilestoneBuilder } from "@hexagons/milestone/domain/milestone.builder";
 import { ProjectBuilder } from "@hexagons/project/domain/project.builder";
 import { SliceBuilder } from "@hexagons/slice/domain/slice.builder";
@@ -21,6 +27,9 @@ function createRepos() {
     taskRepo: new InMemoryTaskRepository(),
     shipRecordRepo: new InMemoryShipRecordRepository(),
     completionRecordRepo: new InMemoryCompletionRecordRepository(),
+    workflowSessionRepo: new InMemoryWorkflowSessionRepository(),
+    reviewRepo: new InMemoryReviewRepository(),
+    verificationRepo: new InMemoryVerificationRepository(),
   };
 }
 
@@ -132,5 +141,111 @@ describe("StateImporter", () => {
 
     const t = await targetRepos.taskRepo.findById(taskId);
     expect(t.ok && t.data?.label).toBe("T01");
+  });
+
+  it("v2 round-trip: export with workflow entities, re-import, verify survival", async () => {
+    const sourceRepos = createRepos();
+    const projectId = crypto.randomUUID();
+    const milestoneId = crypto.randomUUID();
+    const sliceId = crypto.randomUUID();
+
+    const project = new ProjectBuilder().withId(projectId).build();
+    sourceRepos.projectRepo.seed(project);
+    const milestone = new MilestoneBuilder()
+      .withId(milestoneId)
+      .withProjectId(projectId)
+      .withLabel("M01")
+      .build();
+    sourceRepos.milestoneRepo.seed(milestone);
+
+    // Seed workflow session
+    const ws = new WorkflowSessionBuilder()
+      .withMilestoneId(milestoneId)
+      .withSliceId(sliceId)
+      .withCurrentPhase("executing")
+      .build();
+    sourceRepos.workflowSessionRepo.seed(ws);
+
+    // Seed review
+    const review = new ReviewBuilder().withSliceId(sliceId).build();
+    sourceRepos.reviewRepo.seed(review);
+
+    // Seed verification
+    const verification = Verification.createNew({
+      id: crypto.randomUUID(),
+      sliceId,
+      agentIdentity: "test-agent",
+      fixCycleIndex: 0,
+      now: new Date(),
+    });
+    sourceRepos.verificationRepo.seed(verification);
+
+    // Export
+    const exporter = new StateExporter(sourceRepos);
+    const exportResult = await exporter.export();
+    expect(exportResult.ok).toBe(true);
+    if (!exportResult.ok) return;
+
+    // JSON round-trip
+    const json = JSON.parse(JSON.stringify(exportResult.data));
+
+    // Import into fresh repos
+    const targetRepos = createRepos();
+    const importer = new StateImporter(targetRepos);
+    const importResult = await importer.import(json);
+    expect(importResult.ok).toBe(true);
+
+    // Verify workflow session survived
+    const wsResult = await targetRepos.workflowSessionRepo.findAll();
+    expect(wsResult.ok).toBe(true);
+    if (wsResult.ok) {
+      expect(wsResult.data).toHaveLength(1);
+      expect(wsResult.data[0].milestoneId).toBe(milestoneId);
+      expect(wsResult.data[0].currentPhase).toBe("executing");
+    }
+
+    // Verify review survived
+    const rvResult = await targetRepos.reviewRepo.findAll();
+    expect(rvResult.ok).toBe(true);
+    if (rvResult.ok) {
+      expect(rvResult.data).toHaveLength(1);
+      expect(rvResult.data[0].sliceId).toBe(sliceId);
+    }
+
+    // Verify verification survived
+    const vfResult = await targetRepos.verificationRepo.findAll();
+    expect(vfResult.ok).toBe(true);
+    if (vfResult.ok) {
+      expect(vfResult.data).toHaveLength(1);
+      expect(vfResult.data[0].sliceId).toBe(sliceId);
+    }
+  });
+
+  it("imports v1 snapshot (missing workflow fields) with migration", async () => {
+    const repos = createRepos();
+    const importer = new StateImporter(repos);
+
+    const v1Snapshot = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      project: null,
+      milestones: [],
+      slices: [],
+      tasks: [],
+      shipRecords: [],
+      completionRecords: [],
+      // no workflowSessions, reviews, verifications
+    };
+
+    const result = await importer.import(v1Snapshot);
+    expect(result.ok).toBe(true);
+
+    // Should have empty arrays after migration
+    const wsResult = await repos.workflowSessionRepo.findAll();
+    expect(wsResult.ok && wsResult.data).toEqual([]);
+    const rvResult = await repos.reviewRepo.findAll();
+    expect(rvResult.ok && rvResult.data).toEqual([]);
+    const vfResult = await repos.verificationRepo.findAll();
+    expect(vfResult.ok && vfResult.data).toEqual([]);
   });
 });

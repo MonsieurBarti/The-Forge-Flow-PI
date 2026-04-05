@@ -1,9 +1,12 @@
 import type { CompletionRecordRepositoryPort } from "@hexagons/review/domain/ports/completion-record-repository.port";
+import type { ReviewRepositoryPort } from "@hexagons/review/domain/ports/review-repository.port";
 import type { ShipRecordRepositoryPort } from "@hexagons/review/domain/ports/ship-record-repository.port";
+import type { VerificationRepositoryPort } from "@hexagons/review/domain/ports/verification-repository.port";
 import type { MilestoneRepositoryPort } from "@hexagons/milestone/domain/ports/milestone-repository.port";
 import type { ProjectRepositoryPort } from "@hexagons/project/domain/ports/project-repository.port";
 import type { SliceRepositoryPort } from "@hexagons/slice/domain/ports/slice-repository.port";
 import type { TaskRepositoryPort } from "@hexagons/task/domain/ports/task-repository.port";
+import type { WorkflowSessionRepositoryPort } from "@hexagons/workflow/domain/ports/workflow-session.repository.port";
 import { SyncError } from "@kernel/errors";
 import { err, ok, type Result } from "@kernel/result";
 import {
@@ -18,6 +21,9 @@ export interface StateExporterDeps {
   taskRepo: TaskRepositoryPort;
   shipRecordRepo: ShipRecordRepositoryPort;
   completionRecordRepo: CompletionRecordRepositoryPort;
+  workflowSessionRepo: WorkflowSessionRepositoryPort;
+  reviewRepo: ReviewRepositoryPort;
+  verificationRepo: VerificationRepositoryPort;
 }
 
 export class StateExporter {
@@ -66,6 +72,18 @@ export class StateExporter {
       const completionResult = await completionRecordRepo.findAll();
       if (!completionResult.ok) return err(new SyncError("EXPORT_FAILED", completionResult.error.message));
 
+      // Workflow sessions
+      const wsResult = await this.deps.workflowSessionRepo.findAll();
+      if (!wsResult.ok) return err(new SyncError("EXPORT_FAILED", wsResult.error.message));
+
+      // Reviews
+      const rvResult = await this.deps.reviewRepo.findAll();
+      if (!rvResult.ok) return err(new SyncError("EXPORT_FAILED", rvResult.error.message));
+
+      // Verifications
+      const vfResult = await this.deps.verificationRepo.findAll();
+      if (!vfResult.ok) return err(new SyncError("EXPORT_FAILED", vfResult.error.message));
+
       const snapshot: StateSnapshot = {
         version: SCHEMA_VERSION,
         exportedAt: new Date(),
@@ -75,6 +93,9 @@ export class StateExporter {
         tasks: taskProps as StateSnapshot["tasks"],
         shipRecords: shipResult.data.map((r) => r.toJSON()),
         completionRecords: completionResult.data.map((r) => r.toJSON()),
+        workflowSessions: wsResult.data.map((ws) => ws.toJSON()),
+        reviews: rvResult.data.map((r) => r.toJSON()),
+        verifications: vfResult.data.map((v) => v.toJSON()),
       };
 
       return ok(snapshot);
