@@ -80,7 +80,7 @@ describe("WorkflowSliceTransitionAdapter", () => {
     expect(isErr(result)).toBe(true);
     if (isErr(result)) {
       expect(result.error).toBeInstanceOf(SliceTransitionError);
-      expect(result.error.code).toBe("WORKFLOW.SLICE_TRANSITION_FAILED");
+      expect(result.error.code).toBe("SLICE_TRANSITION_FAILED");
     }
   });
 

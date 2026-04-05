@@ -70,6 +70,7 @@ export {
   GitHubError,
   InvalidTransitionError,
   PersistenceError,
+  SliceTransitionError,
   SyncError,
   WorktreeError,
 } from "./errors";
@@ -129,6 +130,7 @@ export {
   WorktreeInfoSchema,
   WorktreePort,
 } from "./ports";
+export { SliceTransitionPort } from "./ports/slice-transition.port";
 export type { Result } from "./result";
 export { err, isErr, isOk, match, ok } from "./result";
 export type { ComplexityTier, Id, ModelProfileName, Timestamp } from "./schemas";
