@@ -6,6 +6,8 @@ import type { EnvVarPort } from "../domain/ports/env-var.port";
 import type { SettingsFilePort } from "../domain/ports/settings-file.port";
 import { ENV_VAR_MAP, type RawSettingsSources } from "../domain/project-settings.schemas";
 
+export type { RawSettingsSources };
+
 // Numeric env vars that need Number() parsing
 const NUMERIC_ENV_VARS = new Set(["TFF_AUTONOMY_MAX_RETRIES", "TFF_BEADS_TIMEOUT"]);
 
