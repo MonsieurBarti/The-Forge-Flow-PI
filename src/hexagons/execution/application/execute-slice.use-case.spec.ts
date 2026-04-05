@@ -31,6 +31,7 @@ import { InMemoryGuardrailAdapter } from "../infrastructure/adapters/guardrails/
 import { InMemoryJournalRepository } from "../infrastructure/repositories/journal/in-memory-journal.repository";
 import { InMemoryMetricsRepository } from "../infrastructure/repositories/metrics/in-memory-metrics.repository";
 import { InMemoryOverseerAdapter } from "../infrastructure/adapters/overseer/in-memory-overseer.adapter";
+import { InMemoryPreDispatchAdapter } from "../infrastructure/adapters/pre-dispatch/in-memory-pre-dispatch.adapter";
 import { InMemoryWorktreeAdapter } from "@kernel/infrastructure/worktree/in-memory-worktree.adapter";
 import type { ExecuteSliceInput } from "./execute-slice.schemas";
 import { ExecuteSliceUseCase } from "./execute-slice.use-case";
@@ -107,6 +108,7 @@ describe("ExecuteSliceUseCase", () => {
   let guardrailAdapter: InMemoryGuardrailAdapter;
   let mockGitPort: InMemoryGitAdapter;
   let overseerAdapter: InMemoryOverseerAdapter;
+  let preDispatchAdapter: InMemoryPreDispatchAdapter;
   let retryPolicy: DefaultRetryPolicy;
   const OVERSEER_CONFIG: OverseerConfig = {
     enabled: true,
@@ -129,6 +131,7 @@ describe("ExecuteSliceUseCase", () => {
     guardrailAdapter = new InMemoryGuardrailAdapter();
     mockGitPort = new InMemoryGitAdapter();
     overseerAdapter = new InMemoryOverseerAdapter();
+    preDispatchAdapter = new InMemoryPreDispatchAdapter();
     retryPolicy = new DefaultRetryPolicy(2, 3);
 
     // Seed worktree for non-S tier by default
@@ -156,6 +159,7 @@ describe("ExecuteSliceUseCase", () => {
       overseer: overseerAdapter,
       retryPolicy,
       overseerConfig: OVERSEER_CONFIG,
+      preDispatchGuardrail: preDispatchAdapter,
     });
   });
 
@@ -316,9 +320,9 @@ describe("ExecuteSliceUseCase", () => {
   });
 
   // -------------------------------------------------------------------------
-  // 5. aborts on task failure — in-flight complete, no further waves (AC3)
+  // 5. collects per-task failures without aborting (AC3)
   // -------------------------------------------------------------------------
-  it("aborts on task failure — in-flight complete, ¬further waves (AC3)", async () => {
+  it("collects per-task failures — succeeding sibling completes, wave advances (AC3)", async () => {
     const t1 = makeTask(T1_ID, "T01");
     const t2 = makeTask(T2_ID, "T02");
     const t3 = makeTask(T3_ID, "T03", [T1_ID, T2_ID]);
@@ -335,16 +339,18 @@ describe("ExecuteSliceUseCase", () => {
       T2_ID,
       ok(new AgentResultBuilder().withTaskId(T2_ID).asBlocked("Missing dep").build()),
     );
+    agentDispatch.givenResult(
+      T3_ID,
+      ok(new AgentResultBuilder().withTaskId(T3_ID).asDone().build()),
+    );
 
     const result = await useCase.execute(makeInput());
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.data.aborted).toBe(true);
+    // No longer aborts on per-task failure
     expect(result.data.failedTasks).toContain(T2_ID);
-    // T03 should NOT be dispatched (wave 1 never started)
-    expect(agentDispatch.wasDispatched(T3_ID)).toBe(false);
-    expect(result.data.wavesCompleted).toBe(0);
+    expect(result.data.completedTasks).toContain(T1_ID);
   });
 
   // -------------------------------------------------------------------------
@@ -478,23 +484,35 @@ describe("ExecuteSliceUseCase", () => {
   });
 
   // -------------------------------------------------------------------------
-  // 9. does NOT emit AllTasksCompletedEvent when aborted (AC6)
+  // 9. does NOT emit AllTasksCompletedEvent when aborted via signal (AC6)
   // -------------------------------------------------------------------------
-  it("does NOT emit AllTasksCompletedEvent when aborted (AC6)", async () => {
+  it("does NOT emit AllTasksCompletedEvent when aborted via signal (AC6)", async () => {
     const t1 = makeTask(T1_ID, "T01");
+    const t2 = makeTask(T2_ID, "T02", [T1_ID]);
     taskRepo.seed(t1);
+    taskRepo.seed(t2);
 
     agentDispatch.givenResult(
       T1_ID,
-      ok(new AgentResultBuilder().withTaskId(T1_ID).asBlocked("err").build()),
+      ok(new AgentResultBuilder().withTaskId(T1_ID).asDone().build()),
     );
+
+    const controller = new AbortController();
+    const originalDispatch = agentDispatch.dispatch.bind(agentDispatch);
+    let dispatchCount = 0;
+    agentDispatch.dispatch = async (cfg: AgentDispatchConfig) => {
+      dispatchCount++;
+      const result = await originalDispatch(cfg);
+      if (dispatchCount === 1) controller.abort();
+      return result;
+    };
 
     const events: DomainEvent[] = [];
     eventBus.subscribe(EVENT_NAMES.ALL_TASKS_COMPLETED, async (e) => {
       events.push(e);
     });
 
-    await useCase.execute(makeInput());
+    await useCase.execute(makeInput(), controller.signal);
 
     expect(events.length).toBe(0);
   });
@@ -636,7 +654,7 @@ describe("ExecuteSliceUseCase", () => {
   // Guardrail validation
   // -------------------------------------------------------------------------
   describe("guardrail validation", () => {
-    it("blocks wave when guardrail returns error violations", async () => {
+    it("collects guardrail blocker as failed task without aborting", async () => {
       const t1 = makeTask(T1_ID, "T01");
       taskRepo.seed(t1);
 
@@ -664,7 +682,6 @@ describe("ExecuteSliceUseCase", () => {
       expect(result.ok).toBe(true);
       if (!result.ok) return;
       expect(result.data.failedTasks).toContain(T1_ID);
-      expect(result.data.aborted).toBe(true);
     });
 
     it("proceeds with warnings attached as concerns", async () => {
@@ -727,7 +744,6 @@ describe("ExecuteSliceUseCase", () => {
       expect(guardrailAdapter.wasValidated()).toBe(true);
       expect(result.ok).toBe(true);
       if (!result.ok) return;
-      expect(result.data.aborted).toBe(true);
       expect(result.data.failedTasks).toContain(T1_ID);
     });
 
@@ -820,6 +836,7 @@ describe("ExecuteSliceUseCase", () => {
         overseer: overseerAdapter,
         retryPolicy,
         overseerConfig: disabledConfig,
+        preDispatchGuardrail: preDispatchAdapter,
       });
 
       const t1 = makeTask(T1_ID, "T01");
@@ -994,6 +1011,7 @@ describe("ExecuteSliceUseCase", () => {
         overseer: overseerAdapter,
         retryPolicy: noRetryPolicy,
         overseerConfig: OVERSEER_CONFIG,
+        preDispatchGuardrail: preDispatchAdapter,
       });
 
       const t1 = makeTask(T1_ID, "T01");
@@ -1015,10 +1033,9 @@ describe("ExecuteSliceUseCase", () => {
 
       const result = await executePromise;
 
-      // Should fail (escalated, no retry)
+      // Should fail (escalated, no retry) — collected as failure, not aborted
       expect(result.ok).toBe(true);
       if (!result.ok) return;
-      expect(result.data.aborted).toBe(true);
       expect(result.data.failedTasks).toContain(T1_ID);
 
       // Verify escalation journal entry
@@ -1085,6 +1102,145 @@ describe("ExecuteSliceUseCase", () => {
       if (result.ok) {
         expect(result.data.aborted).toBe(false);
       }
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Pre-dispatch guardrail (T11)
+  // -----------------------------------------------------------------------
+  describe("pre-dispatch guardrail", () => {
+    it("blocks dispatch when pre-dispatch guardrail returns blocker", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      preDispatchAdapter.setReport({
+        passed: false,
+        violations: [
+          { ruleId: "scope-containment", severity: "blocker", message: "File outside scope" },
+        ],
+        checkedAt: new Date().toISOString(),
+      });
+
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(new AgentResultBuilder().withTaskId(T1_ID).asDone().build()),
+      );
+
+      const result = await useCase.execute(makeInput());
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      // Task should NOT be dispatched (pre-dispatch blocked)
+      expect(agentDispatch.wasDispatched(T1_ID)).toBe(false);
+      expect(result.data.failedTasks).toContain(T1_ID);
+    });
+
+    it("journals pre-dispatch-blocked entry on blocker", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      preDispatchAdapter.setReport({
+        passed: false,
+        violations: [
+          { ruleId: "scope-containment", severity: "blocker", message: "File outside scope" },
+        ],
+        checkedAt: new Date().toISOString(),
+      });
+
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(new AgentResultBuilder().withTaskId(T1_ID).asDone().build()),
+      );
+
+      await useCase.execute(makeInput());
+
+      const journalResult = await journalRepo.readAll(SLICE_ID);
+      expect(journalResult.ok).toBe(true);
+      if (!journalResult.ok) return;
+      const pdEntries = journalResult.data.filter((e) => e.type === "pre-dispatch-blocked");
+      expect(pdEntries.length).toBeGreaterThanOrEqual(1);
+      const entry = pdEntries[0];
+      if (entry?.type !== "pre-dispatch-blocked") return;
+      expect(entry.taskId).toBe(T1_ID);
+      expect(entry.severity).toBe("blocker");
+    });
+
+    it("proceeds with dispatch on pre-dispatch warning", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      taskRepo.seed(t1);
+
+      preDispatchAdapter.setReport({
+        passed: true,
+        violations: [
+          { ruleId: "budget-check", severity: "warning", message: "Budget running low" },
+        ],
+        checkedAt: new Date().toISOString(),
+      });
+
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(new AgentResultBuilder().withTaskId(T1_ID).asDone().build()),
+      );
+
+      const result = await useCase.execute(makeInput());
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      // Task SHOULD be dispatched despite warning
+      expect(agentDispatch.wasDispatched(T1_ID)).toBe(true);
+      expect(result.data.completedTasks).toContain(T1_ID);
+
+      // Warning should be journaled
+      const journalResult = await journalRepo.readAll(SLICE_ID);
+      expect(journalResult.ok).toBe(true);
+      if (!journalResult.ok) return;
+      const pdEntries = journalResult.data.filter((e) => e.type === "pre-dispatch-blocked");
+      expect(pdEntries.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("one task blocked, sibling in wave still dispatched and succeeds", async () => {
+      const t1 = makeTask(T1_ID, "T01");
+      const t2 = makeTask(T2_ID, "T02");
+      taskRepo.seed(t1);
+      taskRepo.seed(t2);
+
+      // Set up per-task pre-dispatch: block T1 but allow T2
+      // InMemoryPreDispatchAdapter returns same report for all tasks,
+      // so we use a custom implementation
+      let callCount = 0;
+      const origValidate = preDispatchAdapter.validate.bind(preDispatchAdapter);
+      preDispatchAdapter.validate = async (ctx) => {
+        callCount++;
+        if (ctx.taskId === T1_ID) {
+          return ok({
+            passed: false,
+            violations: [
+              { ruleId: "scope", severity: "blocker" as const, message: "blocked" },
+            ],
+            checkedAt: new Date().toISOString(),
+          });
+        }
+        return origValidate(ctx);
+      };
+
+      agentDispatch.givenResult(
+        T1_ID,
+        ok(new AgentResultBuilder().withTaskId(T1_ID).asDone().build()),
+      );
+      agentDispatch.givenResult(
+        T2_ID,
+        ok(new AgentResultBuilder().withTaskId(T2_ID).asDone().build()),
+      );
+
+      const result = await useCase.execute(makeInput());
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      // T1 blocked, T2 dispatched
+      expect(agentDispatch.wasDispatched(T1_ID)).toBe(false);
+      expect(agentDispatch.wasDispatched(T2_ID)).toBe(true);
+      expect(result.data.failedTasks).toContain(T1_ID);
+      expect(result.data.completedTasks).toContain(T2_ID);
     });
   });
 });

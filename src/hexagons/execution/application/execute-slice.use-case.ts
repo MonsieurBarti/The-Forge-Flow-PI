@@ -10,12 +10,12 @@ import {
   ok,
   type Result,
 } from "@kernel";
-import type {
-  AgentConcern,
-  AgentDispatchConfig,
+import {
+  type AgentConcern,
+  type AgentDispatchConfig,
   AgentDispatchError,
-  AgentDispatchPort,
-  AgentResult,
+  type AgentDispatchPort,
+  type AgentResult,
 } from "@kernel/agents";
 import { isSuccessfulStatus } from "@kernel/agents";
 import type { GitPort } from "@kernel/ports/git.port";
@@ -28,8 +28,10 @@ import type { GuardrailValidationReport, GuardrailViolation } from "../domain/gu
 import type {
   GuardrailViolationEntry,
   OverseerInterventionEntry,
+  PreDispatchBlockedEntry,
 } from "../domain/journal-entry.schemas";
 import type { OverseerConfig, OverseerVerdict } from "../domain/overseer.schemas";
+import type { PreDispatchGuardrailPort } from "../domain/ports/pre-dispatch-guardrail.port";
 import type { CheckpointRepositoryPort } from "../domain/ports/checkpoint-repository.port";
 import type { JournalRepositoryPort } from "../domain/ports/journal-repository.port";
 import type { MetricsRepositoryPort } from "../domain/ports/metrics-repository.port";
@@ -70,6 +72,7 @@ interface ExecuteSliceUseCaseDeps {
   readonly overseer: OverseerPort;
   readonly retryPolicy: RetryPolicy;
   readonly overseerConfig: OverseerConfig;
+  readonly preDispatchGuardrail: PreDispatchGuardrailPort;
 }
 
 export class ExecuteSliceUseCase {
@@ -193,6 +196,9 @@ export class ExecuteSliceUseCase {
       return err(ExecutionError.noTasks(input.sliceId));
     }
 
+    // Compute slice-wide file paths for pre-dispatch context
+    const sliceFilePaths = [...new Set(tasks.flatMap((t) => [...t.filePaths]))];
+
     // 2. Detect waves
     const taskInputs: TaskDependencyInput[] = tasks.map((t) => ({
       id: t.id,
@@ -312,11 +318,53 @@ export class ExecuteSliceUseCase {
         }),
       );
 
-      // 6e. Dispatch all tasks in parallel via Promise.allSettled
+      // 6e. Pre-dispatch validation + dispatch via Promise.allSettled
+      const preDispatchBlocked = new Set<string>();
       const settled = await Promise.allSettled(
-        waveTasks.map((task, i) => {
+        waveTasks.map(async (task, i) => {
           const config = configs[i];
           if (!config) throw new Error(`Missing config for task index ${i}`);
+
+          // Pre-dispatch guard
+          const pdContext = {
+            taskId: task.id,
+            sliceId: input.sliceId,
+            milestoneId: input.milestoneId,
+            taskFilePaths: [...task.filePaths],
+            sliceFilePaths,
+            worktreePath: input.workingDirectory,
+            expectedBranch: `slice/${input.sliceId}`,
+            agentModel: `${input.model.provider}/${input.model.modelId}`,
+            agentTools: config.tools,
+            upstreamTasks: [...task.blockedBy].map((id) => {
+              const t = taskMap.get(id);
+              return { id, status: t?.status ?? "unknown" };
+            }),
+          };
+          const pdResult = await this.deps.preDispatchGuardrail.validate(pdContext);
+          if (pdResult.ok) {
+            const report = pdResult.data;
+            // Journal all violations (blockers and warnings)
+            for (const v of report.violations) {
+              const entry: Omit<PreDispatchBlockedEntry, "seq"> = {
+                type: "pre-dispatch-blocked",
+                sliceId: input.sliceId,
+                timestamp: this.deps.dateProvider.now(),
+                taskId: task.id,
+                waveIndex,
+                ruleId: v.ruleId,
+                severity: v.severity,
+                message: v.message,
+              };
+              await this.deps.journalRepository.append(input.sliceId, entry);
+            }
+            if (!report.passed) {
+              // Blocker — skip dispatch
+              preDispatchBlocked.add(task.id);
+              return err(AgentDispatchError.sessionAborted(task.id));
+            }
+          }
+
           return this.executeTaskWithOverseer(task, config, input);
         }),
       );
@@ -393,10 +441,9 @@ export class ExecuteSliceUseCase {
         }
       }
 
-      if (guardrailBlocked) {
-        failedTasks.push(...waveFailedTasks);
-        aborted = true;
-        break;
+      // Add pre-dispatch blocked tasks to failures
+      for (const blockedId of preDispatchBlocked) {
+        waveFailedTasks.push(blockedId);
       }
 
       // 6f. Process settled results
@@ -404,6 +451,9 @@ export class ExecuteSliceUseCase {
         const settlement = settled[i];
         const task = waveTasks[i];
         if (!settlement || !task) continue;
+
+        // Skip pre-dispatch blocked tasks (already handled)
+        if (preDispatchBlocked.has(task.id)) continue;
 
         if (settlement.status === "fulfilled") {
           const dispatchResult = settlement.value;
@@ -470,11 +520,9 @@ export class ExecuteSliceUseCase {
         }
       }
 
-      // 6g. Fail-fast on failures
+      // 6g. Collect failures (no longer fail-fast; failures enter retry pass)
       if (waveFailedTasks.length > 0) {
         failedTasks.push(...waveFailedTasks);
-        aborted = true;
-        break;
       }
 
       // 6h. Advance wave
