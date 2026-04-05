@@ -28,6 +28,12 @@ export function createZodTool<T extends z.ZodObject<z.ZodRawShape>>(
     target: "draft-07",
     unrepresentable: "any",
   });
+  // PI SDK uses TypeBox which doesn't emit additionalProperties.
+  // Zod does — strip it to match PI's expected schema shape and avoid
+  // AJV rejecting hallucinated extra properties from LLMs.
+  if ("additionalProperties" in jsonSchema) {
+    delete (jsonSchema as Record<string, unknown>).additionalProperties;
+  }
 
   return {
     name: config.name,
