@@ -198,7 +198,8 @@ describe("GitStateSyncAdapter", () => {
       const lockPath = join(tffDir, ".lock");
       const lockResult = externalLock.acquire(lockPath);
       expect(lockResult.ok).toBe(true);
-      const externalRelease = lockResult.data!;
+      if (!lockResult.ok) throw new Error("lock failed");
+      const externalRelease = lockResult.data;
 
       // Adapter should succeed using caller's lock (not try to re-acquire)
       const result = await adapter.syncToStateBranch("milestone/M07", tffDir, { lockToken: externalRelease });
@@ -222,7 +223,8 @@ describe("GitStateSyncAdapter", () => {
       const lockPath = join(tffDir, ".lock");
       const lockResult = externalLock.acquire(lockPath);
       expect(lockResult.ok).toBe(true);
-      const externalRelease = lockResult.data!;
+      if (!lockResult.ok) throw new Error("lock failed");
+      const externalRelease = lockResult.data;
 
       // Adapter should succeed using caller's lock
       const result = await adapter.restoreFromStateBranch("milestone/M07", tffDir, { lockToken: externalRelease });

@@ -50,7 +50,7 @@ function contractSuite(
 
       // Trigger a transition to blocked to get an escalation
       const ctx = {
-        complexityTier: "M" as const,
+        complexityTier: "F-lite" as const,
         retryCount: 4,
         maxRetries: 3,
         allSlicesClosed: false,

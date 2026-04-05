@@ -41,6 +41,7 @@ import { CritiqueReflectionService } from "@hexagons/review/domain/services/crit
 import { FreshReviewerService } from "@hexagons/review/domain/services/fresh-reviewer.service";
 import { BeadSliceSpecAdapter } from "@hexagons/review/infrastructure/adapters/slice-spec/bead-slice-spec.adapter";
 import { CachedExecutorQueryAdapter } from "@hexagons/review/infrastructure/adapters/executor-query/cached-executor-query.adapter";
+import { ExecutorQueryError } from "@hexagons/review/domain/errors/executor-query.error";
 import { GitChangedFilesAdapter } from "@hexagons/review/infrastructure/adapters/changed-files/git-changed-files.adapter";
 import { SqliteReviewRepository } from "@hexagons/review/infrastructure/repositories/review/sqlite-review.repository";
 import { SqliteVerificationRepository } from "@hexagons/review/infrastructure/repositories/verification/sqlite-verification.repository";
@@ -82,7 +83,6 @@ import {
   InProcessEventBus,
   initializeAgentRegistry,
   isAgentRegistryInitialized,
-  type ModelProfileName,
   PersistenceError,
   type ResolvedModel,
   SystemDateProvider,
@@ -181,7 +181,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   // --- Shared: modelResolver + templateLoader (needed by execution & review) ---
   const templateLoader = (path: string) =>
     readFileSync(join(options.projectRoot, "src/resources", path), "utf-8");
-  const modelResolver = (_profile: ModelProfileName): ResolvedModel => ({
+  const modelResolver = (_profile: string): ResolvedModel => ({
     provider: "anthropic",
     modelId: "claude-opus-4-6",
   });
@@ -266,7 +266,11 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const reviewRepository = new SqliteReviewRepository(stateDb);
   const getSliceExecutors = new GetSliceExecutorsUseCase(checkpointRepo);
   const executorQueryAdapter = new CachedExecutorQueryAdapter(
-    async (sliceId) => getSliceExecutors.execute(sliceId),
+    async (sliceId) => {
+      const result = await getSliceExecutors.execute(sliceId);
+      if (!result.ok) return { ok: false as const, error: new ExecutorQueryError(result.error.message) };
+      return result;
+    },
   );
   const freshReviewerService = new FreshReviewerService(executorQueryAdapter);
   const critiqueReflectionService = new CritiqueReflectionService();

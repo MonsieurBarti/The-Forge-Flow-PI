@@ -11,7 +11,7 @@ export const WorkflowJournalEntrySchema = z.object({
   toPhase: z.string().optional(),
   trigger: z.string().optional(),
   timestamp: TimestampSchema,
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 export type WorkflowJournalEntry = z.infer<typeof WorkflowJournalEntrySchema>;
 

@@ -39,7 +39,7 @@ export class StateExporter {
       const project = projectResult.data;
 
       // Milestones
-      let milestoneProps: ReturnType<typeof project.toJSON>[] extends never[] ? never : unknown[] = [];
+      let milestoneProps: unknown[] = [];
       if (project) {
         const msResult = await milestoneRepo.findByProjectId(project.id);
         if (!msResult.ok) return err(new SyncError("EXPORT_FAILED", msResult.error.message));

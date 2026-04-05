@@ -59,6 +59,7 @@ export class GitStateSyncAdapter extends StateSyncPort {
       stateBranch,
       parentStateBranch,
       lastSyncedAt: null,
+      lastSyncedHash: null,
       lastJournalOffset: 0,
       dirty: false,
     };
@@ -120,6 +121,7 @@ export class GitStateSyncAdapter extends StateSyncPort {
           stateBranch,
           parentStateBranch: null,
           lastSyncedAt: null,
+          lastSyncedHash: null,
           lastJournalOffset: 0,
           dirty: false,
         };

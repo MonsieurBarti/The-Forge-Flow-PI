@@ -4,7 +4,7 @@ export interface SnapshotEntity {
 }
 
 export interface Snapshot {
-  project?: Record<string, unknown>;
+  project?: Record<string, unknown> | null;
   milestones: SnapshotEntity[];
   slices: SnapshotEntity[];
   tasks: SnapshotEntity[];

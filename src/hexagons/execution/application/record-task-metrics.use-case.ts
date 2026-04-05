@@ -35,6 +35,7 @@ export class RecordTaskMetricsUseCase {
       retries: 0,
       downshifted: false,
       reflectionPassed: undefined,
+      reflectionTier: "skipped" as const,
       turns: event.agentResult.turns ?? [],
       timestamp: event.occurredAt,
     };

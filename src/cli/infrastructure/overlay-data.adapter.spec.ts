@@ -12,7 +12,7 @@ import { describe, expect, it, vi } from "vitest";
 import { OverlayDataAdapter } from "./overlay-data.adapter";
 
 function stubProjectRepo(project: Project | null): ProjectRepositoryPort {
-  return { save: vi.fn(), findById: vi.fn(), findSingleton: vi.fn().mockResolvedValue(ok(project)) };
+  return { save: vi.fn(), findById: vi.fn(), findSingleton: vi.fn().mockResolvedValue(ok(project)), reset: vi.fn() };
 }
 
 function stubMilestoneRepo(milestones: Milestone[]): MilestoneRepositoryPort {
@@ -21,6 +21,7 @@ function stubMilestoneRepo(milestones: Milestone[]): MilestoneRepositoryPort {
     findById: vi.fn(),
     findByLabel: vi.fn(),
     findByProjectId: vi.fn().mockResolvedValue(ok(milestones)),
+    reset: vi.fn(),
   };
 }
 
@@ -30,6 +31,7 @@ function stubSliceRepo(slices: Slice[]): SliceRepositoryPort {
     findById: vi.fn().mockImplementation(async (id: string) => ok(slices.find((s) => s.id === id) ?? null)),
     findByLabel: vi.fn(),
     findByMilestoneId: vi.fn().mockResolvedValue(ok(slices)),
+    reset: vi.fn(),
   };
 }
 
@@ -41,6 +43,7 @@ function stubTaskRepo(tasks: Task[]): TaskRepositoryPort {
     findBySliceId: vi.fn().mockImplementation(async (sliceId: string) =>
       ok(tasks.filter((t) => t.sliceId === sliceId)),
     ),
+    reset: vi.fn(),
   };
 }
 

@@ -214,11 +214,11 @@ describe("OrchestratePhaseTransitionUseCase", () => {
 
   it("appends phase-transition entry to workflow journal", async () => {
     const { sessionRepo, sliceRepo, sliceTransitionPort, eventBus, dateProvider } = setup();
-    const appendSpy = vi.fn(async () => ({ data: undefined }) as { data: undefined });
+    const appendSpy = vi.fn(async (_entry: WorkflowJournalEntry) => ({ ok: true as const, data: undefined }));
     const mockJournal: WorkflowJournalPort = {
       append: appendSpy,
-      readAll: async () => ({ data: [] }) as { data: WorkflowJournalEntry[] },
-    } as WorkflowJournalPort;
+      readAll: async () => ({ ok: true as const, data: [] as WorkflowJournalEntry[] }),
+    } as unknown as WorkflowJournalPort;
 
     const useCase = new OrchestratePhaseTransitionUseCase(
       sessionRepo,
@@ -244,7 +244,7 @@ describe("OrchestratePhaseTransitionUseCase", () => {
 
     expect(isOk(result)).toBe(true);
     expect(appendSpy).toHaveBeenCalledOnce();
-    const entry = appendSpy.mock.calls[0][0];
+    const entry = appendSpy.mock.calls[0]![0]!;
     expect(entry.type).toBe("phase-transition");
     expect(entry.sessionId).toBe(session.id);
     expect(entry.milestoneId).toBe(session.milestoneId);
