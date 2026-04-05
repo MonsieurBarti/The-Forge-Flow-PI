@@ -3,7 +3,7 @@ import type { ComplexityTier } from "@kernel/schemas";
 import type Database from "better-sqlite3";
 import { SliceRepositoryPort } from "../domain/ports/slice-repository.port";
 import { Slice } from "../domain/slice.aggregate";
-import type { SliceProps, SliceStatus } from "../domain/slice.schemas";
+import type { SliceKind, SliceProps, SliceStatus } from "../domain/slice.schemas";
 
 interface SliceRow {
   id: string;
@@ -116,6 +116,13 @@ export class SqliteSliceRepository extends SliceRepositoryPort {
     const rows = this.db
       .prepare<[string], SliceRow>("SELECT * FROM slices WHERE milestone_id = ?")
       .all(milestoneId);
+    return ok(rows.map((row) => Slice.reconstitute(this.toProps(row))));
+  }
+
+  async findByKind(kind: SliceKind): Promise<Result<Slice[], PersistenceError>> {
+    const rows = this.db
+      .prepare<[string], SliceRow>("SELECT * FROM slices WHERE kind = ?")
+      .all(kind);
     return ok(rows.map((row) => Slice.reconstitute(this.toProps(row))));
   }
 

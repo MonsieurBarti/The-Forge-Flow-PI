@@ -102,6 +102,61 @@ function runContractTests(name: string, factory: () => SliceRepositoryPort & { r
       const result = await repo.save(slice);
       expect(isOk(result)).toBe(true);
     });
+
+    it("finds slices by kind", async () => {
+      const m1 = new SliceBuilder().withKind("milestone").withLabel("M01-S01").build();
+      const m2 = new SliceBuilder().withKind("milestone").withLabel("M01-S02").build();
+      const q1 = new SliceBuilder().withKind("quick").withoutMilestone().withLabel("Q-01").build();
+      await repo.save(m1);
+      await repo.save(m2);
+      await repo.save(q1);
+
+      const result = await repo.findByKind("quick");
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        expect(result.data).toHaveLength(1);
+        expect(result.data[0].id).toBe(q1.id);
+      }
+    });
+
+    it("returns empty array for kind with no slices", async () => {
+      const result = await repo.findByKind("debug");
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        expect(result.data).toEqual([]);
+      }
+    });
+
+    it("saves and retrieves slice with null milestoneId", async () => {
+      const slice = new SliceBuilder()
+        .withKind("quick")
+        .withoutMilestone()
+        .withLabel("Q-02")
+        .build();
+      await repo.save(slice);
+
+      const result = await repo.findById(slice.id);
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        expect(result.data).not.toBeNull();
+        expect(result.data?.milestoneId).toBeNull();
+      }
+    });
+
+    it("findByMilestoneId does not return ad-hoc slices", async () => {
+      const milestoneId = crypto.randomUUID();
+      const ms = new SliceBuilder().withMilestoneId(milestoneId).withLabel("M01-S10").build();
+      const qs = new SliceBuilder().withKind("quick").withoutMilestone().withLabel("Q-03").build();
+      await repo.save(ms);
+      await repo.save(qs);
+
+      const result = await repo.findByMilestoneId(milestoneId);
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        expect(result.data).toHaveLength(1);
+        expect(result.data[0].id).toBe(ms.id);
+      }
+    });
   });
 }
 

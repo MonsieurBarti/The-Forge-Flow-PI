@@ -11,7 +11,7 @@ import type {
 
 interface WorkflowSessionRow {
   id: string;
-  milestone_id: string;
+  milestone_id: string | null;
   slice_id: string | null;
   current_phase: string;
   previous_phase: string | null;
@@ -28,7 +28,7 @@ export class SqliteWorkflowSessionRepository extends WorkflowSessionRepositoryPo
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS workflow_sessions (
         id              TEXT NOT NULL PRIMARY KEY,
-        milestone_id    TEXT NOT NULL,
+        milestone_id    TEXT,
         slice_id        TEXT,
         current_phase   TEXT NOT NULL,
         previous_phase  TEXT,
@@ -44,18 +44,20 @@ export class SqliteWorkflowSessionRepository extends WorkflowSessionRepositoryPo
   async save(session: WorkflowSession): Promise<Result<void, PersistenceError>> {
     const props = session.toJSON();
 
-    const conflict = this.db
-      .prepare<[string | null, string], { id: string }>(
-        "SELECT id FROM workflow_sessions WHERE milestone_id = ? AND id != ?",
-      )
-      .get(props.milestoneId ?? null, props.id);
+    if (props.milestoneId != null) {
+      const conflict = this.db
+        .prepare<[string, string], { id: string }>(
+          "SELECT id FROM workflow_sessions WHERE milestone_id = ? AND id != ?",
+        )
+        .get(props.milestoneId, props.id);
 
-    if (conflict) {
-      return err(
-        new PersistenceError(
-          `Milestone cardinality violated: session for milestone "${props.milestoneId}" already exists`,
-        ),
-      );
+      if (conflict) {
+        return err(
+          new PersistenceError(
+            `Milestone cardinality violated: session for milestone "${props.milestoneId}" already exists`,
+          ),
+        );
+      }
     }
 
     this.db
@@ -100,6 +102,14 @@ export class SqliteWorkflowSessionRepository extends WorkflowSessionRepositoryPo
     return ok(WorkflowSession.reconstitute(this.toProps(row)));
   }
 
+  async findBySliceId(sliceId: Id): Promise<Result<WorkflowSession | null, PersistenceError>> {
+    const row = this.db
+      .prepare<[string], WorkflowSessionRow>("SELECT * FROM workflow_sessions WHERE slice_id = ?")
+      .get(sliceId);
+    if (!row) return ok(null);
+    return ok(WorkflowSession.reconstitute(this.toProps(row)));
+  }
+
   async findAll(): Promise<Result<WorkflowSession[], PersistenceError>> {
     const rows = this.db.prepare("SELECT * FROM workflow_sessions").all() as WorkflowSessionRow[];
     return ok(rows.map((row) => WorkflowSession.reconstitute(this.toProps(row))));
@@ -112,7 +122,7 @@ export class SqliteWorkflowSessionRepository extends WorkflowSessionRepositoryPo
   private toProps(row: WorkflowSessionRow): WorkflowSessionProps {
     return {
       id: row.id,
-      milestoneId: row.milestone_id,
+      milestoneId: row.milestone_id ?? null,
       sliceId: row.slice_id ?? undefined,
       currentPhase: row.current_phase as WorkflowPhase,
       previousPhase: (row.previous_phase as WorkflowPhase) ?? undefined,

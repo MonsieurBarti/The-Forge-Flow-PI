@@ -37,6 +37,7 @@ function stubSliceRepo(slices: Slice[]): SliceRepositoryPort {
       .mockImplementation(async (id: string) => ok(slices.find((s) => s.id === id) ?? null)),
     findByLabel: vi.fn(),
     findByMilestoneId: vi.fn().mockResolvedValue(ok(slices)),
+    findByKind: vi.fn().mockResolvedValue(ok([])),
     reset: vi.fn(),
   };
 }
