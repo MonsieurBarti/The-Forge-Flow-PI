@@ -1,7 +1,4 @@
-import type {
-  ToolPoliciesConfig,
-  ToolPolicyEntry,
-} from "@hexagons/settings/domain/project-settings.schemas";
+import type { ToolPoliciesConfig, ToolPolicyEntry } from "@hexagons/settings";
 
 import type {
   PreDispatchContext,

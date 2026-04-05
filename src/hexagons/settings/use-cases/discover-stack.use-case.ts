@@ -52,7 +52,7 @@ export class DiscoverStackUseCase {
     return undefined;
   }
 
-  private detectRuntime(deps: Record<string, string>): string | undefined {
+  private detectRuntime(deps: Record<string, string>): string {
     if ("typescript" in deps) return "typescript";
     return "node";
   }

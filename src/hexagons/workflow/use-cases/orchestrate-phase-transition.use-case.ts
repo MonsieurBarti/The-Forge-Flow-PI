@@ -1,5 +1,4 @@
-import type { MetricsRepositoryPort } from "@hexagons/execution/domain/ports/metrics-repository.port";
-import type { QualitySnapshot } from "@hexagons/execution/domain/task-metrics.schemas";
+import type { MetricsRepositoryPort, QualitySnapshot } from "@hexagons/execution";
 import type { DateProviderPort, EventBusPort, PersistenceError, Result } from "@kernel";
 import { err, isErr, ok } from "@kernel";
 import type { SliceTransitionError } from "../domain/errors/slice-transition.error";
