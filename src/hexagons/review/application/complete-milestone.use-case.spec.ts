@@ -12,23 +12,19 @@ import type { GitPort } from "@kernel/ports/git.port";
 import type { GitHubPort } from "@kernel/ports/github.port";
 import type { PullRequestInfo } from "@kernel/ports/github.schemas";
 import { describe, expect, it, vi } from "vitest";
-import { AuditError } from "../domain/errors/audit.error";
+import { MilestoneAuditRecord } from "../domain/aggregates/milestone-audit-record.aggregate";
 import { CompleteMilestoneError } from "../domain/errors/complete-milestone.error";
-import type { FixerError } from "../domain/errors/fixer.error";
 import type { MilestoneQueryError } from "../domain/errors/milestone-query.error";
 import { MilestoneTransitionError } from "../domain/errors/milestone-transition.error";
 import { MilestoneCompletedEvent } from "../domain/events/milestone-completed.event";
-import { AuditPort } from "../domain/ports/audit.port";
-import type { FixRequest, FixResult } from "../domain/ports/fixer.port";
-import { FixerPort } from "../domain/ports/fixer.port";
 import type { MergeGateContext } from "../domain/ports/merge-gate.port";
 import { MergeGatePort } from "../domain/ports/merge-gate.port";
+import { MilestoneAuditRecordRepositoryPort } from "../domain/ports/milestone-audit-record-repository.port";
 import {
   MilestoneQueryPort,
   type MilestoneSliceStatus,
 } from "../domain/ports/milestone-query.port";
 import { MilestoneTransitionPort } from "../domain/ports/milestone-transition.port";
-import type { AuditReportProps } from "../domain/schemas/completion.schemas";
 import type { MergeGateDecision } from "../domain/schemas/ship.schemas";
 import { InMemoryCompletionRecordRepository } from "../infrastructure/repositories/completion-record/in-memory-completion-record.repository";
 import {
@@ -49,20 +45,6 @@ const BASE_BRANCH = "main";
 const PR_URL = "https://github.com/org/repo/pull/42";
 const PR_NUMBER = 42;
 const FIXED_DATE = new Date("2026-04-01T12:00:00.000Z");
-
-const STUB_AUDIT_REPORT_PASS: AuditReportProps = {
-  agentType: "spec-reviewer",
-  verdict: "PASS",
-  findings: [],
-  summary: "All requirements met.",
-};
-
-const STUB_SECURITY_REPORT_PASS: AuditReportProps = {
-  agentType: "security-auditor",
-  verdict: "PASS",
-  findings: [],
-  summary: "No security issues found.",
-};
 
 const STUB_PR_INFO: PullRequestInfo = {
   number: PR_NUMBER,
@@ -113,41 +95,32 @@ class StubMilestoneQueryPort extends MilestoneQueryPort {
   }
 }
 
-class StubAuditPort extends AuditPort {
-  readonly auditCalls: Array<{
-    milestoneLabel: string;
-    agentType: string;
-    diffContent: string;
-  }> = [];
-  private _results: Array<Result<AuditReportProps, AuditError>> = [];
-  private _callIndex = 0;
+class StubAuditRecordRepo extends MilestoneAuditRecordRepositoryPort {
+  record: MilestoneAuditRecord | null = null;
 
-  withResult(result: Result<AuditReportProps, AuditError>): this {
-    this._results.push(result);
-    return this;
+  async save(r: MilestoneAuditRecord) {
+    this.record = r;
+    return ok(undefined) as Result<void, never>;
   }
+  async findLatestByMilestoneId() {
+    return ok(this.record) as Result<MilestoneAuditRecord | null, never>;
+  }
+  reset() {
+    this.record = null;
+  }
+}
 
-  async auditMilestone(params: {
-    milestoneLabel: string;
-    requirementsContent: string;
-    diffContent: string;
-    agentType: "spec-reviewer" | "security-auditor";
-  }): Promise<Result<AuditReportProps, AuditError>> {
-    this.auditCalls.push({
-      milestoneLabel: params.milestoneLabel,
-      agentType: params.agentType,
-      diffContent: params.diffContent,
-    });
-    const idx = this._callIndex++;
-    if (idx < this._results.length) {
-      return this._results[idx];
-    }
-    // Default: pass for spec-reviewer, pass for security-auditor
-    if (params.agentType === "spec-reviewer") {
-      return ok(STUB_AUDIT_REPORT_PASS);
-    }
-    return ok(STUB_SECURITY_REPORT_PASS);
-  }
+function makePassingAuditRecord(milestoneId: string): MilestoneAuditRecord {
+  return MilestoneAuditRecord.createNew({
+    id: crypto.randomUUID(),
+    milestoneId,
+    milestoneLabel: MILESTONE_LABEL,
+    auditReports: [
+      { agentType: "spec-reviewer", verdict: "PASS", findings: [], summary: "OK" },
+      { agentType: "security-auditor", verdict: "PASS", findings: [], summary: "OK" },
+    ],
+    now: FIXED_DATE,
+  });
 }
 
 class StubMergeGatePort extends MergeGatePort {
@@ -167,31 +140,6 @@ class StubMergeGatePort extends MergeGatePort {
       return this._decisions[idx];
     }
     return "merged";
-  }
-}
-
-class StubFixerPort extends FixerPort {
-  readonly fixCalls: FixRequest[] = [];
-  private _results: Array<Result<FixResult, FixerError>> = [];
-  private _callIndex = 0;
-
-  withResult(result: Result<FixResult, FixerError>): this {
-    this._results.push(result);
-    return this;
-  }
-
-  async fix(request: FixRequest): Promise<Result<FixResult, FixerError>> {
-    this.fixCalls.push(request);
-    const idx = this._callIndex++;
-    if (idx < this._results.length) {
-      return this._results[idx];
-    }
-    return ok({
-      fixed: [...request.findings],
-      deferred: [],
-      justifications: {},
-      testsPassing: true,
-    });
   }
 }
 
@@ -265,11 +213,10 @@ function makeStubGitPort(overrides?: {
 
 interface BuildUseCaseOverrides {
   milestoneQueryPort?: StubMilestoneQueryPort;
-  auditPort?: StubAuditPort;
+  auditRecordRepo?: StubAuditRecordRepo;
   gitHubPort?: GitHubPort;
   mergeGatePort?: StubMergeGatePort;
   completionRecordRepository?: InMemoryCompletionRecordRepository;
-  fixerPort?: StubFixerPort;
   gitPort?: GitPort;
   milestoneTransitionPort?: StubMilestoneTransitionPort;
   eventBus?: EventBusPort;
@@ -280,22 +227,26 @@ interface BuildUseCaseOverrides {
 function buildUseCase(overrides: BuildUseCaseOverrides = {}): {
   useCase: CompleteMilestoneUseCase;
   milestoneQueryPort: StubMilestoneQueryPort;
-  auditPort: StubAuditPort;
+  auditRecordRepo: StubAuditRecordRepo;
   mergeGatePort: StubMergeGatePort;
   completionRecordRepository: InMemoryCompletionRecordRepository;
-  fixerPort: StubFixerPort;
   gitHubPort: GitHubPort;
   gitPort: GitPort;
   milestoneTransitionPort: StubMilestoneTransitionPort;
   eventBus: SpyEventBus;
 } {
   const milestoneQueryPort = overrides.milestoneQueryPort ?? new StubMilestoneQueryPort();
-  const auditPort = overrides.auditPort ?? new StubAuditPort();
+  const auditRecordRepo =
+    overrides.auditRecordRepo ??
+    (() => {
+      const repo = new StubAuditRecordRepo();
+      repo.record = makePassingAuditRecord(MILESTONE_ID);
+      return repo;
+    })();
   const gitHubPort = overrides.gitHubPort ?? makeStubGitHubPort();
   const mergeGatePort = overrides.mergeGatePort ?? new StubMergeGatePort();
   const completionRecordRepository =
     overrides.completionRecordRepository ?? new InMemoryCompletionRecordRepository();
-  const fixerPort = overrides.fixerPort ?? new StubFixerPort();
   const gitPort = overrides.gitPort ?? makeStubGitPort();
   const milestoneTransitionPort =
     overrides.milestoneTransitionPort ?? new StubMilestoneTransitionPort();
@@ -306,11 +257,10 @@ function buildUseCase(overrides: BuildUseCaseOverrides = {}): {
 
   const useCase = new CompleteMilestoneUseCase(
     milestoneQueryPort,
-    auditPort,
+    auditRecordRepo,
     gitHubPort,
     mergeGatePort,
     completionRecordRepository,
-    fixerPort,
     gitPort,
     milestoneTransitionPort,
     eventBus,
@@ -322,10 +272,9 @@ function buildUseCase(overrides: BuildUseCaseOverrides = {}): {
   return {
     useCase,
     milestoneQueryPort,
-    auditPort,
+    auditRecordRepo,
     mergeGatePort,
     completionRecordRepository,
-    fixerPort,
     gitHubPort,
     gitPort,
     milestoneTransitionPort,
@@ -452,21 +401,20 @@ describe("CompleteMilestoneUseCase", () => {
     });
   });
 
-  describe("audit dispatch failure", () => {
-    it("returns err(auditFailed) when spec-reviewer fails", async () => {
+  describe("audit gate: no passing audit record", () => {
+    it("returns err(auditRequired) when no audit record exists", async () => {
       resetIdCounter();
-      const auditPort = new StubAuditPort().withResult(
-        err(AuditError.dispatchFailed("spec-reviewer", new Error("agent unavailable"))),
-      );
+      const auditRecordRepo = new StubAuditRecordRepo();
+      auditRecordRepo.record = null;
 
-      const { useCase } = buildUseCase({ auditPort });
+      const { useCase } = buildUseCase({ auditRecordRepo });
 
       const result = await useCase.execute(makeRequest());
 
       expect(result.ok).toBe(false);
       if (!result.ok) {
         expect(result.error).toBeInstanceOf(CompleteMilestoneError);
-        expect(result.error.code).toBe("MILESTONE.AUDIT_FAILED");
+        expect(result.error.code).toBe("MILESTONE.AUDIT_REQUIRED");
       }
     });
   });
@@ -538,37 +486,12 @@ describe("CompleteMilestoneUseCase", () => {
   });
 
   describe("needs changes: one fix cycle then merged", () => {
-    it("runs audit -> fixer -> push, then merged on second ask", async () => {
+    it("runs push in fix cycle, then merged on second ask", async () => {
       resetIdCounter();
       const mergeGate = new StubMergeGatePort().withDecisions("needs_changes", "merged");
-      const auditPort = new StubAuditPort()
-        // First pair (initial audit in execute)
-        .withResult(ok(STUB_AUDIT_REPORT_PASS))
-        .withResult(ok(STUB_SECURITY_REPORT_PASS))
-        // Second pair (fix cycle re-audit) — include findings to trigger fixer
-        .withResult(
-          ok({
-            agentType: "spec-reviewer",
-            verdict: "FAIL",
-            findings: [
-              {
-                id: "f1",
-                severity: "medium",
-                message: "Missing test",
-                filePath: "src/file.ts",
-                lineStart: 10,
-              },
-            ],
-            summary: "Missing test coverage.",
-          }),
-        )
-        .withResult(ok(STUB_SECURITY_REPORT_PASS));
-      const fixerPort = new StubFixerPort();
 
-      const { useCase } = buildUseCase({
+      const { useCase, gitPort } = buildUseCase({
         mergeGatePort: mergeGate,
-        auditPort,
-        fixerPort,
       });
 
       const result = await useCase.execute(makeRequest());
@@ -579,10 +502,9 @@ describe("CompleteMilestoneUseCase", () => {
         expect(result.data.merged).toBe(true);
       }
 
-      // Fixer was called with findings from the re-audit
-      expect(fixerPort.fixCalls).toHaveLength(1);
-      expect(fixerPort.fixCalls[0].sliceId).toBe(MILESTONE_ID);
-      expect(fixerPort.fixCalls[0].findings).toHaveLength(1);
+      // Push was called during fix cycle
+      const pushFn = gitPort.pushFrom as ReturnType<typeof vi.fn>;
+      expect(pushFn).toHaveBeenCalled();
     });
   });
 
@@ -595,22 +517,9 @@ describe("CompleteMilestoneUseCase", () => {
         "needs_changes", // cycle 2 — exhausted, no fix, re-ask
         "merged", // forced decide
       );
-      const auditPort = new StubAuditPort()
-        // Initial audits
-        .withResult(ok(STUB_AUDIT_REPORT_PASS))
-        .withResult(ok(STUB_SECURITY_REPORT_PASS))
-        // Fix cycle 0 re-audits
-        .withResult(ok(STUB_AUDIT_REPORT_PASS))
-        .withResult(ok(STUB_SECURITY_REPORT_PASS))
-        // Fix cycle 1 re-audits
-        .withResult(ok(STUB_AUDIT_REPORT_PASS))
-        .withResult(ok(STUB_SECURITY_REPORT_PASS));
-      const fixerPort = new StubFixerPort();
 
       const { useCase } = buildUseCase({
         mergeGatePort: mergeGate,
-        auditPort,
-        fixerPort,
       });
 
       const result = await useCase.execute(makeRequest({ maxFixCycles: 2 }));
@@ -671,35 +580,21 @@ describe("CompleteMilestoneUseCase", () => {
     });
   });
 
-  describe("diff size guard: diff > 100KB truncated before audit", () => {
-    it("truncates the diff and passes truncated version to audit", async () => {
-      resetIdCounter();
+  describe("diff size guard: truncateDiff utility", () => {
+    it("truncates diffs exceeding the size limit", () => {
       const largeDiff = "x".repeat(DIFF_SIZE_LIMIT + 5000);
-      const gitPort = makeStubGitPort({
-        diffResult: ok(largeDiff),
-      });
-      const auditPort = new StubAuditPort();
-      const mergeGate = new StubMergeGatePort().withDecisions("merged");
-
-      const { useCase } = buildUseCase({
-        gitPort,
-        auditPort,
-        mergeGatePort: mergeGate,
-      });
-
-      await useCase.execute(makeRequest());
-
-      // Audit calls should receive truncated diff
-      expect(auditPort.auditCalls).toHaveLength(2);
-      const diffPassedToAudit = auditPort.auditCalls[0].diffContent;
-      expect(diffPassedToAudit.length).toBeLessThan(largeDiff.length);
-      expect(diffPassedToAudit).toContain("[... diff truncated at 100KB ...]");
-
-      // Verify truncateDiff produces expected output
       const truncated = truncateDiff(largeDiff);
       expect(truncated.length).toBe(
         DIFF_SIZE_LIMIT + "\n\n[... diff truncated at 100KB ...]".length,
       );
+      expect(truncated).toContain("[... diff truncated at 100KB ...]");
+    });
+
+    it("appends truncation notice even for small diffs", () => {
+      const smallDiff = "x".repeat(100);
+      const result = truncateDiff(smallDiff);
+      expect(result).toContain(smallDiff);
+      expect(result).toContain("[... diff truncated at 100KB ...]");
     });
   });
 

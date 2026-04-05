@@ -37,6 +37,7 @@ function seedSlice(
     specPath: null,
     planPath: null,
     researchPath: null,
+    position: 0,
     createdAt: new Date(),
     updatedAt: new Date(),
   });

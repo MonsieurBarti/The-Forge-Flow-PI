@@ -61,6 +61,23 @@ describe("Slice", () => {
       ).toThrow();
     });
 
+    it("creates a slice with explicit position", () => {
+      const s = Slice.createNew({
+        id,
+        milestoneId,
+        label: "M01-S01",
+        title: "Schemas",
+        position: 3,
+        now,
+      });
+      expect(s.position).toBe(3);
+    });
+
+    it("defaults position to 0", () => {
+      const s = Slice.createNew({ id, milestoneId, label: "M01-S01", title: "Schemas", now });
+      expect(s.position).toBe(0);
+    });
+
     it("throws on invalid id", () => {
       expect(() =>
         Slice.createNew({ id: "not-a-uuid", milestoneId, label: "M01-S01", title: "Schemas", now }),
@@ -167,6 +184,7 @@ describe("Slice", () => {
         specPath: null,
         planPath: null,
         researchPath: null,
+        position: 0,
         createdAt: now,
         updatedAt: now,
       };
@@ -191,6 +209,7 @@ describe("Slice", () => {
           specPath: null,
           planPath: null,
           researchPath: null,
+          position: 0,
           createdAt: now,
           updatedAt: now,
         }),
@@ -215,6 +234,7 @@ describe("Slice", () => {
         specPath: null,
         planPath: null,
         researchPath: null,
+        position: 0,
         createdAt: now,
         updatedAt: now,
       });
@@ -255,6 +275,7 @@ describe("Slice", () => {
         specPath: null,
         planPath: null,
         researchPath: null,
+        position: 0,
         createdAt: now,
         updatedAt: now,
       });

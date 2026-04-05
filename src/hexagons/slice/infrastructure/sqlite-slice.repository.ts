@@ -17,6 +17,7 @@ interface SliceRow {
   spec_path: string | null;
   plan_path: string | null;
   research_path: string | null;
+  position: number;
   created_at: string;
   updated_at: string;
 }
@@ -37,6 +38,7 @@ export class SqliteSliceRepository extends SliceRepositoryPort {
         spec_path     TEXT,
         plan_path     TEXT,
         research_path TEXT,
+        position      INTEGER NOT NULL DEFAULT 0,
         created_at    TEXT NOT NULL,
         updated_at    TEXT NOT NULL
       )
@@ -73,12 +75,13 @@ export class SqliteSliceRepository extends SliceRepositoryPort {
           string | null,
           string | null,
           string | null,
+          number,
           string,
           string,
         ]
       >(
-        `INSERT OR REPLACE INTO slices (id, milestone_id, kind, label, title, description, status, complexity, spec_path, plan_path, research_path, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT OR REPLACE INTO slices (id, milestone_id, kind, label, title, description, status, complexity, spec_path, plan_path, research_path, position, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         props.id,
@@ -92,6 +95,7 @@ export class SqliteSliceRepository extends SliceRepositoryPort {
         props.specPath,
         props.planPath,
         props.researchPath,
+        props.position,
         props.createdAt.toISOString(),
         props.updatedAt.toISOString(),
       );
@@ -114,7 +118,9 @@ export class SqliteSliceRepository extends SliceRepositoryPort {
 
   async findByMilestoneId(milestoneId: Id): Promise<Result<Slice[], PersistenceError>> {
     const rows = this.db
-      .prepare<[string], SliceRow>("SELECT * FROM slices WHERE milestone_id = ?")
+      .prepare<[string], SliceRow>(
+        "SELECT * FROM slices WHERE milestone_id = ? ORDER BY position ASC",
+      )
       .all(milestoneId);
     return ok(rows.map((row) => Slice.reconstitute(this.toProps(row))));
   }
@@ -124,6 +130,11 @@ export class SqliteSliceRepository extends SliceRepositoryPort {
       .prepare<[string], SliceRow>("SELECT * FROM slices WHERE kind = ?")
       .all(kind);
     return ok(rows.map((row) => Slice.reconstitute(this.toProps(row))));
+  }
+
+  async delete(id: Id): Promise<Result<void, PersistenceError>> {
+    this.db.prepare<[string]>("DELETE FROM slices WHERE id = ?").run(id);
+    return ok(undefined);
   }
 
   reset(): void {
@@ -143,6 +154,7 @@ export class SqliteSliceRepository extends SliceRepositoryPort {
       specPath: row.spec_path,
       planPath: row.plan_path,
       researchPath: row.research_path,
+      position: row.position,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
     };

@@ -118,6 +118,7 @@ describe("GetStatusUseCase", () => {
         specPath: null,
         planPath: null,
         researchPath: null,
+        position: 0,
         createdAt: now,
         updatedAt: now,
       }),

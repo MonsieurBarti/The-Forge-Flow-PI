@@ -61,6 +61,10 @@ export class Slice extends AggregateRoot<SliceProps> {
     return this.props.researchPath;
   }
 
+  get position(): number {
+    return this.props.position;
+  }
+
   get createdAt(): Date {
     return this.props.createdAt;
   }
@@ -76,6 +80,7 @@ export class Slice extends AggregateRoot<SliceProps> {
     title: string;
     description?: string;
     kind?: SliceKind;
+    position?: number;
     now: Date;
   }): Slice {
     const kind = params.kind ?? "milestone";
@@ -100,6 +105,7 @@ export class Slice extends AggregateRoot<SliceProps> {
       specPath: null,
       planPath: null,
       researchPath: null,
+      position: params.position ?? 0,
       createdAt: params.now,
       updatedAt: params.now,
     });

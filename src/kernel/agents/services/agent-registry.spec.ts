@@ -61,7 +61,7 @@ describe("AgentRegistry", () => {
 
     it("getAll() returns all cards", () => {
       const registry = AgentRegistry.fromCards(makeTestCards());
-      expect(registry.getAll().size).toBe(6);
+      expect(registry.getAll().size).toBe(7);
     });
   });
 });
@@ -87,13 +87,13 @@ describe("backward-compat wrappers", () => {
 
   it("findAgentsByCapability returns review agents", () => {
     const agents = findAgentsByCapability("review");
-    expect(agents.length).toBe(3);
+    expect(agents.length).toBe(4);
     for (const a of agents) expect(a.capabilities).toContain("review");
   });
 
   it("getAll() returns all cards via registry instance", () => {
     const registry = AgentRegistry.fromCards(makeTestCards());
-    expect(registry.getAll().size).toBe(6);
+    expect(registry.getAll().size).toBe(7);
   });
 });
 

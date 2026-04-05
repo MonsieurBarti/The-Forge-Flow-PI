@@ -38,6 +38,7 @@ function stubSliceRepo(slices: Slice[]): SliceRepositoryPort {
     findByLabel: vi.fn(),
     findByMilestoneId: vi.fn().mockResolvedValue(ok(slices)),
     findByKind: vi.fn().mockResolvedValue(ok([])),
+    delete: vi.fn().mockResolvedValue(ok(undefined)),
     reset: vi.fn(),
   };
 }

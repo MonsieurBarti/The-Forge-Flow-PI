@@ -1,6 +1,8 @@
 // Domain — Autonomy Policy
 
+export type { MapCodebaseInput, MapCodebaseOutput } from "./application/map-codebase.use-case";
 // Application
+export { MapCodebaseUseCase } from "./application/map-codebase.use-case";
 export { ReplayWorkflowJournalUseCase } from "./application/replay-workflow-journal.use-case";
 export { getHumanGates, shouldAutoTransition } from "./domain/autonomy-policy";
 export { ContextPackageBuilder } from "./domain/context-package.builder";
@@ -73,6 +75,8 @@ export {
   ContextStagingPort,
   ContextStagingRequestSchema,
 } from "./domain/ports/context-staging.port";
+export type { DocType } from "./domain/ports/doc-writer.port";
+export { DocWriterPort } from "./domain/ports/doc-writer.port";
 export { ModelProfileResolverPort } from "./domain/ports/model-profile-resolver.port";
 export { SliceTransitionPort } from "./domain/ports/slice-transition.port";
 export type { WorkflowJournalEntry } from "./domain/ports/workflow-journal.port";
@@ -155,6 +159,7 @@ export {
 export { createWritePlanTool } from "./infrastructure/pi/write-plan.tool";
 export { createWriteResearchTool } from "./infrastructure/pi/write-research.tool";
 export { createWriteSpecTool } from "./infrastructure/pi/write-spec.tool";
+export { PiDocWriterAdapter } from "./infrastructure/pi-doc-writer.adapter";
 export { SettingsModelProfileResolver } from "./infrastructure/settings-model-profile-resolver";
 export { SqliteWorkflowSessionRepository } from "./infrastructure/sqlite-workflow-session.repository";
 
