@@ -68,8 +68,8 @@ import {
   MergeSettingsUseCase,
 } from "@hexagons/settings";
 import { FormatSettingsCascadeService } from "@hexagons/settings/domain/services/format-settings-cascade.service";
-import { AlwaysUnderBudgetAdapter } from "@hexagons/settings/infrastructure/always-under-budget.adapter";
 import { FsSettingsFileAdapter } from "@hexagons/settings/infrastructure/fs-settings-file.adapter";
+import { LoggingBudgetAdapter } from "@hexagons/settings/infrastructure/logging-budget.adapter";
 import { ProcessEnvVarAdapter } from "@hexagons/settings/infrastructure/process-env-var.adapter";
 import { AddSliceUseCase } from "@hexagons/slice/application/add-slice.use-case";
 import { RemoveSliceUseCase } from "@hexagons/slice/application/remove-slice.use-case";
@@ -474,10 +474,8 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   // --- State sync wiring (moved before ship/complete for dependency injection) ---
   const ghCliAdapter = new GhCliAdapter(options.projectRoot);
   const mergeGateAdapter = new PiMergeGateAdapter();
-  const shipRecordDb = new Database(join(rootTffDir, "ship-records.db"));
-  const shipRecordRepository = new SqliteShipRecordRepository(shipRecordDb);
-  const completionRecordDb = new Database(join(rootTffDir, "completion-records.db"));
-  const completionRecordRepository = new SqliteCompletionRecordRepository(completionRecordDb);
+  const shipRecordRepository = new SqliteShipRecordRepository(stateDb);
+  const completionRecordRepository = new SqliteCompletionRecordRepository(stateDb);
 
   const stateBranchOps = new GitStateBranchOpsAdapter(options.projectRoot);
   const stateExporter = new StateExporter({
@@ -545,8 +543,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     options.projectRoot,
   );
   const milestoneTransitionAdapter = new MilestoneTransitionAdapter(milestoneRepo, dateProvider);
-  const auditRecordDb = new Database(join(rootTffDir, "audit-records.db"));
-  const milestoneAuditRecordRepo = new SqliteMilestoneAuditRecordRepository(auditRecordDb);
+  const milestoneAuditRecordRepo = new SqliteMilestoneAuditRecordRepository(stateDb);
 
   // --- Map codebase use case (shared with CompleteMilestone + /tff:map-codebase) ---
   const docWriterAdapter = new PiDocWriterAdapter(
@@ -828,7 +825,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const settingsResult = mergeSettings.execute({ team: null, local: null, env: {} });
   const hotkeys = settingsResult.ok ? settingsResult.data.hotkeys : HOTKEYS_DEFAULTS;
 
-  const budgetTrackingPort = new AlwaysUnderBudgetAdapter();
+  const budgetTrackingPort = new LoggingBudgetAdapter(logger);
   registerOverlayExtension(api, {
     overlayDataPort: overlayDataAdapter,
     budgetTrackingPort,
