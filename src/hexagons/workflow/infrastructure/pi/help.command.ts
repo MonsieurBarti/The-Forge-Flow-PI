@@ -1,9 +1,9 @@
-import type { ExtensionAPI } from "@infrastructure/pi";
+import type { ExtensionAPI, ExtensionCommandContext } from "@infrastructure/pi";
 
 export function registerHelpCommand(api: ExtensionAPI): void {
   api.registerCommand("tff:help", {
     description: "Show TFF command reference",
-    handler: async () => {
+    handler: async (_args: string, _ctx: ExtensionCommandContext) => {
       const commands = api.getCommands();
       const tffCommands = commands
         .filter((cmd) => cmd.name.startsWith("tff:"))

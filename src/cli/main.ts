@@ -1,24 +1,19 @@
 /**
- * TFF-PI CLI entry point.
+ * TFF-PI extension entry point.
  *
- * Bootstraps a PI coding agent session with TFF extensions pre-loaded.
- * The exact PI SDK bootstrap API is documented in RESEARCH.md § 1.4.
+ * - Named export: for programmatic usage
+ * - Default export: required by PI SDK for auto-discovery from .pi/extensions/
+ *   (exception to project's named-export convention — PI SDK mandates default export)
  *
- * Currently a placeholder — PI SDK packages must be installed before
- * this file becomes fully functional. The extension wiring (extension.ts)
- * is the real composition root and is fully tested independently.
+ * Bootstrap (createAgentSession) lives in loader.ts (M08-S06).
  */
+import type { ExtensionAPI } from "@infrastructure/pi";
+import { createTffExtension } from "./extension";
 
-// TODO: Install @mariozechner/pi-coding-agent and wire createAgentSession
-// import { createAgentSession } from '@mariozechner/pi-coding-agent';
-// import { createTffExtension } from './extension';
-//
-// const { session } = await createAgentSession({
-//   cwd: process.cwd(),
-//   customTools: [],  // tools registered via extension
-// });
-//
-// After session creation, call:
-// createTffExtension(session.extensionApi, { projectRoot: process.cwd() });
+export type { TffExtensionOptions } from "./extension";
+export { createTffExtension };
 
-export { createTffExtension } from "./extension";
+// PI auto-discovery requires a default export — see pi-mono/packages/coding-agent/src/core/extensions/
+export default function (pi: ExtensionAPI) {
+  createTffExtension(pi, { projectRoot: process.cwd() });
+}

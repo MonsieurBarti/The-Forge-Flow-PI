@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { ExtensionAPI } from "@infrastructure/pi";
+import type { ExtensionAPI, ExtensionCommandContext } from "@infrastructure/pi";
 import { isErr } from "@kernel";
 import type { GetStatusUseCase, StatusReport } from "../../use-cases/get-status.use-case";
 
@@ -32,7 +32,7 @@ export function formatDashboard(report: StatusReport): string {
 export function registerProgressCommand(api: ExtensionAPI, deps: ProgressCommandDeps): void {
   api.registerCommand("tff:progress", {
     description: "Show project dashboard and auto-fix STATE.md",
-    handler: async () => {
+    handler: async (_args: string, _ctx: ExtensionCommandContext) => {
       const result = await deps.getStatus.execute();
       if (isErr(result)) {
         api.sendUserMessage(`Error: ${result.error.message}`);
