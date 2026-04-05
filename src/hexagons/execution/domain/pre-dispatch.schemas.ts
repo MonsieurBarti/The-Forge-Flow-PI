@@ -1,3 +1,4 @@
+import { ComplexityTierSchema } from "@kernel/schemas";
 import { z } from "zod";
 
 export const PreDispatchContextSchema = z.object({
@@ -13,6 +14,8 @@ export const PreDispatchContextSchema = z.object({
   upstreamTasks: z.array(z.object({ id: z.string(), status: z.string() })),
   budgetRemaining: z.number().optional(),
   budgetEstimated: z.number().optional(),
+  agentRole: z.string().optional(),
+  complexityTier: ComplexityTierSchema.optional(),
 });
 export type PreDispatchContext = z.infer<typeof PreDispatchContextSchema>;
 

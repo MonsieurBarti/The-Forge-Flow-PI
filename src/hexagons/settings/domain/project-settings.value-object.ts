@@ -4,7 +4,11 @@ import type {
   BeadsConfig,
   HotkeysConfig,
   ModelRoutingConfig,
+  QualityMetricsConfig,
   SettingsProps,
+  StackConfig,
+  ToolPoliciesConfig,
+  WorkflowConfig,
 } from "./project-settings.schemas";
 import { SettingsSchema } from "./project-settings.schemas";
 
@@ -38,6 +42,22 @@ export class ProjectSettings {
 
   get hotkeys(): HotkeysConfig {
     return this.props.hotkeys;
+  }
+
+  get toolPolicies(): ToolPoliciesConfig {
+    return this.props.toolPolicies;
+  }
+
+  get workflow(): WorkflowConfig {
+    return this.props.workflow;
+  }
+
+  get qualityMetrics(): QualityMetricsConfig {
+    return this.props.qualityMetrics;
+  }
+
+  get stack(): StackConfig {
+    return this.props.stack;
   }
 
   toJSON(): SettingsProps {

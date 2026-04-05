@@ -14,6 +14,9 @@ export type ModelProfileName = z.infer<typeof ModelProfileNameSchema>;
 export const AutonomyModeSchema = z.enum(["guided", "plan-to-pr"]);
 export type AutonomyMode = z.infer<typeof AutonomyModeSchema>;
 
+export const FailurePolicyModeSchema = z.enum(["strict", "tolerant", "lenient"]);
+export type FailurePolicyMode = z.infer<typeof FailurePolicyModeSchema>;
+
 // ---------------------------------------------------------------------------
 // Sub-schemas (base — without .catch(), used for type extraction)
 // ---------------------------------------------------------------------------
@@ -145,6 +148,76 @@ const BaseFallbackStrategyConfigSchema = z.object({
 export type FallbackStrategyConfig = z.infer<typeof BaseFallbackStrategyConfigSchema>;
 
 // ---------------------------------------------------------------------------
+// G09: Tool Policies
+// ---------------------------------------------------------------------------
+
+const ToolPolicyEntrySchema = z.object({
+  allowed: z.array(z.string()).optional(),
+  blocked: z.array(z.string()).optional(),
+});
+export type ToolPolicyEntry = z.infer<typeof ToolPolicyEntrySchema>;
+
+const BaseToolPoliciesConfigSchema = z.object({
+  defaults: ToolPolicyEntrySchema.default({}),
+  byTier: z
+    .object({
+      S: ToolPolicyEntrySchema.optional(),
+      "F-lite": ToolPolicyEntrySchema.optional(),
+      "F-full": ToolPolicyEntrySchema.optional(),
+    })
+    .default({}),
+  byRole: z.record(z.string(), ToolPolicyEntrySchema).default({}),
+});
+export type ToolPoliciesConfig = z.infer<typeof BaseToolPoliciesConfigSchema>;
+
+// ---------------------------------------------------------------------------
+// G02: Failure Policies
+// ---------------------------------------------------------------------------
+
+const BaseFailurePoliciesConfigSchema = z.object({
+  default: FailurePolicyModeSchema.default("strict"),
+  byPhase: z.record(z.string(), FailurePolicyModeSchema).default({}),
+});
+export type FailurePoliciesConfig = z.infer<typeof BaseFailurePoliciesConfigSchema>;
+
+const BaseWorkflowConfigSchema = z.object({
+  failurePolicies: BaseFailurePoliciesConfigSchema.default({
+    default: "strict",
+    byPhase: {},
+  }),
+});
+export type WorkflowConfig = z.infer<typeof BaseWorkflowConfigSchema>;
+
+// ---------------------------------------------------------------------------
+// G03: Quality Metrics
+// ---------------------------------------------------------------------------
+
+const BaseQualityMetricsConfigSchema = z.object({
+  perPhaseTracking: z.boolean().default(true),
+});
+export type QualityMetricsConfig = z.infer<typeof BaseQualityMetricsConfigSchema>;
+
+// ---------------------------------------------------------------------------
+// G04: Stack Config
+// ---------------------------------------------------------------------------
+
+export const StackInfoSchema = z.object({
+  runtime: z.string().optional(),
+  framework: z.string().optional(),
+  packageManager: z.string().optional(),
+  buildTool: z.string().optional(),
+  testRunner: z.string().optional(),
+  linter: z.string().optional(),
+});
+export type StackInfo = z.infer<typeof StackInfoSchema>;
+
+const BaseStackConfigSchema = z.object({
+  detected: StackInfoSchema.default({}),
+  overrides: StackInfoSchema.default({}),
+});
+export type StackConfig = z.infer<typeof BaseStackConfigSchema>;
+
+// ---------------------------------------------------------------------------
 // Fully-hydrated defaults (required by Zod 4 — parent .default() is literal)
 // ---------------------------------------------------------------------------
 
@@ -205,6 +278,30 @@ export const FALLBACK_STRATEGY_DEFAULTS: FallbackStrategyConfig = {
   checkpointBeforeRetry: true,
 };
 
+export const TOOL_POLICIES_DEFAULTS: ToolPoliciesConfig = {
+  defaults: {},
+  byTier: {},
+  byRole: {},
+};
+
+export const FAILURE_POLICIES_DEFAULTS: FailurePoliciesConfig = {
+  default: "strict",
+  byPhase: {},
+};
+
+export const WORKFLOW_DEFAULTS: WorkflowConfig = {
+  failurePolicies: FAILURE_POLICIES_DEFAULTS,
+};
+
+export const QUALITY_METRICS_DEFAULTS: QualityMetricsConfig = {
+  perPhaseTracking: true,
+};
+
+export const STACK_DEFAULTS: StackConfig = {
+  detected: {},
+  overrides: {},
+};
+
 // ---------------------------------------------------------------------------
 // Exported schemas with .catch() for resilience
 // ---------------------------------------------------------------------------
@@ -219,6 +316,13 @@ export const HotkeysConfigSchema = BaseHotkeysConfigSchema.catch(HOTKEYS_DEFAULT
 export const FallbackStrategyConfigSchema = BaseFallbackStrategyConfigSchema.catch(
   FALLBACK_STRATEGY_DEFAULTS,
 );
+export const ToolPoliciesConfigSchema = BaseToolPoliciesConfigSchema.catch(TOOL_POLICIES_DEFAULTS);
+export const FailurePoliciesConfigSchema =
+  BaseFailurePoliciesConfigSchema.catch(FAILURE_POLICIES_DEFAULTS);
+export const WorkflowConfigSchema = BaseWorkflowConfigSchema.catch(WORKFLOW_DEFAULTS);
+export const QualityMetricsConfigSchema =
+  BaseQualityMetricsConfigSchema.catch(QUALITY_METRICS_DEFAULTS);
+export const StackConfigSchema = BaseStackConfigSchema.catch(STACK_DEFAULTS);
 
 // ---------------------------------------------------------------------------
 // Top-level SettingsSchema
@@ -233,6 +337,10 @@ export const SETTINGS_DEFAULTS = {
   overseer: OVERSEER_DEFAULTS,
   hotkeys: HOTKEYS_DEFAULTS,
   fallback: undefined as FallbackStrategyConfig | undefined,
+  toolPolicies: TOOL_POLICIES_DEFAULTS,
+  workflow: WORKFLOW_DEFAULTS,
+  qualityMetrics: QUALITY_METRICS_DEFAULTS,
+  stack: STACK_DEFAULTS,
 };
 
 export const SettingsSchema = z
@@ -245,6 +353,10 @@ export const SettingsSchema = z
     overseer: OverseerConfigSchema.default(OVERSEER_DEFAULTS),
     hotkeys: HotkeysConfigSchema.default(HOTKEYS_DEFAULTS),
     fallback: FallbackStrategyConfigSchema.optional(),
+    toolPolicies: ToolPoliciesConfigSchema.default(TOOL_POLICIES_DEFAULTS),
+    workflow: WorkflowConfigSchema.default(WORKFLOW_DEFAULTS),
+    qualityMetrics: QualityMetricsConfigSchema.default(QUALITY_METRICS_DEFAULTS),
+    stack: StackConfigSchema.default(STACK_DEFAULTS),
   })
   .default(SETTINGS_DEFAULTS);
 export type SettingsProps = z.infer<typeof SettingsSchema>;

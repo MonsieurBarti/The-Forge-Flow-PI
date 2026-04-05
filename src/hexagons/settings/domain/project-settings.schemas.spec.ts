@@ -9,7 +9,13 @@ import {
   MODEL_ROUTING_DEFAULTS,
   ModelNameSchema,
   ModelProfileNameSchema,
+  QUALITY_METRICS_DEFAULTS,
   SettingsSchema,
+  STACK_DEFAULTS,
+  TOOL_POLICIES_DEFAULTS,
+  ToolPoliciesConfigSchema,
+  WORKFLOW_DEFAULTS,
+  WorkflowConfigSchema,
 } from "./project-settings.schemas";
 
 describe("SettingsSchema", () => {
@@ -155,6 +161,97 @@ describe("FallbackStrategyConfigSchema", () => {
   it("returns defaults on null via .catch()", () => {
     const result = FallbackStrategyConfigSchema.parse(null);
     expect(result).toEqual(FALLBACK_STRATEGY_DEFAULTS);
+  });
+});
+
+describe("ToolPoliciesConfigSchema", () => {
+  it("produces defaults from empty object", () => {
+    const result = ToolPoliciesConfigSchema.parse({});
+    expect(result).toEqual(TOOL_POLICIES_DEFAULTS);
+  });
+
+  it("accepts tool policies with defaults, byTier, and byRole", () => {
+    const result = ToolPoliciesConfigSchema.parse({
+      defaults: { blocked: ["Agent"] },
+      byTier: { S: { blocked: ["Agent"] } },
+      byRole: { "security-auditor": { allowed: ["Read", "Grep", "Glob"] } },
+    });
+    expect(result.defaults.blocked).toEqual(["Agent"]);
+    expect(result.byTier.S?.blocked).toEqual(["Agent"]);
+    expect(result.byRole["security-auditor"]?.allowed).toEqual(["Read", "Grep", "Glob"]);
+  });
+
+  it("returns defaults on invalid input via .catch()", () => {
+    const result = ToolPoliciesConfigSchema.parse("garbage");
+    expect(result).toEqual(TOOL_POLICIES_DEFAULTS);
+  });
+});
+
+describe("WorkflowConfigSchema", () => {
+  it("produces defaults from empty object", () => {
+    const result = WorkflowConfigSchema.parse({});
+    expect(result).toEqual(WORKFLOW_DEFAULTS);
+  });
+
+  it("accepts failure policies with per-phase overrides", () => {
+    const result = WorkflowConfigSchema.parse({
+      failurePolicies: {
+        default: "tolerant",
+        byPhase: { researching: "lenient", executing: "strict" },
+      },
+    });
+    expect(result.failurePolicies.default).toBe("tolerant");
+    expect(result.failurePolicies.byPhase.researching).toBe("lenient");
+    expect(result.failurePolicies.byPhase.executing).toBe("strict");
+  });
+
+  it("returns defaults on invalid input via .catch()", () => {
+    const result = WorkflowConfigSchema.parse(null);
+    expect(result).toEqual(WORKFLOW_DEFAULTS);
+  });
+});
+
+describe("SettingsSchema new sections", () => {
+  it("includes toolPolicies defaults", () => {
+    const result = SettingsSchema.parse({});
+    expect(result.toolPolicies).toEqual(TOOL_POLICIES_DEFAULTS);
+  });
+
+  it("includes workflow defaults", () => {
+    const result = SettingsSchema.parse({});
+    expect(result.workflow).toEqual(WORKFLOW_DEFAULTS);
+  });
+
+  it("includes qualityMetrics defaults", () => {
+    const result = SettingsSchema.parse({});
+    expect(result.qualityMetrics).toEqual(QUALITY_METRICS_DEFAULTS);
+  });
+
+  it("includes stack defaults", () => {
+    const result = SettingsSchema.parse({});
+    expect(result.stack).toEqual(STACK_DEFAULTS);
+  });
+
+  it("recovers corrupted toolPolicies via .catch()", () => {
+    const result = SettingsSchema.parse({ toolPolicies: "garbage" });
+    expect(result.toolPolicies).toEqual(TOOL_POLICIES_DEFAULTS);
+  });
+
+  it("recovers corrupted workflow via .catch()", () => {
+    const result = SettingsSchema.parse({ workflow: 42 });
+    expect(result.workflow).toEqual(WORKFLOW_DEFAULTS);
+  });
+
+  it("accepts stack with detected and overrides", () => {
+    const result = SettingsSchema.parse({
+      stack: {
+        detected: { runtime: "typescript", packageManager: "pnpm" },
+        overrides: { linter: "biome" },
+      },
+    });
+    expect(result.stack.detected.runtime).toBe("typescript");
+    expect(result.stack.detected.packageManager).toBe("pnpm");
+    expect(result.stack.overrides.linter).toBe("biome");
   });
 });
 

@@ -61,7 +61,12 @@ import { SqliteMilestoneAuditRecordRepository } from "@hexagons/review/infrastru
 import { SqliteReviewRepository } from "@hexagons/review/infrastructure/repositories/review/sqlite-review.repository";
 import { SqliteShipRecordRepository } from "@hexagons/review/infrastructure/repositories/ship-record/sqlite-ship-record.repository";
 import { SqliteVerificationRepository } from "@hexagons/review/infrastructure/repositories/verification/sqlite-verification.repository";
-import { HOTKEYS_DEFAULTS, LoadSettingsUseCase, MergeSettingsUseCase } from "@hexagons/settings";
+import {
+  DiscoverStackUseCase,
+  HOTKEYS_DEFAULTS,
+  LoadSettingsUseCase,
+  MergeSettingsUseCase,
+} from "@hexagons/settings";
 import { FormatSettingsCascadeService } from "@hexagons/settings/domain/services/format-settings-cascade.service";
 import { AlwaysUnderBudgetAdapter } from "@hexagons/settings/infrastructure/always-under-budget.adapter";
 import { FsSettingsFileAdapter } from "@hexagons/settings/infrastructure/fs-settings-file.adapter";
@@ -314,7 +319,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const preDispatchGuardrail = new ComposablePreDispatchAdapter([
     new ScopeContainmentRule(),
     new DependencyCheckRule(),
-    new ToolPolicyRule(),
+    new ToolPolicyRule(settingsForModel.ok ? settingsForModel.data.toolPolicies : undefined),
     new WorktreeStateRule(worktreeStateGitOps),
     new BudgetCheckRule(),
   ]);
@@ -626,6 +631,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   };
 
   // --- Hexagon extensions (registered after withGuard is available) ---
+  const settingsFileAdapter = new FsSettingsFileAdapter();
   registerProjectExtension(api, {
     projectRoot: options.projectRoot,
     projectRepo,
@@ -634,6 +640,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     eventBus,
     dateProvider,
     gitHookPort: gitHookAdapter,
+    discoverStack: new DiscoverStackUseCase(settingsFileAdapter),
     withGuard,
   });
 
@@ -664,6 +671,9 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     resolveActiveTffDir,
     withGuard,
     workflowJournal,
+    failurePolicies: settingsForModel.ok
+      ? settingsForModel.data.workflow.failurePolicies
+      : undefined,
   });
 
   // --- Health command + tool ---

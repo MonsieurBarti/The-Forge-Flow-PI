@@ -2,6 +2,23 @@ import { isOk } from "@kernel";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { MetricsRepositoryPort } from "../../../domain/ports/metrics-repository.port";
 import { TaskMetricsBuilder } from "../../../domain/task-metrics.builder";
+import type { QualitySnapshot } from "../../../domain/task-metrics.schemas";
+
+function buildQualitySnapshot(overrides: Partial<QualitySnapshot> = {}): QualitySnapshot {
+  return {
+    type: "quality-snapshot",
+    sliceId: overrides.sliceId ?? crypto.randomUUID(),
+    milestoneId: overrides.milestoneId ?? crypto.randomUUID(),
+    taskId: overrides.taskId ?? crypto.randomUUID(),
+    metrics: overrides.metrics ?? {
+      testsPassed: 10,
+      testsFailed: 0,
+      lintErrors: 0,
+      typeErrors: 0,
+    },
+    timestamp: overrides.timestamp ?? new Date(),
+  };
+}
 
 export function runMetricsContractTests(
   name: string,
@@ -86,9 +103,99 @@ export function runMetricsContractTests(
       const result = await repo.readAll();
       expect(isOk(result)).toBe(true);
       if (isOk(result)) {
-        expect(result.data[0].retries).toBe(2);
-        expect(result.data[0].downshifted).toBe(true);
-        expect(result.data[0].reflectionPassed).toBe(false);
+        expect(result.data[0]).toMatchObject({
+          retries: 2,
+          downshifted: true,
+          reflectionPassed: false,
+        });
+      }
+    });
+
+    it("quality snapshot round-trip", async () => {
+      const snapshot = buildQualitySnapshot({ sliceId });
+      const appendResult = await repo.append(snapshot);
+      expect(isOk(appendResult)).toBe(true);
+
+      const result = await repo.readQualitySnapshots(sliceId);
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        expect(result.data).toHaveLength(1);
+        expect(result.data[0].type).toBe("quality-snapshot");
+        expect(result.data[0].sliceId).toBe(sliceId);
+        expect(result.data[0].metrics.testsPassed).toBe(10);
+      }
+    });
+
+    it("type discrimination: readBySlice returns only TaskMetrics, readQualitySnapshots returns only snapshots", async () => {
+      const taskEntry = new TaskMetricsBuilder()
+        .withSliceId(sliceId)
+        .withMilestoneId(milestoneId)
+        .build();
+      const snapshot = buildQualitySnapshot({ sliceId, milestoneId });
+      await repo.append(taskEntry);
+      await repo.append(snapshot);
+
+      const sliceResult = await repo.readBySlice(sliceId);
+      expect(isOk(sliceResult)).toBe(true);
+      if (isOk(sliceResult)) {
+        expect(sliceResult.data).toHaveLength(1);
+        expect(sliceResult.data[0].type).toBe("task-metrics");
+      }
+
+      const snapshotResult = await repo.readQualitySnapshots(sliceId);
+      expect(isOk(snapshotResult)).toBe(true);
+      if (isOk(snapshotResult)) {
+        expect(snapshotResult.data).toHaveLength(1);
+        expect(snapshotResult.data[0].type).toBe("quality-snapshot");
+      }
+
+      const allResult = await repo.readAll();
+      expect(isOk(allResult)).toBe(true);
+      if (isOk(allResult)) {
+        expect(allResult.data).toHaveLength(2);
+      }
+    });
+
+    it("readByMilestone returns only TaskMetrics (not quality snapshots)", async () => {
+      const taskEntry = new TaskMetricsBuilder()
+        .withMilestoneId(milestoneId)
+        .withSliceId(sliceId)
+        .build();
+      const snapshot = buildQualitySnapshot({ milestoneId, sliceId });
+      await repo.append(taskEntry);
+      await repo.append(snapshot);
+
+      const result = await repo.readByMilestone(milestoneId);
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        expect(result.data).toHaveLength(1);
+        expect(result.data[0].type).toBe("task-metrics");
+      }
+    });
+
+    it("readQualitySnapshots filters by sliceId", async () => {
+      const otherSliceId = crypto.randomUUID();
+      const snapshot1 = buildQualitySnapshot({ sliceId });
+      const snapshot2 = buildQualitySnapshot({ sliceId: otherSliceId });
+      await repo.append(snapshot1);
+      await repo.append(snapshot2);
+
+      const result = await repo.readQualitySnapshots(sliceId);
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        expect(result.data).toHaveLength(1);
+        expect(result.data[0].sliceId).toBe(sliceId);
+      }
+    });
+
+    it("readQualitySnapshots returns empty when no snapshots exist", async () => {
+      const taskEntry = new TaskMetricsBuilder().withSliceId(sliceId).build();
+      await repo.append(taskEntry);
+
+      const result = await repo.readQualitySnapshots(sliceId);
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        expect(result.data).toHaveLength(0);
       }
     });
   });

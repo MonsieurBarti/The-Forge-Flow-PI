@@ -120,6 +120,71 @@ describe("AggregateMetricsUseCase", () => {
     }
   });
 
+  it("aggregateByPhase groups metrics by phase", async () => {
+    const entries = [
+      new TaskMetricsBuilder()
+        .withSliceId(sliceId)
+        .withMilestoneId(milestoneId)
+        .withPhase("executing")
+        .withCostUsd(0.05)
+        .withSuccess(true)
+        .build(),
+      new TaskMetricsBuilder()
+        .withSliceId(sliceId)
+        .withMilestoneId(milestoneId)
+        .withPhase("executing")
+        .withCostUsd(0.08)
+        .withSuccess(false)
+        .build(),
+      new TaskMetricsBuilder()
+        .withSliceId(sliceId)
+        .withMilestoneId(milestoneId)
+        .withPhase("verifying")
+        .withCostUsd(0.03)
+        .withSuccess(true)
+        .build(),
+    ];
+    const { useCase } = setup(entries);
+
+    const result = await useCase.aggregateByPhase(sliceId);
+    expect(isOk(result)).toBe(true);
+    if (isOk(result)) {
+      const byPhase = result.data;
+      expect(Object.keys(byPhase)).toHaveLength(2);
+
+      const executing = byPhase.executing;
+      expect(executing).toBeDefined();
+      expect(executing?.taskCount).toBe(2);
+      expect(executing?.successCount).toBe(1);
+      expect(executing?.failureCount).toBe(1);
+      expect(executing?.totalCostUsd).toBeCloseTo(0.13);
+
+      const verifying = byPhase.verifying;
+      expect(verifying).toBeDefined();
+      expect(verifying?.taskCount).toBe(1);
+      expect(verifying?.successCount).toBe(1);
+      expect(verifying?.totalCostUsd).toBeCloseTo(0.03);
+    }
+  });
+
+  it("aggregateByPhase uses 'unknown' for entries without phase", async () => {
+    const entries = [
+      new TaskMetricsBuilder()
+        .withSliceId(sliceId)
+        .withMilestoneId(milestoneId)
+        .withCostUsd(0.1)
+        .build(),
+    ];
+    const { useCase } = setup(entries);
+
+    const result = await useCase.aggregateByPhase(sliceId);
+    expect(isOk(result)).toBe(true);
+    if (isOk(result)) {
+      expect(Object.keys(result.data)).toEqual(["unknown"]);
+      expect(result.data.unknown?.taskCount).toBe(1);
+    }
+  });
+
   it("excludes entries from other slices", async () => {
     const entries = [
       new TaskMetricsBuilder().withSliceId(sliceId).withCostUsd(0.1).build(),

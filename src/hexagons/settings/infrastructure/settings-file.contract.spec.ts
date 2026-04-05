@@ -12,6 +12,7 @@ function runContractTests(
   factory: () => {
     port: SettingsFilePort;
     seed: (content: string) => Promise<string>;
+    freshPath: () => string;
     nonExistentPath: () => string;
     cleanup: () => Promise<void>;
   },
@@ -43,6 +44,42 @@ function runContractTests(
         await cleanup();
       }
     });
+
+    it("writeFile → readFile round-trip produces identical content", async () => {
+      const { port, freshPath, cleanup } = factory();
+      const path = freshPath();
+      const content = "autonomy-level: full\nmodel: opus-4";
+      try {
+        const writeResult = await port.writeFile(path, content);
+        expect(isOk(writeResult)).toBe(true);
+
+        const readResult = await port.readFile(path);
+        expect(isOk(readResult)).toBe(true);
+        if (isOk(readResult)) {
+          expect(readResult.data).toBe(content);
+        }
+      } finally {
+        await cleanup();
+      }
+    });
+
+    it("writeFile overwrites existing content", async () => {
+      const { port, seed, cleanup } = factory();
+      const path = await seed("original content");
+      const updated = "updated content";
+      try {
+        const writeResult = await port.writeFile(path, updated);
+        expect(isOk(writeResult)).toBe(true);
+
+        const readResult = await port.readFile(path);
+        expect(isOk(readResult)).toBe(true);
+        if (isOk(readResult)) {
+          expect(readResult.data).toBe(updated);
+        }
+      } finally {
+        await cleanup();
+      }
+    });
   });
 }
 
@@ -57,6 +94,7 @@ runContractTests("InMemorySettingsFileAdapter", () => {
       adapter.seed(seededPath, content);
       return seededPath;
     },
+    freshPath: () => `/test/fresh-${Date.now()}-${Math.random()}.yaml`,
     nonExistentPath: () => "/nonexistent/path/settings.yaml",
     cleanup: async () => {
       adapter.reset();
@@ -82,6 +120,7 @@ runContractTests("FsSettingsFileAdapter", () => {
       await writeFile(fullPath, content, "utf-8");
       return fullPath;
     },
+    freshPath: () => join(testDir, `fresh-${Date.now()}-${Math.random()}.yaml`),
     nonExistentPath: () => join(testDir, "does-not-exist.yaml"),
     cleanup: async () => {
       // individual test cleanup is a no-op; afterAll handles the dir

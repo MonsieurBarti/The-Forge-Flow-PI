@@ -1,4 +1,4 @@
-import type { MergeSettingsUseCase } from "@hexagons/settings";
+import type { DiscoverStackUseCase, MergeSettingsUseCase } from "@hexagons/settings";
 import {
   type DateProviderPort,
   type EventBusPort,
@@ -34,6 +34,7 @@ export class InitProjectUseCase {
     private readonly eventBus: EventBusPort,
     private readonly dateProvider: DateProviderPort,
     private readonly gitHookPort?: GitHookPort,
+    private readonly discoverStack?: DiscoverStackUseCase,
   ) {}
 
   async execute(params: InitProjectParams): Promise<Result<ProjectDTO, InitProjectError>> {
@@ -59,14 +60,23 @@ export class InitProjectUseCase {
     const writeProjResult = await this.projectFs.writeFile(`${tffDir}/PROJECT.md`, projectMd);
     if (isErr(writeProjResult)) return writeProjResult;
 
-    // 4. Generate + write settings.yaml
+    // 4. Generate + write settings.yaml (with optional stack discovery)
     const settingsResult = this.mergeSettings.execute({
       team: null,
       local: null,
       env: {},
     });
     if (isErr(settingsResult)) return settingsResult;
-    const settingsYaml = stringify(settingsResult.data.toJSON());
+    const settingsJson = settingsResult.data.toJSON();
+
+    if (this.discoverStack) {
+      const stackResult = await this.discoverStack.execute(params.projectRoot);
+      if (stackResult.ok) {
+        settingsJson.stack = { detected: stackResult.data, overrides: {} };
+      }
+    }
+
+    const settingsYaml = stringify(settingsJson);
     const writeSettingsResult = await this.projectFs.writeFile(
       `${tffDir}/settings.yaml`,
       settingsYaml,

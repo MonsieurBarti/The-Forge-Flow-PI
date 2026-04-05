@@ -4,7 +4,11 @@ import {
   AUTONOMY_DEFAULTS,
   BEADS_DEFAULTS,
   MODEL_ROUTING_DEFAULTS,
+  QUALITY_METRICS_DEFAULTS,
   SETTINGS_DEFAULTS,
+  STACK_DEFAULTS,
+  TOOL_POLICIES_DEFAULTS,
+  WORKFLOW_DEFAULTS,
 } from "./project-settings.schemas";
 import { ProjectSettings } from "./project-settings.value-object";
 
@@ -60,6 +64,26 @@ describe("ProjectSettings", () => {
     it("returns correct beads section", () => {
       const settings = ProjectSettings.create({});
       expect(settings.beads.timeout).toBe(30000);
+    });
+
+    it("returns correct toolPolicies section", () => {
+      const settings = ProjectSettings.create({});
+      expect(settings.toolPolicies).toEqual(TOOL_POLICIES_DEFAULTS);
+    });
+
+    it("returns correct workflow section", () => {
+      const settings = ProjectSettings.create({});
+      expect(settings.workflow).toEqual(WORKFLOW_DEFAULTS);
+    });
+
+    it("returns correct qualityMetrics section", () => {
+      const settings = ProjectSettings.create({});
+      expect(settings.qualityMetrics).toEqual(QUALITY_METRICS_DEFAULTS);
+    });
+
+    it("returns correct stack section", () => {
+      const settings = ProjectSettings.create({});
+      expect(settings.stack).toEqual(STACK_DEFAULTS);
     });
   });
 

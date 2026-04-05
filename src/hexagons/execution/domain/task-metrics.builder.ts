@@ -7,6 +7,7 @@ export class TaskMetricsBuilder {
   private _taskId: string = faker.string.uuid();
   private _sliceId: string = faker.string.uuid();
   private _milestoneId: string = faker.string.uuid();
+  private _phase?: string;
   private _provider = "anthropic";
   private _modelId = "claude-sonnet-4-6";
   private _profile: ModelProfileName = "balanced";
@@ -35,6 +36,10 @@ export class TaskMetricsBuilder {
   }
   withMilestoneId(id: string): this {
     this._milestoneId = id;
+    return this;
+  }
+  withPhase(phase: string): this {
+    this._phase = phase;
     return this;
   }
   withProvider(p: string): this {
@@ -103,6 +108,7 @@ export class TaskMetricsBuilder {
       taskId: this._taskId,
       sliceId: this._sliceId,
       milestoneId: this._milestoneId,
+      phase: this._phase,
       model: { provider: this._provider, modelId: this._modelId, profile: this._profile },
       tokens: { input: this._inputTokens, output: this._outputTokens },
       costUsd: this._costUsd,

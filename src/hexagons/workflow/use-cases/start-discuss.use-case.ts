@@ -95,6 +95,7 @@ export class StartDiscussUseCase {
         maxRetries: 2,
         allSlicesClosed: false,
         lastError: null,
+        failurePolicy: "strict",
       },
       now,
     );

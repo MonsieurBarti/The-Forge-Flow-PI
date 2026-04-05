@@ -172,6 +172,15 @@ export const PreDispatchBlockedEntrySchema = JournalEntryBaseSchema.extend({
 });
 export type PreDispatchBlockedEntry = z.infer<typeof PreDispatchBlockedEntrySchema>;
 
+export const FailureRecordedEntrySchema = JournalEntryBaseSchema.extend({
+  type: z.literal("failure-recorded"),
+  phase: z.string(),
+  policy: z.enum(["strict", "tolerant", "lenient"]),
+  action: z.enum(["retried", "continued", "blocked"]),
+  error: z.string().optional(),
+});
+export type FailureRecordedEntry = z.infer<typeof FailureRecordedEntrySchema>;
+
 // ---------------------------------------------------------------------------
 // Discriminated union
 // ---------------------------------------------------------------------------
@@ -192,5 +201,6 @@ export const JournalEntrySchema = z.discriminatedUnion("type", [
   ModelDownshiftEntrySchema,
   TaskEscalatedEntrySchema,
   PreDispatchBlockedEntrySchema,
+  FailureRecordedEntrySchema,
 ]);
 export type JournalEntry = z.infer<typeof JournalEntrySchema>;

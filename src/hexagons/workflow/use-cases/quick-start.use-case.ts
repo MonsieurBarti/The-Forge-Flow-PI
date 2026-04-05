@@ -121,6 +121,7 @@ export class QuickStartUseCase {
       maxRetries: 2,
       allSlicesClosed: false,
       lastError: null,
+      failurePolicy: "strict" as const,
     };
 
     const startResult = session.trigger("start", guardContext, now);

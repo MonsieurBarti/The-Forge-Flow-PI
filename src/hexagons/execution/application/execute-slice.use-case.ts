@@ -343,6 +343,8 @@ export class ExecuteSliceUseCase {
             expectedBranch: `slice/${input.sliceId}`,
             agentModel: `${input.model.provider}/${input.model.modelId}`,
             agentTools: config.tools,
+            agentRole: config.agentType,
+            complexityTier: input.complexity,
             upstreamTasks: [...task.blockedBy].map((id) => {
               const t = taskMap.get(id);
               return { id, status: t?.status ?? "unknown" };

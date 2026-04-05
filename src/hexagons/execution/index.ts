@@ -208,13 +208,17 @@ export {
 export { TaskMetricsBuilder } from "./domain/task-metrics.builder";
 export type {
   AggregatedMetrics,
+  MetricsEntry,
   ModelBreakdownEntry,
+  QualitySnapshot,
   TaskMetrics,
   TaskMetricsModel,
 } from "./domain/task-metrics.schemas";
 export {
   AggregatedMetricsSchema,
+  MetricsEntrySchema,
   ModelBreakdownEntrySchema,
+  QualitySnapshotSchema,
   TaskMetricsModelSchema,
   TaskMetricsSchema,
 } from "./domain/task-metrics.schemas";

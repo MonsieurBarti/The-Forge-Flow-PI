@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { InMemoryMetricsRepository } from "@hexagons/execution/infrastructure/repositories/metrics/in-memory-metrics.repository";
 import { Slice } from "@hexagons/slice/domain/slice.aggregate";
 import type { SliceStatus } from "@hexagons/slice/domain/slice.schemas";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
@@ -21,7 +22,10 @@ import type {
 import { WorkflowSessionBuilder } from "../domain/workflow-session.builder";
 import type { GuardContext } from "../domain/workflow-session.schemas";
 import { InMemoryWorkflowSessionRepository } from "../infrastructure/in-memory-workflow-session.repository";
-import { OrchestratePhaseTransitionUseCase } from "./orchestrate-phase-transition.use-case";
+import {
+  OrchestratePhaseTransitionUseCase,
+  PHASE_SUCCESS_TRIGGERS,
+} from "./orchestrate-phase-transition.use-case";
 
 class StubDateProvider extends DateProviderPort {
   private _now = new Date("2026-01-15T10:00:00Z");
@@ -36,6 +40,7 @@ const DEFAULT_GUARD_CTX: GuardContext = {
   maxRetries: 2,
   allSlicesClosed: false,
   lastError: null,
+  failurePolicy: "strict",
 };
 
 function setup() {
@@ -325,5 +330,236 @@ describe("OrchestratePhaseTransitionUseCase", () => {
     expect(entry.milestoneId).toBe(session.milestoneId);
     expect(entry.fromPhase).toBe("discussing");
     expect(entry.toPhase).toBe("researching");
+  });
+
+  it("writes quality snapshot when metricsRepository provided", async () => {
+    const { sessionRepo, sliceRepo, sliceTransitionPort, eventBus, dateProvider } = setup();
+    const metricsRepo = new InMemoryMetricsRepository();
+
+    const useCase = new OrchestratePhaseTransitionUseCase(
+      sessionRepo,
+      sliceTransitionPort,
+      eventBus,
+      dateProvider,
+      undefined,
+      metricsRepo,
+    );
+
+    const sliceId = faker.string.uuid();
+    const session = new WorkflowSessionBuilder()
+      .withCurrentPhase("discussing")
+      .withSliceId(sliceId)
+      .build();
+    sessionRepo.seed(session);
+    seedSlice(sliceRepo, sliceId, "discussing");
+
+    const result = await useCase.execute({
+      milestoneId: session.milestoneId as string,
+      trigger: "next",
+      guardContext: { ...DEFAULT_GUARD_CTX, complexityTier: "F-lite" },
+    });
+
+    expect(isOk(result)).toBe(true);
+
+    const snapshots = await metricsRepo.readQualitySnapshots(sliceId);
+    expect(isOk(snapshots)).toBe(true);
+    if (isOk(snapshots)) {
+      expect(snapshots.data).toHaveLength(1);
+      const snap = snapshots.data[0];
+      expect(snap.sliceId).toBe(sliceId);
+      expect(snap.milestoneId).toBe(session.milestoneId);
+      expect(snap.metrics.testsPassed).toBe(0);
+      expect(snap.metrics.testsFailed).toBe(0);
+      expect(snap.metrics.lintErrors).toBe(0);
+      expect(snap.metrics.typeErrors).toBe(0);
+    }
+  });
+
+  it("does not write quality snapshot when metricsRepository not provided", async () => {
+    const { useCase, sessionRepo, sliceRepo } = setup();
+    const sliceId = faker.string.uuid();
+    const session = new WorkflowSessionBuilder()
+      .withCurrentPhase("discussing")
+      .withSliceId(sliceId)
+      .build();
+    sessionRepo.seed(session);
+    seedSlice(sliceRepo, sliceId, "discussing");
+
+    // setup() creates the use case without metricsRepository — should not throw
+    const result = await useCase.execute({
+      milestoneId: session.milestoneId as string,
+      trigger: "next",
+      guardContext: { ...DEFAULT_GUARD_CTX, complexityTier: "F-lite" },
+    });
+
+    expect(isOk(result)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Failure Policy Routing
+// ---------------------------------------------------------------------------
+
+function setupWithJournal() {
+  const sessionRepo = new InMemoryWorkflowSessionRepository();
+  const sliceRepo = new InMemorySliceRepository();
+  const dateProvider = new StubDateProvider();
+  const sliceTransitionPort = new WorkflowSliceTransitionAdapter(sliceRepo, dateProvider);
+  const eventBus = new InProcessEventBus(new SilentLoggerAdapter());
+  const appendSpy = vi.fn(async (_entry: WorkflowJournalEntry) => ({
+    ok: true as const,
+    data: undefined,
+  }));
+  const mockJournal: WorkflowJournalPort = {
+    append: appendSpy,
+    readAll: async () => ({ ok: true as const, data: [] as WorkflowJournalEntry[] }),
+  } as unknown as WorkflowJournalPort;
+  const useCase = new OrchestratePhaseTransitionUseCase(
+    sessionRepo,
+    sliceTransitionPort,
+    eventBus,
+    dateProvider,
+    mockJournal,
+  );
+  return { useCase, sessionRepo, sliceRepo, eventBus, dateProvider, appendSpy };
+}
+
+describe("Failure policy routing", () => {
+  it("strict mode returns trigger error unchanged (default behavior)", async () => {
+    const { useCase, sessionRepo } = setupWithJournal();
+    // idle + "next" with allSlicesClosed=false will fail (guard blocks)
+    const session = new WorkflowSessionBuilder().withCurrentPhase("idle").build();
+    sessionRepo.seed(session);
+
+    const result = await useCase.execute({
+      milestoneId: session.milestoneId as string,
+      trigger: "next",
+      guardContext: { ...DEFAULT_GUARD_CTX, failurePolicy: "strict", allSlicesClosed: false },
+    });
+
+    expect(isErr(result)).toBe(true);
+  });
+
+  it("tolerant mode records FailureRecordedEntry then returns the error", async () => {
+    const { useCase, sessionRepo, appendSpy } = setupWithJournal();
+    const session = new WorkflowSessionBuilder().withCurrentPhase("idle").build();
+    sessionRepo.seed(session);
+
+    const result = await useCase.execute({
+      milestoneId: session.milestoneId as string,
+      trigger: "next",
+      guardContext: { ...DEFAULT_GUARD_CTX, failurePolicy: "tolerant", allSlicesClosed: false },
+    });
+
+    expect(isErr(result)).toBe(true);
+    expect(appendSpy).toHaveBeenCalledOnce();
+    const entry = appendSpy.mock.calls[0]?.[0];
+    expect(entry.type).toBe("failure-recorded");
+    expect(entry.metadata).toMatchObject({
+      phase: "idle",
+      policy: "tolerant",
+      action: "retried",
+    });
+  });
+
+  it("lenient mode records FailureRecordedEntry and triggers success path", async () => {
+    const { useCase, sessionRepo, sliceRepo, appendSpy } = setupWithJournal();
+    const sliceId = faker.string.uuid();
+    const session = new WorkflowSessionBuilder()
+      .withCurrentPhase("discussing")
+      .withSliceId(sliceId)
+      .build();
+    sessionRepo.seed(session);
+    seedSlice(sliceRepo, sliceId, "discussing");
+
+    // "approve" is not valid for "discussing" — it will fail.
+    // Then lenient should look up PHASE_SUCCESS_TRIGGERS["discussing"] = "next" and try that instead.
+    const result = await useCase.execute({
+      milestoneId: session.milestoneId as string,
+      trigger: "approve",
+      guardContext: { ...DEFAULT_GUARD_CTX, failurePolicy: "lenient", complexityTier: "F-lite" },
+    });
+
+    expect(isOk(result)).toBe(true);
+    if (isOk(result)) {
+      expect(result.data.fromPhase).toBe("discussing");
+      expect(result.data.toPhase).toBe("researching");
+    }
+    // Should have recorded a failure-recorded entry
+    const failureEntry = appendSpy.mock.calls.find((c) => c[0].type === "failure-recorded");
+    expect(failureEntry).toBeDefined();
+    expect(failureEntry?.[0].metadata).toMatchObject({
+      phase: "discussing",
+      policy: "lenient",
+      action: "continued",
+    });
+  });
+
+  it("lenient mode with unknown phase falls back to strict (returns error)", async () => {
+    const { useCase, sessionRepo, appendSpy } = setupWithJournal();
+    // "completing-milestone" has no entry in PHASE_SUCCESS_TRIGGERS
+    const session = new WorkflowSessionBuilder().withCurrentPhase("completing-milestone").build();
+    sessionRepo.seed(session);
+
+    // "approve" is not valid for "completing-milestone"
+    const result = await useCase.execute({
+      milestoneId: session.milestoneId as string,
+      trigger: "approve",
+      guardContext: { ...DEFAULT_GUARD_CTX, failurePolicy: "lenient" },
+    });
+
+    expect(isErr(result)).toBe(true);
+    // No journal entry since we fell back to strict
+    expect(appendSpy).not.toHaveBeenCalled();
+  });
+
+  it("lenient mode without journal still recovers via success trigger", async () => {
+    const sessionRepo = new InMemoryWorkflowSessionRepository();
+    const sliceRepo = new InMemorySliceRepository();
+    const dateProvider = new StubDateProvider();
+    const sliceTransitionPort = new WorkflowSliceTransitionAdapter(sliceRepo, dateProvider);
+    const eventBus = new InProcessEventBus(new SilentLoggerAdapter());
+    const useCase = new OrchestratePhaseTransitionUseCase(
+      sessionRepo,
+      sliceTransitionPort,
+      eventBus,
+      dateProvider,
+    );
+
+    const sliceId = faker.string.uuid();
+    const session = new WorkflowSessionBuilder()
+      .withCurrentPhase("executing")
+      .withSliceId(sliceId)
+      .build();
+    sessionRepo.seed(session);
+    seedSlice(sliceRepo, sliceId, "executing");
+
+    // "approve" is invalid for "executing"; lenient tries "next" (success trigger)
+    const result = await useCase.execute({
+      milestoneId: session.milestoneId as string,
+      trigger: "approve",
+      guardContext: { ...DEFAULT_GUARD_CTX, failurePolicy: "lenient" },
+    });
+
+    expect(isOk(result)).toBe(true);
+    if (isOk(result)) {
+      expect(result.data.fromPhase).toBe("executing");
+      expect(result.data.toPhase).toBe("verifying");
+    }
+  });
+
+  it("PHASE_SUCCESS_TRIGGERS covers all active workflow phases", () => {
+    const activePhases = [
+      "discussing",
+      "researching",
+      "planning",
+      "executing",
+      "verifying",
+      "reviewing",
+      "shipping",
+    ];
+    for (const phase of activePhases) {
+      expect(PHASE_SUCCESS_TRIGGERS[phase]).toBeDefined();
+    }
   });
 });

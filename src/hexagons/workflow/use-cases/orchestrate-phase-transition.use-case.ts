@@ -1,3 +1,4 @@
+import type { MetricsRepositoryPort, QualitySnapshot } from "@hexagons/execution";
 import type { DateProviderPort, EventBusPort, PersistenceError, Result } from "@kernel";
 import { err, isErr, ok } from "@kernel";
 import type { SliceTransitionError } from "../domain/errors/slice-transition.error";
@@ -11,6 +12,16 @@ import type {
   WorkflowPhase,
   WorkflowTrigger,
 } from "../domain/workflow-session.schemas";
+
+export const PHASE_SUCCESS_TRIGGERS: Record<string, string> = {
+  discussing: "next",
+  researching: "next",
+  planning: "approve",
+  executing: "next",
+  verifying: "approve",
+  reviewing: "approve",
+  shipping: "next",
+};
 
 export interface PhaseTransitionInput {
   milestoneId?: string;
@@ -46,6 +57,7 @@ export class OrchestratePhaseTransitionUseCase {
     private readonly eventBus: EventBusPort,
     private readonly dateProvider: DateProviderPort,
     private readonly workflowJournal?: WorkflowJournalPort,
+    private readonly metricsRepository?: MetricsRepositoryPort,
   ) {}
 
   async execute(
@@ -74,9 +86,66 @@ export class OrchestratePhaseTransitionUseCase {
     const fromPhase = session.currentPhase;
     const capturedSliceId = session.sliceId;
 
-    // 2. Trigger transition
+    // 2. Trigger transition (with failure policy routing)
     const triggerResult = session.trigger(input.trigger, input.guardContext, now);
-    if (isErr(triggerResult)) return triggerResult;
+    if (isErr(triggerResult)) {
+      const policy = input.guardContext.failurePolicy ?? "strict";
+
+      if (policy === "strict") {
+        return triggerResult;
+      }
+
+      if (policy === "tolerant") {
+        if (this.workflowJournal) {
+          await this.workflowJournal.append({
+            type: "failure-recorded",
+            sessionId: session.id,
+            milestoneId: input.milestoneId ?? null,
+            sliceId: session.sliceId,
+            timestamp: now,
+            metadata: {
+              phase: fromPhase,
+              policy: "tolerant",
+              action: "retried",
+              error: String(triggerResult.error),
+            },
+          });
+        }
+        return triggerResult;
+      }
+
+      // lenient: attempt the success trigger for the current phase
+      const successTrigger = PHASE_SUCCESS_TRIGGERS[fromPhase];
+      if (!successTrigger) {
+        // Unknown phase — fall back to strict
+        return triggerResult;
+      }
+
+      if (this.workflowJournal) {
+        await this.workflowJournal.append({
+          type: "failure-recorded",
+          sessionId: session.id,
+          milestoneId: input.milestoneId ?? null,
+          sliceId: session.sliceId,
+          timestamp: now,
+          metadata: {
+            phase: fromPhase,
+            policy: "lenient",
+            action: "continued",
+            error: String(triggerResult.error),
+          },
+        });
+      }
+
+      const recoveryResult = session.trigger(
+        successTrigger as WorkflowTrigger,
+        input.guardContext,
+        now,
+      );
+      if (isErr(recoveryResult)) {
+        return triggerResult; // Return the original error
+      }
+    }
 
     // 3. Detect slice effects
     const sliceCleared = capturedSliceId !== undefined && session.sliceId === undefined;
@@ -100,6 +169,25 @@ export class OrchestratePhaseTransitionUseCase {
         if (isErr(transitionResult)) return transitionResult;
         sliceTransitioned = true;
       }
+    }
+
+    // 3b. Capture quality snapshot for the departing phase
+    if (this.metricsRepository && capturedSliceId) {
+      const milestoneIdForSnapshot = input.milestoneId ?? session.milestoneId ?? capturedSliceId;
+      const snapshot: QualitySnapshot = {
+        type: "quality-snapshot",
+        sliceId: capturedSliceId,
+        milestoneId: milestoneIdForSnapshot,
+        taskId: crypto.randomUUID(),
+        metrics: {
+          testsPassed: 0,
+          testsFailed: 0,
+          lintErrors: 0,
+          typeErrors: 0,
+        },
+        timestamp: now,
+      };
+      await this.metricsRepository.append(snapshot);
     }
 
     // 4. Save session

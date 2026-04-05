@@ -5,7 +5,10 @@ import type { MetricsRepositoryPort } from "../domain/ports/metrics-repository.p
 import type { TaskMetrics } from "../domain/task-metrics.schemas";
 
 export class RecordTaskMetricsUseCase {
-  constructor(private readonly metricsRepo: MetricsRepositoryPort) {}
+  constructor(
+    private readonly metricsRepo: MetricsRepositoryPort,
+    private readonly currentPhase?: () => string,
+  ) {}
 
   register(eventBus: EventBusPort): void {
     eventBus.subscribe(EVENT_NAMES.TASK_EXECUTION_COMPLETED, (event) =>
@@ -17,9 +20,11 @@ export class RecordTaskMetricsUseCase {
     if (!(event instanceof TaskExecutionCompletedEvent)) return;
 
     const metrics: TaskMetrics = {
+      type: "task-metrics",
       taskId: event.taskId,
       sliceId: event.sliceId,
       milestoneId: event.milestoneId,
+      phase: this.currentPhase?.() ?? "executing",
       model: {
         provider: event.agentResult.cost.provider,
         modelId: event.agentResult.cost.modelId,
