@@ -51,6 +51,7 @@ export {
 export { ProjectSettings } from "./domain/project-settings.value-object";
 
 // Use Cases
+export { DiscoverStackUseCase } from "./use-cases/discover-stack.use-case";
 export { LoadSettingsUseCase } from "./use-cases/load-settings.use-case";
 export { MergeSettingsUseCase } from "./use-cases/merge-settings.use-case";
 export { ResolveModelUseCase } from "./use-cases/resolve-model.use-case";
