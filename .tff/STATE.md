@@ -7,7 +7,7 @@
 ## Slices
 | Slice | Status | Tasks | Progress |
 |---|---|---|---|
-| Build Hygiene & Dependency Fix | executing | 0/0 | 0% |
+| Build Hygiene & Dependency Fix | verifying | 0/0 | 0% |
 | PI Extension Audit & Entry Point Wiring | discussing | 0/0 | 0% |
 | Package Metadata & Documentation | discussing | 0/0 | 0% |
 | Release-Please Setup | discussing | 0/0 | 0% |
