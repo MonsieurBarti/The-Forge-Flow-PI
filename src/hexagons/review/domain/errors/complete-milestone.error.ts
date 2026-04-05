@@ -64,6 +64,14 @@ export class CompleteMilestoneError extends BaseDomainError {
     );
   }
 
+  static auditRequired(milestoneId: string, reason?: string): CompleteMilestoneError {
+    return new CompleteMilestoneError(
+      "MILESTONE.AUDIT_REQUIRED",
+      reason ?? `Run /tff:audit-milestone first. All findings must be resolved.`,
+      { milestoneId },
+    );
+  }
+
   static mergeBackFailed(milestoneId: string, cause: unknown): CompleteMilestoneError {
     const msg = cause instanceof Error ? cause.message : String(cause);
     return new CompleteMilestoneError(

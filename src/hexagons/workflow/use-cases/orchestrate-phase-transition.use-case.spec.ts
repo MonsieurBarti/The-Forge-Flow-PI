@@ -67,6 +67,7 @@ function seedSlice(repo: InMemorySliceRepository, id: string, status: SliceStatu
       specPath: null,
       planPath: null,
       researchPath: null,
+      position: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
     }),

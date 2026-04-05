@@ -1,3 +1,7 @@
+export type { AddSliceInput, AddSliceOutput } from "./application/add-slice.use-case";
+export { AddSliceUseCase } from "./application/add-slice.use-case";
+export type { RemoveSliceInput, RemoveSliceOutput } from "./application/remove-slice.use-case";
+export { RemoveSliceUseCase } from "./application/remove-slice.use-case";
 export { SliceNotFoundError } from "./domain/errors/slice-not-found.error";
 export { SliceCreatedEvent } from "./domain/events/slice-created.event";
 export { SliceStatusChangedEvent } from "./domain/events/slice-status-changed.event";

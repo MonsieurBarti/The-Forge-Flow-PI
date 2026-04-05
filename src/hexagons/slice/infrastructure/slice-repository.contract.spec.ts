@@ -143,6 +143,75 @@ function runContractTests(name: string, factory: () => SliceRepositoryPort & { r
       }
     });
 
+    it("save + findById preserves position", async () => {
+      const slice = new SliceBuilder().withPosition(5).build();
+      await repo.save(slice);
+
+      const result = await repo.findById(slice.id);
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        expect(result.data?.position).toBe(5);
+      }
+    });
+
+    it("position defaults to 0", async () => {
+      const slice = new SliceBuilder().build();
+      await repo.save(slice);
+
+      const result = await repo.findById(slice.id);
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        expect(result.data?.position).toBe(0);
+      }
+    });
+
+    it("findByMilestoneId returns slices sorted by position", async () => {
+      const milestoneId = crypto.randomUUID();
+      const s1 = new SliceBuilder()
+        .withMilestoneId(milestoneId)
+        .withLabel("M01-S01")
+        .withPosition(2)
+        .build();
+      const s2 = new SliceBuilder()
+        .withMilestoneId(milestoneId)
+        .withLabel("M01-S02")
+        .withPosition(0)
+        .build();
+      const s3 = new SliceBuilder()
+        .withMilestoneId(milestoneId)
+        .withLabel("M01-S03")
+        .withPosition(1)
+        .build();
+      await repo.save(s1);
+      await repo.save(s2);
+      await repo.save(s3);
+
+      const result = await repo.findByMilestoneId(milestoneId);
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        expect(result.data.map((s) => s.position)).toEqual([0, 1, 2]);
+      }
+    });
+
+    it("delete removes slice by id", async () => {
+      const slice = new SliceBuilder().build();
+      await repo.save(slice);
+
+      const delResult = await repo.delete(slice.id);
+      expect(isOk(delResult)).toBe(true);
+
+      const findResult = await repo.findById(slice.id);
+      expect(isOk(findResult)).toBe(true);
+      if (isOk(findResult)) {
+        expect(findResult.data).toBeNull();
+      }
+    });
+
+    it("delete is idempotent", async () => {
+      const result = await repo.delete(crypto.randomUUID());
+      expect(isOk(result)).toBe(true);
+    });
+
     it("findByMilestoneId does not return ad-hoc slices", async () => {
       const milestoneId = crypto.randomUUID();
       const ms = new SliceBuilder().withMilestoneId(milestoneId).withLabel("M01-S10").build();

@@ -1,5 +1,11 @@
 // Domain -- Errors
 
+export type {
+  AuditMilestoneInput,
+  AuditMilestoneOutput,
+} from "./application/audit-milestone.use-case";
+// Application — AuditMilestone
+export { AuditMilestoneError, AuditMilestoneUseCase } from "./application/audit-milestone.use-case";
 // Application — CompleteMilestone
 export { CompleteMilestoneUseCase } from "./application/complete-milestone.use-case";
 // Application — ConductReview
@@ -13,6 +19,8 @@ export { ShipSliceUseCase } from "./application/ship-slice.use-case";
 export { VerifyAcceptanceCriteriaUseCase } from "./application/verify-acceptance-criteria.use-case";
 // Domain — CompletionRecord Aggregate
 export { CompletionRecord } from "./domain/aggregates/completion-record.aggregate";
+// Domain — MilestoneAuditRecord Aggregate
+export { MilestoneAuditRecord } from "./domain/aggregates/milestone-audit-record.aggregate";
 // Domain -- Aggregates & Value Objects
 export { Review } from "./domain/aggregates/review.aggregate";
 // Domain — ShipRecord aggregate
@@ -59,6 +67,7 @@ export { FixerPort, FixRequestSchema, FixResultSchema } from "./domain/ports/fix
 export type { MergeGateContext } from "./domain/ports/merge-gate.port";
 // Domain — Ship Ports
 export { MergeGatePort } from "./domain/ports/merge-gate.port";
+export { MilestoneAuditRecordRepositoryPort } from "./domain/ports/milestone-audit-record-repository.port";
 export type { MilestoneSliceStatus } from "./domain/ports/milestone-query.port";
 export { MilestoneQueryPort } from "./domain/ports/milestone-query.port";
 export { MilestoneTransitionPort } from "./domain/ports/milestone-transition.port";

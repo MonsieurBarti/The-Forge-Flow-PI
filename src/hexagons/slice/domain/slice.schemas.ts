@@ -68,6 +68,7 @@ export const SlicePropsSchema = z.object({
   specPath: z.string().nullable().default(null),
   planPath: z.string().nullable().default(null),
   researchPath: z.string().nullable().default(null),
+  position: z.number().int().nonnegative().default(0),
   createdAt: TimestampSchema,
   updatedAt: TimestampSchema,
 });

@@ -15,6 +15,7 @@ export class SliceBuilder {
   private _researchPath: string | null = null;
   private _now: Date = faker.date.recent();
   private _kind: SliceKind = "milestone";
+  private _position = 0;
 
   withId(id: string): this {
     this._id = id;
@@ -71,6 +72,11 @@ export class SliceBuilder {
     return this;
   }
 
+  withPosition(position: number): this {
+    this._position = position;
+    return this;
+  }
+
   withoutMilestone(): this {
     this._milestoneId = null;
     this._kind = "quick";
@@ -85,6 +91,7 @@ export class SliceBuilder {
       title: this._title,
       description: this._description,
       kind: this._kind,
+      position: this._position,
       now: this._now,
     });
   }
@@ -102,6 +109,7 @@ export class SliceBuilder {
       specPath: this._specPath,
       planPath: this._planPath,
       researchPath: this._researchPath,
+      position: this._position,
       createdAt: this._now,
       updatedAt: this._now,
     };

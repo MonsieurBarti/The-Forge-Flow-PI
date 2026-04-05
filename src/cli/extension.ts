@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { ExecuteSliceUseCase } from "@hexagons/execution/application/execute-slice.use-case";
 import { GetSliceExecutorsUseCase } from "@hexagons/execution/application/get-slice-executors.use-case";
 import { ReplayJournalUseCase } from "@hexagons/execution/application/replay-journal.use-case";
+import { RollbackSliceUseCase } from "@hexagons/execution/application/rollback-slice.use-case";
 import { OverseerConfigSchema } from "@hexagons/execution/domain/overseer.schemas";
 import { PiAgentDispatchAdapter } from "@hexagons/execution/infrastructure/adapters/agent-dispatch/pi-agent-dispatch.adapter";
 import { MarkdownExecutionSessionAdapter } from "@hexagons/execution/infrastructure/adapters/execution-session/markdown-execution-session.adapter";
@@ -34,6 +35,7 @@ import { SqliteMilestoneRepository } from "@hexagons/milestone/infrastructure/sq
 import { registerProjectExtension } from "@hexagons/project";
 import { NodeProjectFileSystemAdapter } from "@hexagons/project/infrastructure/node-project-filesystem.adapter";
 import { SqliteProjectRepository } from "@hexagons/project/infrastructure/sqlite-project.repository";
+import { AuditMilestoneUseCase } from "@hexagons/review/application/audit-milestone.use-case";
 import { CompleteMilestoneUseCase } from "@hexagons/review/application/complete-milestone.use-case";
 import { ConductReviewUseCase } from "@hexagons/review/application/conduct-review.use-case";
 import { ReviewPromptBuilder } from "@hexagons/review/application/review-prompt-builder";
@@ -52,7 +54,10 @@ import { MilestoneTransitionAdapter } from "@hexagons/review/infrastructure/adap
 import { PlannotatorReviewUIAdapter } from "@hexagons/review/infrastructure/adapters/review-ui/plannotator-review-ui.adapter";
 import { TerminalReviewUIAdapter } from "@hexagons/review/infrastructure/adapters/review-ui/terminal-review-ui.adapter";
 import { BeadSliceSpecAdapter } from "@hexagons/review/infrastructure/adapters/slice-spec/bead-slice-spec.adapter";
+import { registerAuditMilestoneCommand } from "@hexagons/review/infrastructure/pi/audit-milestone.command";
+import { createAuditMilestoneTool } from "@hexagons/review/infrastructure/pi/audit-milestone.tool";
 import { SqliteCompletionRecordRepository } from "@hexagons/review/infrastructure/repositories/completion-record/sqlite-completion-record.repository";
+import { SqliteMilestoneAuditRecordRepository } from "@hexagons/review/infrastructure/repositories/milestone-audit-record/sqlite-milestone-audit-record.repository";
 import { SqliteReviewRepository } from "@hexagons/review/infrastructure/repositories/review/sqlite-review.repository";
 import { SqliteShipRecordRepository } from "@hexagons/review/infrastructure/repositories/ship-record/sqlite-ship-record.repository";
 import { SqliteVerificationRepository } from "@hexagons/review/infrastructure/repositories/verification/sqlite-verification.repository";
@@ -61,6 +66,12 @@ import { FormatSettingsCascadeService } from "@hexagons/settings/domain/services
 import { AlwaysUnderBudgetAdapter } from "@hexagons/settings/infrastructure/always-under-budget.adapter";
 import { FsSettingsFileAdapter } from "@hexagons/settings/infrastructure/fs-settings-file.adapter";
 import { ProcessEnvVarAdapter } from "@hexagons/settings/infrastructure/process-env-var.adapter";
+import { AddSliceUseCase } from "@hexagons/slice/application/add-slice.use-case";
+import { RemoveSliceUseCase } from "@hexagons/slice/application/remove-slice.use-case";
+import { registerAddSliceCommand } from "@hexagons/slice/infrastructure/pi/add-slice.command";
+import { createAddSliceTool } from "@hexagons/slice/infrastructure/pi/add-slice.tool";
+import { registerRemoveSliceCommand } from "@hexagons/slice/infrastructure/pi/remove-slice.command";
+import { createRemoveSliceTool } from "@hexagons/slice/infrastructure/pi/remove-slice.tool";
 import { SqliteSliceRepository } from "@hexagons/slice/infrastructure/sqlite-slice.repository";
 import { WorkflowSliceTransitionAdapter } from "@hexagons/slice/infrastructure/workflow-slice-transition.adapter";
 import { CreateTasksUseCase } from "@hexagons/task/application/create-tasks.use-case";
@@ -74,15 +85,19 @@ import {
   SettingsModelProfileResolver,
   SqliteWorkflowSessionRepository,
 } from "@hexagons/workflow";
+import { MapCodebaseUseCase } from "@hexagons/workflow/application/map-codebase.use-case";
 import { NodeArtifactFileAdapter } from "@hexagons/workflow/infrastructure/node-artifact-file.adapter";
 import { registerHealthCommand } from "@hexagons/workflow/infrastructure/pi/health.command";
 import { createHealthCheckTool } from "@hexagons/workflow/infrastructure/pi/health-check.tool";
 import { registerHelpCommand } from "@hexagons/workflow/infrastructure/pi/help.command";
+import { registerMapCodebaseCommand } from "@hexagons/workflow/infrastructure/pi/map-codebase.command";
+import { createMapCodebaseTool } from "@hexagons/workflow/infrastructure/pi/map-codebase.tool";
 import { registerProgressCommand } from "@hexagons/workflow/infrastructure/pi/progress.command";
 import { createProgressTool } from "@hexagons/workflow/infrastructure/pi/progress.tool";
 import { registerSettingsCommand } from "@hexagons/workflow/infrastructure/pi/settings.command";
 import { createReadSettingsTool } from "@hexagons/workflow/infrastructure/pi/settings-read.tool";
 import { createUpdateSettingTool } from "@hexagons/workflow/infrastructure/pi/settings-update.tool";
+import { PiDocWriterAdapter } from "@hexagons/workflow/infrastructure/pi-doc-writer.adapter";
 import type { ExtensionAPI } from "@infrastructure/pi";
 import type { Result } from "@kernel";
 import {
@@ -330,16 +345,33 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     checkpointBeforeRetry: true,
   });
 
-  registerExecutionExtension(api, {
-    sessionRepository: sessionRepo,
-    pauseSignal: new ProcessSignalPauseAdapter(),
-    executeSlice,
-    replayJournal,
-    checkpointRepository: checkpointRepo,
-    eventBus,
-    dateProvider,
-    logger,
-  });
+  // --- Rollback wiring ---
+  const phaseTransitionAdapter = {
+    async transition(sliceId: string, _from: string, to: string) {
+      return sliceTransitionPort.transition(
+        sliceId,
+        to as import("@hexagons/slice/domain/slice.schemas").SliceStatus,
+      );
+    },
+  };
+  const rollbackUseCase = new RollbackSliceUseCase(journalRepo, gitPort, phaseTransitionAdapter);
+
+  registerExecutionExtension(
+    api,
+    {
+      sessionRepository: sessionRepo,
+      pauseSignal: new ProcessSignalPauseAdapter(),
+      executeSlice,
+      replayJournal,
+      checkpointRepository: checkpointRepo,
+      eventBus,
+      dateProvider,
+      logger,
+    },
+    {
+      rollback: { rollback: rollbackUseCase, checkpointRepo: checkpointRepo, sliceRepo },
+    },
+  );
 
   // --- Review pipeline wiring ---
   const reviewRepository = new SqliteReviewRepository(stateDb);
@@ -506,20 +538,24 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     options.projectRoot,
   );
   const milestoneTransitionAdapter = new MilestoneTransitionAdapter(milestoneRepo, dateProvider);
-  const piAuditAdapter = new PiAuditAdapter(
-    new PiAgentDispatchAdapter(),
+  const auditRecordDb = new Database(join(rootTffDir, "audit-records.db"));
+  const milestoneAuditRecordRepo = new SqliteMilestoneAuditRecordRepository(auditRecordDb);
+
+  // --- Map codebase use case (shared with CompleteMilestone + /tff:map-codebase) ---
+  const docWriterAdapter = new PiDocWriterAdapter(
+    new PiAgentDispatchAdapter({ agentEventPort: agentEventHub }),
     templateLoader,
     modelResolver,
     logger,
   );
+  const mapCodebaseUseCase = new MapCodebaseUseCase(docWriterAdapter, gitPort, logger);
 
   const completeMilestoneUseCase = new CompleteMilestoneUseCase(
     milestoneQueryAdapter,
-    piAuditAdapter,
+    milestoneAuditRecordRepo,
     ghCliAdapter,
     mergeGateAdapter,
     completionRecordRepository,
-    piFixerAdapter,
     gitPort,
     milestoneTransitionAdapter,
     eventBus,
@@ -527,6 +563,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     () => crypto.randomUUID(),
     logger,
     gitStateSyncAdapter,
+    mapCodebaseUseCase,
   );
   void completeMilestoneUseCase;
 
@@ -696,6 +733,76 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
       }
     },
   });
+
+  // --- S09: Slice management commands ---
+  const addSliceUseCase = new AddSliceUseCase(sliceRepo, milestoneRepo, dateProvider);
+  const removeSliceUseCase = new RemoveSliceUseCase(
+    sliceRepo,
+    worktreeAdapter,
+    stateBranchOps,
+    gitPort,
+    milestoneRepo,
+    rootTffDir,
+  );
+
+  registerAddSliceCommand(api, {
+    addSlice: addSliceUseCase,
+    activeMilestoneId: async () => {
+      const project = await projectRepo.findSingleton();
+      if (!project.ok || !project.data) return null;
+      const milestones = await milestoneRepo.findByProjectId(project.data.id);
+      if (!milestones.ok) return null;
+      const active = milestones.data.find((m) => m.status === "in_progress");
+      return active?.id ?? null;
+    },
+  });
+  api.registerTool(createAddSliceTool({ addSlice: addSliceUseCase }));
+
+  registerRemoveSliceCommand(api, { removeSlice: removeSliceUseCase });
+  api.registerTool(createRemoveSliceTool({ removeSlice: removeSliceUseCase }));
+
+  // --- S09: Audit milestone ---
+  const piAuditAdapter = new PiAuditAdapter(
+    new PiAgentDispatchAdapter({ agentEventPort: agentEventHub }),
+    templateLoader,
+    modelResolver,
+    logger,
+  );
+  const auditMilestoneUseCase = new AuditMilestoneUseCase(
+    milestoneQueryAdapter,
+    piAuditAdapter,
+    milestoneAuditRecordRepo,
+    gitPort,
+    dateProvider,
+    () => crypto.randomUUID(),
+  );
+  registerAuditMilestoneCommand(api, {
+    auditMilestone: auditMilestoneUseCase,
+    resolveActiveMilestone: async () => {
+      const project = await projectRepo.findSingleton();
+      if (!project.ok || !project.data) return null;
+      const milestones = await milestoneRepo.findByProjectId(project.data.id);
+      if (!milestones.ok) return null;
+      const active = milestones.data.find((m) => m.status === "in_progress");
+      if (!active) return null;
+      return {
+        milestoneId: active.id,
+        milestoneLabel: active.label,
+        headBranch: `milestone/${active.label}`,
+        baseBranch: "main",
+        workingDirectory: options.projectRoot,
+      };
+    },
+  });
+  api.registerTool(createAuditMilestoneTool({ auditMilestone: auditMilestoneUseCase }));
+
+  // --- S09: Map codebase ---
+  registerMapCodebaseCommand(api, {
+    mapCodebase: mapCodebaseUseCase,
+    tffDir: rootTffDir,
+    workingDirectory: options.projectRoot,
+  });
+  api.registerTool(createMapCodebaseTool({ mapCodebase: mapCodebaseUseCase }));
 
   // --- Overlay extension wiring ---
   const overlayDataAdapter = new OverlayDataAdapter(

@@ -41,7 +41,7 @@ export class InMemorySliceRepository extends SliceRepositoryPort {
         results.push(Slice.reconstitute(props));
       }
     }
-    return ok(results);
+    return ok(results.sort((a, b) => a.position - b.position));
   }
 
   async findByKind(kind: SliceKind): Promise<Result<Slice[], PersistenceError>> {
@@ -49,6 +49,11 @@ export class InMemorySliceRepository extends SliceRepositoryPort {
       .filter((props) => props.kind === kind)
       .map((props) => Slice.reconstitute(props));
     return ok(matches);
+  }
+
+  async delete(id: Id): Promise<Result<void, PersistenceError>> {
+    this.store.delete(id);
+    return ok(undefined);
   }
 
   seed(slice: Slice): void {

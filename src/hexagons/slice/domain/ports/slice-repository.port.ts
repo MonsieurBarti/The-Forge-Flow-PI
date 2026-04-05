@@ -8,5 +8,6 @@ export abstract class SliceRepositoryPort {
   abstract findByLabel(label: string): Promise<Result<Slice | null, PersistenceError>>;
   abstract findByMilestoneId(milestoneId: Id): Promise<Result<Slice[], PersistenceError>>;
   abstract findByKind(kind: SliceKind): Promise<Result<Slice[], PersistenceError>>;
+  abstract delete(id: Id): Promise<Result<void, PersistenceError>>;
   abstract reset(): void;
 }
