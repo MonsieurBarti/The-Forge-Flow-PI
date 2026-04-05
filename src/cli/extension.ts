@@ -314,7 +314,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const preDispatchGuardrail = new ComposablePreDispatchAdapter([
     new ScopeContainmentRule(),
     new DependencyCheckRule(),
-    new ToolPolicyRule(),
+    new ToolPolicyRule(settingsForModel.ok ? settingsForModel.data.toolPolicies : undefined),
     new WorktreeStateRule(worktreeStateGitOps),
     new BudgetCheckRule(),
   ]);

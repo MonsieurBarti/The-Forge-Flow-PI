@@ -10,6 +10,7 @@ export const TaskMetricsModelSchema = z.object({
 export type TaskMetricsModel = z.infer<typeof TaskMetricsModelSchema>;
 
 export const TaskMetricsSchema = z.object({
+  type: z.literal("task-metrics").default("task-metrics"),
   taskId: IdSchema,
   sliceId: IdSchema,
   milestoneId: IdSchema,
@@ -31,6 +32,27 @@ export const TaskMetricsSchema = z.object({
   timestamp: TimestampSchema,
 });
 export type TaskMetrics = z.infer<typeof TaskMetricsSchema>;
+
+export const QualitySnapshotSchema = z.object({
+  type: z.literal("quality-snapshot"),
+  sliceId: IdSchema,
+  milestoneId: IdSchema,
+  taskId: IdSchema,
+  metrics: z.object({
+    testsPassed: z.number().int().nonnegative(),
+    testsFailed: z.number().int().nonnegative(),
+    lintErrors: z.number().int().nonnegative(),
+    typeErrors: z.number().int().nonnegative(),
+  }),
+  timestamp: TimestampSchema,
+});
+export type QualitySnapshot = z.infer<typeof QualitySnapshotSchema>;
+
+export const MetricsEntrySchema = z.discriminatedUnion("type", [
+  TaskMetricsSchema.required({ type: true }),
+  QualitySnapshotSchema,
+]);
+export type MetricsEntry = z.infer<typeof MetricsEntrySchema>;
 
 export const ModelBreakdownEntrySchema = z.object({
   modelId: z.string(),

@@ -44,7 +44,7 @@ describe("RecordTaskMetricsUseCase", () => {
       }),
     );
 
-    const result = await repo.readAll();
+    const result = await repo.readBySlice(sliceId);
     expect(isOk(result)).toBe(true);
     if (isOk(result)) {
       expect(result.data).toHaveLength(1);
@@ -68,6 +68,7 @@ describe("RecordTaskMetricsUseCase", () => {
   });
 
   it("persists turns from agentResult into TaskMetrics", async () => {
+    const sliceId = crypto.randomUUID();
     const turns = [
       { turnIndex: 0, toolCalls: [], durationMs: 1200 },
       {
@@ -84,7 +85,7 @@ describe("RecordTaskMetricsUseCase", () => {
         aggregateId: crypto.randomUUID(),
         occurredAt: new Date(),
         taskId: agentResult.taskId,
-        sliceId: crypto.randomUUID(),
+        sliceId,
         milestoneId: crypto.randomUUID(),
         waveIndex: 0,
         modelProfile: "balanced",
@@ -92,7 +93,7 @@ describe("RecordTaskMetricsUseCase", () => {
       }),
     );
 
-    const result = await repo.readAll();
+    const result = await repo.readBySlice(sliceId);
     expect(isOk(result)).toBe(true);
     if (isOk(result)) {
       expect(result.data).toHaveLength(1);
@@ -101,6 +102,7 @@ describe("RecordTaskMetricsUseCase", () => {
   });
 
   it("records failed dispatches too (AC1)", async () => {
+    const sliceId = crypto.randomUUID();
     const agentResult = new AgentResultBuilder().asBlocked("timeout").build();
 
     await bus.publish(
@@ -109,7 +111,7 @@ describe("RecordTaskMetricsUseCase", () => {
         aggregateId: crypto.randomUUID(),
         occurredAt: new Date(),
         taskId: agentResult.taskId,
-        sliceId: crypto.randomUUID(),
+        sliceId,
         milestoneId: crypto.randomUUID(),
         waveIndex: 1,
         modelProfile: "quality",
@@ -117,7 +119,7 @@ describe("RecordTaskMetricsUseCase", () => {
       }),
     );
 
-    const result = await repo.readAll();
+    const result = await repo.readBySlice(sliceId);
     expect(isOk(result)).toBe(true);
     if (isOk(result)) {
       expect(result.data).toHaveLength(1);

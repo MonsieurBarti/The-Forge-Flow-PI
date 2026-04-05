@@ -56,4 +56,34 @@ describe("JsonlMetricsRepository (JSONL-specific)", () => {
     expect(isOk(result)).toBe(true);
     if (isOk(result)) expect(result.data).toHaveLength(0);
   });
+
+  it("backward compat: entries without type field parse as task-metrics", async () => {
+    const testFile = join(basePath, `backcompat-${crypto.randomUUID()}.jsonl`);
+    const entry = new TaskMetricsBuilder().build();
+    // Write a line without the type field (simulating old data)
+    const { type: _, ...entryWithoutType } = entry;
+    const line = JSON.stringify({
+      ...entryWithoutType,
+      timestamp:
+        entryWithoutType.timestamp instanceof Date
+          ? entryWithoutType.timestamp.toISOString()
+          : entryWithoutType.timestamp,
+    });
+    await appendFile(testFile, `${line}\n`, "utf-8");
+
+    const repo = new JsonlMetricsRepository(testFile);
+    const result = await repo.readAll();
+    expect(isOk(result)).toBe(true);
+    if (isOk(result)) {
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].type).toBe("task-metrics");
+    }
+
+    // Also verify readBySlice picks it up
+    const sliceResult = await repo.readBySlice(entry.sliceId);
+    expect(isOk(sliceResult)).toBe(true);
+    if (isOk(sliceResult)) {
+      expect(sliceResult.data).toHaveLength(1);
+    }
+  });
 });

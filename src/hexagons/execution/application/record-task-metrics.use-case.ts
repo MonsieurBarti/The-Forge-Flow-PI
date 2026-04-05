@@ -17,6 +17,7 @@ export class RecordTaskMetricsUseCase {
     if (!(event instanceof TaskExecutionCompletedEvent)) return;
 
     const metrics: TaskMetrics = {
+      type: "task-metrics",
       taskId: event.taskId,
       sliceId: event.sliceId,
       milestoneId: event.milestoneId,

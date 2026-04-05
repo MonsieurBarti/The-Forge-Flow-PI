@@ -3,8 +3,12 @@ import { appendFile, mkdir, readFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { err, ok, PersistenceError, type Result } from "@kernel";
 import { MetricsRepositoryPort } from "../../../domain/ports/metrics-repository.port";
-import type { TaskMetrics } from "../../../domain/task-metrics.schemas";
-import { TaskMetricsSchema } from "../../../domain/task-metrics.schemas";
+import type {
+  MetricsEntry,
+  QualitySnapshot,
+  TaskMetrics,
+} from "../../../domain/task-metrics.schemas";
+import { QualitySnapshotSchema, TaskMetricsSchema } from "../../../domain/task-metrics.schemas";
 
 function isNodeError(error: unknown): error is Error & { code: string } {
   if (!(error instanceof Error)) return false;
@@ -13,11 +17,21 @@ function isNodeError(error: unknown): error is Error & { code: string } {
   return descriptor !== undefined && typeof descriptor.value === "string";
 }
 
-function serializeEntry(entry: TaskMetrics): string {
+function serializeEntry(entry: MetricsEntry): string {
   return JSON.stringify({
     ...entry,
     timestamp: entry.timestamp instanceof Date ? entry.timestamp.toISOString() : entry.timestamp,
   });
+}
+
+function parseEntry(raw: Record<string, unknown>): MetricsEntry | null {
+  if (raw.type === "quality-snapshot") {
+    const parsed = QualitySnapshotSchema.safeParse(raw);
+    return parsed.success ? parsed.data : null;
+  }
+  // "task-metrics" or missing type → backward compat
+  const parsed = TaskMetricsSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
 }
 
 export class JsonlMetricsRepository extends MetricsRepositoryPort {
@@ -25,7 +39,7 @@ export class JsonlMetricsRepository extends MetricsRepositoryPort {
     super();
   }
 
-  async append(entry: TaskMetrics): Promise<Result<void, PersistenceError>> {
+  async append(entry: MetricsEntry): Promise<Result<void, PersistenceError>> {
     try {
       await mkdir(dirname(this.filePath), { recursive: true });
       await appendFile(this.filePath, `${serializeEntry(entry)}\n`, "utf-8");
@@ -35,7 +49,7 @@ export class JsonlMetricsRepository extends MetricsRepositoryPort {
     }
   }
 
-  async readAll(): Promise<Result<TaskMetrics[], PersistenceError>> {
+  async readAll(): Promise<Result<MetricsEntry[], PersistenceError>> {
     let content: string;
     try {
       content = await readFile(this.filePath, "utf-8");
@@ -44,13 +58,13 @@ export class JsonlMetricsRepository extends MetricsRepositoryPort {
       return err(new PersistenceError(error instanceof Error ? error.message : String(error)));
     }
     const lines = content.split("\n").filter((l) => l.trim());
-    const entries: TaskMetrics[] = [];
+    const entries: MetricsEntry[] = [];
     for (const line of lines) {
       try {
-        const raw: unknown = JSON.parse(line);
-        const parsed = TaskMetricsSchema.safeParse(raw);
-        if (parsed.success) {
-          entries.push(parsed.data);
+        const raw = JSON.parse(line) as Record<string, unknown>;
+        const entry = parseEntry(raw);
+        if (entry) {
+          entries.push(entry);
         }
       } catch {
         // Skip unparseable JSON lines
@@ -62,13 +76,33 @@ export class JsonlMetricsRepository extends MetricsRepositoryPort {
   async readBySlice(sliceId: string): Promise<Result<TaskMetrics[], PersistenceError>> {
     const result = await this.readAll();
     if (!result.ok) return result;
-    return ok(result.data.filter((e) => e.sliceId === sliceId));
+    return ok(
+      result.data.filter(
+        (e): e is TaskMetrics => e.type === "task-metrics" && e.sliceId === sliceId,
+      ),
+    );
   }
 
   async readByMilestone(milestoneId: string): Promise<Result<TaskMetrics[], PersistenceError>> {
     const result = await this.readAll();
     if (!result.ok) return result;
-    return ok(result.data.filter((e) => e.milestoneId === milestoneId));
+    return ok(
+      result.data.filter(
+        (e): e is TaskMetrics => e.type === "task-metrics" && e.milestoneId === milestoneId,
+      ),
+    );
+  }
+
+  async readQualitySnapshots(
+    sliceId: string,
+  ): Promise<Result<QualitySnapshot[], PersistenceError>> {
+    const result = await this.readAll();
+    if (!result.ok) return result;
+    return ok(
+      result.data.filter(
+        (e): e is QualitySnapshot => e.type === "quality-snapshot" && e.sliceId === sliceId,
+      ),
+    );
   }
 
   reset(): void {
