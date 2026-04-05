@@ -218,6 +218,29 @@ Sequential: G-pre → A → B
 - Per-tier and per-role rules composable
 - Configurable in settings
 
+### R15: Production Wiring Completeness
+
+- Replace all in-memory/stub adapters in `extension.ts` with persistent implementations
+- `InMemoryWorkflowSessionRepository` → new `SqliteWorkflowSessionRepository`
+- `InMemoryReviewRepository` → complete existing `SqliteReviewRepository` (currently throws "Not implemented")
+- `InMemoryVerificationRepository` → complete existing `SqliteVerificationRepository` (currently throws "Not implemented")
+- `InMemoryJournalRepository` → wire existing `JsonlJournalRepository`
+- `InMemoryCheckpointRepository` → wire existing `MarkdownCheckpointRepository`
+- `InMemoryReviewUIAdapter` → wire `PlannotatorReviewUIAdapter` / `TerminalReviewUIAdapter`
+- `NoOpContextStaging` → implement real `ContextStagingPort` adapter
+- `ExecuteSliceUseCase` stub → wire real use case with full dependency graph
+- `CachedExecutorQueryAdapter` stub → implement real executor query from execution session
+- Persist `TurnMetrics` alongside `TaskMetrics` in `metrics.jsonl` (currently collected but discarded)
+
+**AC:**
+- Zero `InMemory*` or `NoOp*` adapters in `extension.ts` (except `InMemoryAgentEventHub` — intentional in-process pub/sub)
+- Zero `AlwaysUnder*` budget stubs (except `AlwaysUnderBudgetAdapter` — deferred to cost tracking milestone)
+- Workflow session state survives restart
+- Review and verification records persist across sessions
+- Execution journal and checkpoints persist to filesystem
+- Real ExecuteSliceUseCase wired and functional
+- TurnMetrics (tool counts, per-turn timing) included in metrics.jsonl entries
+
 ## Deferred to M09
 
 | ID | Feature | Reason |
@@ -238,6 +261,7 @@ Sequential: G-pre → A → B
 | S08 | R09 (commands batch 1) |
 | S09 | R10 (commands batch 2) |
 | S10 | R11 + R12 + R13 + R14 (gap features) |
+| S11 | R15 (production wiring completeness) |
 
 ## Invariants
 
