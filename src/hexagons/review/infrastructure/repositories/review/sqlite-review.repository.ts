@@ -18,4 +18,12 @@ export class SqliteReviewRepository extends ReviewRepositoryPort {
   delete(_id: Id): Promise<Result<void, PersistenceError>> {
     throw new Error("Not implemented");
   }
+
+  findAll(): Promise<Result<Review[], PersistenceError>> {
+    throw new Error("Not implemented");
+  }
+
+  reset(): void {
+    throw new Error("Not implemented");
+  }
 }

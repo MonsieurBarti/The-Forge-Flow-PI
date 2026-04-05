@@ -21,6 +21,10 @@ export class InMemoryVerificationRepository extends VerificationRepositoryPort {
     return ok(verifications);
   }
 
+  async findAll(): Promise<Result<Verification[], PersistenceError>> {
+    return ok(Array.from(this.store.values()).map((p) => Verification.reconstitute(p)));
+  }
+
   seed(verification: Verification): void {
     this.store.set(verification.id, verification.toJSON());
   }

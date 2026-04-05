@@ -4,4 +4,6 @@ import type { Verification } from "../aggregates/verification.aggregate";
 export abstract class VerificationRepositoryPort {
   abstract save(verification: Verification): Promise<Result<void, PersistenceError>>;
   abstract findBySliceId(sliceId: Id): Promise<Result<Verification[], PersistenceError>>;
+  abstract findAll(): Promise<Result<Verification[], PersistenceError>>;
+  abstract reset(): void;
 }

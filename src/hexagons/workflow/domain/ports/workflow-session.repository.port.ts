@@ -7,4 +7,6 @@ export abstract class WorkflowSessionRepositoryPort {
   abstract findByMilestoneId(
     milestoneId: Id,
   ): Promise<Result<WorkflowSession | null, PersistenceError>>;
+  abstract findAll(): Promise<Result<WorkflowSession[], PersistenceError>>;
+  abstract reset(): void;
 }

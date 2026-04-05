@@ -10,4 +10,12 @@ export class SqliteVerificationRepository extends VerificationRepositoryPort {
   async findBySliceId(_sliceId: Id): Promise<Result<Verification[], PersistenceError>> {
     throw new Error("Not implemented");
   }
+
+  findAll(): Promise<Result<Verification[], PersistenceError>> {
+    throw new Error("Not implemented");
+  }
+
+  reset(): void {
+    throw new Error("Not implemented");
+  }
 }

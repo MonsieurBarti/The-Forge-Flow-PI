@@ -32,6 +32,10 @@ export class InMemoryReviewRepository extends ReviewRepositoryPort {
     return ok(undefined);
   }
 
+  async findAll(): Promise<Result<Review[], PersistenceError>> {
+    return ok(Array.from(this.store.values()).map((p) => Review.reconstitute(p)));
+  }
+
   seed(review: Review): void {
     this.store.set(review.id, review.toJSON());
   }
