@@ -109,7 +109,7 @@ import { StateExporter } from "@kernel/services/state-exporter";
 import { StateGuard } from "@kernel/services/state-guard";
 import { StateImporter } from "@kernel/services/state-importer";
 import type { KnownProvider } from "@mariozechner/pi-ai";
-import { getModels } from "@mariozechner/pi-ai";
+import { getModels, getProviders } from "@mariozechner/pi-ai";
 import Database from "better-sqlite3";
 import { OverlayDataAdapter } from "./infrastructure/overlay-data.adapter";
 import { registerOverlayExtension } from "./overlay.extension";
@@ -134,13 +134,11 @@ function resolveModelFromRegistry(provider: KnownProvider, name: string): string
 
 /**
  * Return PI's default model ID for the given provider.
- * Picks the latest non-dated opus alias (the SDK default for anthropic).
- * Falls back to the first model in the registry.
+ * Uses the first model in PI's registry for that provider.
  */
 function piDefaultModelId(provider: KnownProvider): string {
   const models = getModels(provider);
-  const opusAlias = models.find((m) => m.id.includes("opus") && !/-\d{8}$/.test(m.id));
-  return opusAlias?.id ?? models[0]?.id ?? `unknown-${provider}`;
+  return models[0]?.id ?? "unknown";
 }
 
 function detectPlannotator(): string | undefined {
@@ -224,9 +222,17 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   });
   const modelProfiles = settingsForModel.ok ? settingsForModel.data.modelRouting.profiles : null;
 
+  const providers = getProviders();
+  const defaultProvider = providers[0];
+  if (!defaultProvider) {
+    throw new Error("No PI providers available. Ensure at least one provider is configured.");
+  }
   const modelResolver = (profileName: string): ResolvedModel => {
-    const provider: KnownProvider = "anthropic";
-    const profile = modelProfiles?.[profileName as "quality" | "balanced" | "budget"];
+    const provider = defaultProvider;
+    const profile =
+      profileName === "quality" || profileName === "balanced" || profileName === "budget"
+        ? modelProfiles?.[profileName]
+        : undefined;
     const modelName = profile?.model;
 
     if (!modelName) {
