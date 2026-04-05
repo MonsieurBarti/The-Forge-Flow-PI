@@ -710,7 +710,7 @@ export class ExecuteSliceUseCase {
         passed: true,
         tier: "full",
         issues: [{ severity: "warning", description: "No reflection report found in output" }],
-        reflectedAt: new Date().toISOString(),
+        reflectedAt: this.deps.dateProvider.now().toISOString(),
       };
     }
     try {
@@ -719,7 +719,7 @@ export class ExecuteSliceUseCase {
         passed: parsed.passed ?? true,
         tier: "full",
         issues: Array.isArray(parsed.issues) ? parsed.issues : [],
-        reflectedAt: new Date().toISOString(),
+        reflectedAt: this.deps.dateProvider.now().toISOString(),
       };
     } catch {
       return {
@@ -728,7 +728,7 @@ export class ExecuteSliceUseCase {
         issues: [
           { severity: "warning", description: "Failed to parse reflection report JSON" },
         ],
-        reflectedAt: new Date().toISOString(),
+        reflectedAt: this.deps.dateProvider.now().toISOString(),
       };
     }
   }

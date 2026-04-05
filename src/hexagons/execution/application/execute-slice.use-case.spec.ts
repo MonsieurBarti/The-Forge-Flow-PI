@@ -842,6 +842,7 @@ describe("ExecuteSliceUseCase", () => {
         overseerConfig: disabledConfig,
         preDispatchGuardrail: preDispatchAdapter,
         modelResolver: () => ({ provider: "anthropic", modelId: "claude-sonnet-4-6" }),
+        checkpointBeforeRetry: true,
       });
 
       const t1 = makeTask(T1_ID, "T01");
@@ -1018,6 +1019,7 @@ describe("ExecuteSliceUseCase", () => {
         overseerConfig: OVERSEER_CONFIG,
         preDispatchGuardrail: preDispatchAdapter,
         modelResolver: () => ({ provider: "anthropic", modelId: "claude-sonnet-4-6" }),
+        checkpointBeforeRetry: true,
       });
 
       const t1 = makeTask(T1_ID, "T01");
@@ -1551,6 +1553,7 @@ describe("ExecuteSliceUseCase", () => {
           provider: "anthropic",
           modelId: profile === "budget" ? "claude-haiku-3" : "claude-sonnet-4-6",
         }),
+        checkpointBeforeRetry: true,
       });
 
       // First dispatch: BLOCKED (wave), retry attempt=0: BLOCKED,
@@ -1621,6 +1624,7 @@ describe("ExecuteSliceUseCase", () => {
         overseerConfig: OVERSEER_CONFIG,
         preDispatchGuardrail: preDispatchAdapter,
         modelResolver: () => ({ provider: "anthropic", modelId: "claude-sonnet-4-6" }),
+        checkpointBeforeRetry: true,
       });
 
       agentDispatch.givenResult(
