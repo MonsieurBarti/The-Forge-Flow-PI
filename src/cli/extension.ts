@@ -805,7 +805,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   // --- /tff:sync command ---
   api.registerCommand("tff:sync", {
     description: "Force-push or force-pull state to/from state branch",
-    handler: async (args: string) => {
+    handler: async (args: string, _ctx: ExtensionCommandContext) => {
       const guardResult = await stateGuard.ensure(rootTffDir);
       if (!guardResult.ok) {
         api.sendUserMessage(`State guard failed: ${guardResult.error.message}`);
