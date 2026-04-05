@@ -184,10 +184,29 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   // --- Shared: modelResolver + templateLoader (needed by execution & review) ---
   const templateLoader = (path: string) =>
     readFileSync(join(options.projectRoot, "src/resources", path), "utf-8");
-  const modelResolver = (_profile: string): ResolvedModel => ({
-    provider: "anthropic",
-    modelId: "claude-opus-4-6",
+
+  const mergeSettingsForModel = new MergeSettingsUseCase();
+  const settingsForModel = mergeSettingsForModel.execute({
+    team: null,
+    local: null,
+    env: process.env,
   });
+  const modelProfiles = settingsForModel.ok ? settingsForModel.data.modelRouting.profiles : null;
+
+  const MODEL_ID_MAP: Record<string, string> = {
+    opus: "claude-opus-4-6",
+    sonnet: "claude-sonnet-4-6",
+    haiku: "claude-haiku-4-5-20251001",
+  };
+
+  const modelResolver = (profileName: string): ResolvedModel => {
+    const profile = modelProfiles?.[profileName as "quality" | "balanced" | "budget"];
+    const modelName = profile?.model ?? "sonnet";
+    return {
+      provider: "anthropic",
+      modelId: MODEL_ID_MAP[modelName] ?? `claude-${modelName}-4-6`,
+    };
+  };
 
   // --- Execution extension ---
   const journalRepo = new JsonlJournalRepository(join(rootTffDir, "journal"));

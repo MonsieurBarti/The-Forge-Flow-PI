@@ -385,10 +385,13 @@ export class ExecuteSliceUseCase {
         const agentResult = settlement.value.data;
         if (!isSuccessfulStatus(agentResult.status)) continue;
 
+        const reflectionConfig = configs[i];
+        if (!reflectionConfig) throw new Error(`Missing reflection config for task index ${i}`);
+
         const reflectionResult = await this.runReflection(
           task,
           agentResult,
-          configs[i] ?? configs[0],
+          reflectionConfig,
           input,
           waveIndex,
         );

@@ -16,7 +16,7 @@ function makeVerification(params: {
   const v = Verification.createNew({
     id: params.id,
     sliceId: params.sliceId,
-    agentIdentity: "opus",
+    agentIdentity: "test-agent",
     fixCycleIndex: params.fixCycleIndex ?? 0,
     now: NOW,
   });

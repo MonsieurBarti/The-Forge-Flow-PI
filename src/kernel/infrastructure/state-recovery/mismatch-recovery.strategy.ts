@@ -14,7 +14,10 @@ export class MismatchRecoveryStrategy implements RecoveryStrategy {
     scenario: RecoveryScenario,
     _tffDir: string,
   ): Promise<Result<RecoveryReport, SyncError>> {
-    const branch = scenario.currentBranch as string;
+    if (!scenario.currentBranch) {
+      return err(new SyncError("RECOVERY_FAILED", "currentBranch is null in mismatch recovery"));
+    }
+    const branch = scenario.currentBranch;
     const source = `tff-state/${branch}`;
 
     const restoreResult = await this.restoreUseCase.execute(branch);

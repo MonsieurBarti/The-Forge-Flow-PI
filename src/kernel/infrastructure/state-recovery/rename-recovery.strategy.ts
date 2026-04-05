@@ -21,8 +21,13 @@ export class RenameRecoveryStrategy implements RecoveryStrategy {
     scenario: RecoveryScenario,
     tffDir: string,
   ): Promise<Result<RecoveryReport, SyncError>> {
-    const meta = scenario.branchMeta as NonNullable<typeof scenario.branchMeta>;
-    const currentBranch = scenario.currentBranch as string;
+    if (!scenario.branchMeta || !scenario.currentBranch) {
+      return err(
+        new SyncError("RECOVERY_FAILED", "branchMeta or currentBranch is null in rename recovery"),
+      );
+    }
+    const meta = scenario.branchMeta;
+    const currentBranch = scenario.currentBranch;
 
     const oldStateBranch = meta.stateBranch;
     const newStateBranch = `tff-state/${currentBranch}`;

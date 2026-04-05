@@ -77,7 +77,10 @@ export class CrashRecoveryStrategy implements RecoveryStrategy {
 
     if (useStateBranch) {
       // Restore via RestoreStateUseCase (state branch is newer)
-      const restoreResult = await this.restoreUseCase.execute(scenario.currentBranch as string);
+      if (!scenario.currentBranch) {
+        return ok(this.degradationReport("currentBranch is null in crash recovery"));
+      }
+      const restoreResult = await this.restoreUseCase.execute(scenario.currentBranch);
       if (!restoreResult.ok) {
         return ok(this.degradationReport(restoreResult.error.message));
       }
