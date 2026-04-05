@@ -6,7 +6,6 @@ import { mapPhaseToSliceStatus } from "../domain/phase-status-mapping";
 import type { SliceTransitionPort } from "../domain/ports/slice-transition.port";
 import type { WorkflowJournalPort } from "../domain/ports/workflow-journal.port";
 import type { WorkflowSessionRepositoryPort } from "../domain/ports/workflow-session.repository.port";
-import type { WorkflowSession } from "../domain/workflow-session.aggregate";
 import type {
   GuardContext,
   WorkflowPhase,
@@ -28,6 +27,10 @@ export interface PhaseTransitionResult {
 
 export class WorkflowSessionNotFoundError extends WorkflowBaseError {
   readonly code = "WORKFLOW.SESSION_NOT_FOUND";
+
+  constructor(milestoneId: string) {
+    super(`No workflow session found for milestone '${milestoneId}'`, { milestoneId });
+  }
 }
 
 type OrchestrationError =
@@ -50,8 +53,11 @@ export class OrchestratePhaseTransitionUseCase {
   ): Promise<Result<PhaseTransitionResult, OrchestrationError>> {
     const now = this.dateProvider.now();
 
-    // 1. Load session
-    let findResult: Result<WorkflowSession | null, PersistenceError>;
+    // 1. Load session (milestoneId takes precedence, fallback to sliceId)
+    let findResult: Result<
+      import("../domain/workflow-session.aggregate").WorkflowSession | null,
+      PersistenceError
+    >;
     if (input.milestoneId) {
       findResult = await this.sessionRepo.findByMilestoneId(input.milestoneId);
     } else if (input.sliceId) {
@@ -61,13 +67,7 @@ export class OrchestratePhaseTransitionUseCase {
     }
     if (isErr(findResult)) return findResult;
     if (!findResult.data) {
-      return err(
-        new WorkflowSessionNotFoundError(
-          input.milestoneId
-            ? `No workflow session found for milestone '${input.milestoneId}'`
-            : `No workflow session found for slice '${input.sliceId}'`,
-        ),
-      );
+      return err(new WorkflowSessionNotFoundError(input.milestoneId ?? input.sliceId ?? "unknown"));
     }
 
     const session = findResult.data;
@@ -111,7 +111,7 @@ export class OrchestratePhaseTransitionUseCase {
       await this.workflowJournal.append({
         type: "phase-transition",
         sessionId: session.id,
-        milestoneId: input.milestoneId ?? "",
+        milestoneId: input.milestoneId ?? null,
         sliceId: session.sliceId,
         fromPhase,
         toPhase: session.currentPhase,

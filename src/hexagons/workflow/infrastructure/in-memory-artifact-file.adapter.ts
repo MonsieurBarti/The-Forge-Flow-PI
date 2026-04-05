@@ -16,7 +16,22 @@ export class InMemoryArtifactFileAdapter extends ArtifactFilePort {
     artifactType: ArtifactType,
     kind: SliceKind = "milestone",
   ): string {
-    return `${kind}:${milestoneLabel ?? ""}/${sliceLabel}/${artifactType}`;
+    return `${kind}/${milestoneLabel ?? "_"}/${sliceLabel}/${artifactType}`;
+  }
+
+  private resolvePath(
+    milestoneLabel: string | null,
+    sliceLabel: string,
+    artifactType: ArtifactType,
+    kind: SliceKind = "milestone",
+  ): string {
+    if (kind === "quick") {
+      return `.tff/quick/${sliceLabel}/${ARTIFACT_FILENAMES[artifactType]}`;
+    }
+    if (kind === "debug") {
+      return `.tff/debug/${sliceLabel}/${ARTIFACT_FILENAMES[artifactType]}`;
+    }
+    return `.tff/milestones/${milestoneLabel}/slices/${sliceLabel}/${ARTIFACT_FILENAMES[artifactType]}`;
   }
 
   async write(
@@ -27,16 +42,7 @@ export class InMemoryArtifactFileAdapter extends ArtifactFilePort {
     kind?: SliceKind,
   ): Promise<Result<string, FileIOError>> {
     this.store.set(this.key(milestoneLabel, sliceLabel, artifactType, kind), content);
-    let path: string;
-    const resolvedKind = kind ?? "milestone";
-    if (resolvedKind === "quick") {
-      path = `.tff/quick/${sliceLabel}/${ARTIFACT_FILENAMES[artifactType]}`;
-    } else if (resolvedKind === "debug") {
-      path = `.tff/debug/${sliceLabel}/${ARTIFACT_FILENAMES[artifactType]}`;
-    } else {
-      path = `.tff/milestones/${milestoneLabel}/slices/${sliceLabel}/${ARTIFACT_FILENAMES[artifactType]}`;
-    }
-    return ok(path);
+    return ok(this.resolvePath(milestoneLabel, sliceLabel, artifactType, kind));
   }
 
   async read(

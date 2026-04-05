@@ -15,7 +15,7 @@ export class NodeArtifactFileAdapter extends ArtifactFilePort {
 
   constructor(projectRoot: string) {
     super();
-    this.projectRoot = projectRoot;
+    this.projectRoot = resolve(projectRoot);
     this.basePath = resolve(projectRoot, ".tff", "milestones");
   }
 
@@ -25,25 +25,24 @@ export class NodeArtifactFileAdapter extends ArtifactFilePort {
     artifactType: ArtifactType,
     kind: SliceKind = "milestone",
   ): string {
+    const tffRoot = resolve(this.projectRoot, ".tff");
+
     if (kind === "quick") {
-      return resolve(
-        this.projectRoot,
-        ".tff",
-        "quick",
-        sliceLabel,
-        ARTIFACT_FILENAMES[artifactType],
-      );
+      const target = resolve(tffRoot, "quick", sliceLabel, ARTIFACT_FILENAMES[artifactType]);
+      if (!target.startsWith(tffRoot)) {
+        throw new FileIOError("Path traversal detected: resolved path escapes base directory");
+      }
+      return target;
     }
     if (kind === "debug") {
-      return resolve(
-        this.projectRoot,
-        ".tff",
-        "debug",
-        sliceLabel,
-        ARTIFACT_FILENAMES[artifactType],
-      );
+      const target = resolve(tffRoot, "debug", sliceLabel, ARTIFACT_FILENAMES[artifactType]);
+      if (!target.startsWith(tffRoot)) {
+        throw new FileIOError("Path traversal detected: resolved path escapes base directory");
+      }
+      return target;
     }
-    // milestone (default) — existing behavior
+
+    // milestone (default)
     if (milestoneLabel === null) {
       throw new FileIOError("milestoneLabel is required for milestone kind");
     }
@@ -55,7 +54,7 @@ export class NodeArtifactFileAdapter extends ArtifactFilePort {
       ARTIFACT_FILENAMES[artifactType],
     );
     if (!target.startsWith(this.basePath)) {
-      throw new FileIOError(`Path traversal detected: resolved path escapes base directory`);
+      throw new FileIOError("Path traversal detected: resolved path escapes base directory");
     }
     return target;
   }

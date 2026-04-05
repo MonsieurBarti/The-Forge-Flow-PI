@@ -9,7 +9,6 @@ export type {
   DomainScope,
   RequirementClarity,
   SliceDTO,
-  SliceKind,
   SliceStatus,
 } from "./domain/slice.schemas";
 export {
@@ -20,5 +19,7 @@ export {
   SlicePropsSchema,
   SliceStatusSchema,
 } from "./domain/slice.schemas";
+export type { SliceKind } from "./domain/slice-kind.schemas";
+export { SliceKindSchema } from "./domain/slice-kind.schemas";
 export { InMemoryWorkflowSliceTransitionAdapter } from "./infrastructure/in-memory-workflow-slice-transition.adapter";
 export { WorkflowSliceTransitionAdapter } from "./infrastructure/workflow-slice-transition.adapter";
