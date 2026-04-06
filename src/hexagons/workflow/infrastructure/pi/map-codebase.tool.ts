@@ -14,14 +14,14 @@ export function createMapCodebaseTool(deps: MapCodebaseToolDeps) {
     schema: z.object({
       tffDir: z.string().describe("Path to .tff directory"),
       workingDirectory: z.string().describe("Project root directory"),
-      mode: z.enum(["full", "incremental"]).optional().describe("Generation mode"),
+      mode: z.enum(["full", "incremental"]).default("full").describe("Generation mode"),
       baseBranch: z.string().optional().describe("Base branch for incremental diff"),
     }),
     execute: async (params) => {
       const result = await deps.mapCodebase.execute({
         tffDir: params.tffDir,
         workingDirectory: params.workingDirectory,
-        mode: params.mode ?? "full",
+        mode: params.mode,
         baseBranch: params.baseBranch,
       });
       if (!result.ok) return textResult(JSON.stringify({ error: result.error.message }));

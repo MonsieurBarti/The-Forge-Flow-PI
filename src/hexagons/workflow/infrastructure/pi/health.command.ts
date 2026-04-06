@@ -1,4 +1,4 @@
-import type { ExtensionAPI, ExtensionCommandContext } from "@infrastructure/pi";
+import type { ExtensionAPI } from "@infrastructure/pi";
 import type { HealthCheckReport, HealthCheckService } from "@kernel/services/health-check.service";
 
 export interface HealthCommandDeps {
@@ -53,7 +53,7 @@ export function formatHealthReport(report: HealthCheckReport): string {
 export function registerHealthCommand(api: ExtensionAPI, deps: HealthCommandDeps): void {
   api.registerCommand("tff:health", {
     description: "Run state consistency checks",
-    handler: async (_args: string, _ctx: ExtensionCommandContext) => {
+    handler: async () => {
       const result = await deps.healthCheck.runAll(deps.tffDir);
       if (!result.ok) {
         api.sendUserMessage(`Health check failed: ${result.error.message}`);

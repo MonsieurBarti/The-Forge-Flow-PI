@@ -1,5 +1,5 @@
 import type { SliceRepositoryPort } from "@hexagons/slice/domain/ports/slice-repository.port";
-import type { ExtensionAPI, ExtensionCommandContext } from "@infrastructure/pi";
+import type { ExtensionAPI } from "@infrastructure/pi";
 import type { RollbackSliceUseCase } from "../../application/rollback-slice.use-case";
 import type { CheckpointRepositoryPort } from "../../domain/ports/checkpoint-repository.port";
 
@@ -12,7 +12,7 @@ export interface RollbackCommandDeps {
 export function registerRollbackCommand(api: ExtensionAPI, deps: RollbackCommandDeps): void {
   api.registerCommand("tff:rollback", {
     description: "Revert execution commits for a slice",
-    handler: async (args: string, _ctx: ExtensionCommandContext) => {
+    handler: async (args: string) => {
       const baseCommitMatch = args.match(/--base-commit\s+(\S+)/);
       const sliceLabel = args.replace(/--base-commit\s+\S+/, "").trim();
 

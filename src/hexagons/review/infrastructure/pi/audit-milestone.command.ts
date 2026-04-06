@@ -1,4 +1,4 @@
-import type { ExtensionAPI, ExtensionCommandContext } from "@infrastructure/pi";
+import type { ExtensionAPI } from "@infrastructure/pi";
 import type { AuditMilestoneUseCase } from "../../application/audit-milestone.use-case";
 import type { AuditReportProps } from "../../domain/schemas/completion.schemas";
 
@@ -59,7 +59,7 @@ export function registerAuditMilestoneCommand(
 ): void {
   api.registerCommand("tff:audit-milestone", {
     description: "Run milestone audit (required before completion)",
-    handler: async (_args: string, _ctx: ExtensionCommandContext) => {
+    handler: async () => {
       const milestone = await deps.resolveActiveMilestone();
       if (!milestone) {
         api.sendUserMessage("No active milestone found.");

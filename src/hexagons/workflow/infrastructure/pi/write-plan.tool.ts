@@ -19,7 +19,7 @@ const WritePlanSchema = z.object({
         description: z.string().describe("Task description with TDD steps"),
         acceptanceCriteria: z.string().describe("Joined AC refs, e.g. 'AC1, AC3'"),
         filePaths: z.array(z.string()).describe("Exact file paths"),
-        blockedBy: z.array(z.string()).optional().describe("Labels of blocking tasks"),
+        blockedBy: z.array(z.string()).default([]).describe("Labels of blocking tasks"),
       }),
     )
     .describe("Task definitions"),
@@ -32,11 +32,7 @@ export function createWritePlanTool(useCase: WritePlanUseCase, reviewUI: ReviewU
     description: "Write PLAN.md, create task entities with wave detection, update slice.",
     schema: WritePlanSchema,
     execute: async (params) => {
-      const withDefaults = {
-        ...params,
-        tasks: params.tasks.map((t) => ({ ...t, blockedBy: t.blockedBy ?? [] })),
-      };
-      const result = await useCase.execute(withDefaults);
+      const result = await useCase.execute(params);
       if (isErr(result)) return textResult(`Error: ${result.error.message}`);
 
       const approvalResult = await reviewUI.presentForApproval({

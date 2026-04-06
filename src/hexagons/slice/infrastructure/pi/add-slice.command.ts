@@ -1,4 +1,4 @@
-import type { ExtensionAPI, ExtensionCommandContext } from "@infrastructure/pi";
+import type { ExtensionAPI } from "@infrastructure/pi";
 import type { AddSliceUseCase } from "../../application/add-slice.use-case";
 
 export interface AddSliceCommandDeps {
@@ -9,7 +9,7 @@ export interface AddSliceCommandDeps {
 export function registerAddSliceCommand(api: ExtensionAPI, deps: AddSliceCommandDeps): void {
   api.registerCommand("tff:add-slice", {
     description: "Add a new slice to the active milestone",
-    handler: async (args: string, _ctx: ExtensionCommandContext) => {
+    handler: async (args: string) => {
       const milestoneId = await deps.activeMilestoneId();
       if (!milestoneId) {
         api.sendUserMessage("No active milestone found.");

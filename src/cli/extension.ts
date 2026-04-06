@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ExecuteSliceUseCase } from "@hexagons/execution/application/execute-slice.use-case";
 import { GetSliceExecutorsUseCase } from "@hexagons/execution/application/get-slice-executors.use-case";
@@ -68,8 +68,8 @@ import {
   MergeSettingsUseCase,
 } from "@hexagons/settings";
 import { FormatSettingsCascadeService } from "@hexagons/settings/domain/services/format-settings-cascade.service";
+import { AlwaysUnderBudgetAdapter } from "@hexagons/settings/infrastructure/always-under-budget.adapter";
 import { FsSettingsFileAdapter } from "@hexagons/settings/infrastructure/fs-settings-file.adapter";
-import { LoggingBudgetAdapter } from "@hexagons/settings/infrastructure/logging-budget.adapter";
 import { ProcessEnvVarAdapter } from "@hexagons/settings/infrastructure/process-env-var.adapter";
 import { AddSliceUseCase } from "@hexagons/slice/application/add-slice.use-case";
 import { RemoveSliceUseCase } from "@hexagons/slice/application/remove-slice.use-case";
@@ -103,7 +103,7 @@ import { registerSettingsCommand } from "@hexagons/workflow/infrastructure/pi/se
 import { createReadSettingsTool } from "@hexagons/workflow/infrastructure/pi/settings-read.tool";
 import { createUpdateSettingTool } from "@hexagons/workflow/infrastructure/pi/settings-update.tool";
 import { PiDocWriterAdapter } from "@hexagons/workflow/infrastructure/pi-doc-writer.adapter";
-import type { ExtensionAPI, ExtensionCommandContext } from "@infrastructure/pi";
+import type { ExtensionAPI } from "@infrastructure/pi";
 import type { Result } from "@kernel";
 import {
   AgentRegistry,
@@ -181,20 +181,11 @@ function detectPlannotator(): string | undefined {
   }
 }
 
-function resolveResourceRoot(projectRoot: string): string {
-  const distResources = join(projectRoot, "dist", "resources");
-  if (existsSync(distResources)) return distResources;
-  return join(projectRoot, "src", "resources");
-}
-
 export interface TffExtensionOptions {
   projectRoot: string;
 }
 
 export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptions): void {
-  // --- Resource resolution (dist/resources/ for production, src/resources/ for dev) ---
-  const resourceRoot = resolveResourceRoot(options.projectRoot);
-
   // --- Shared infrastructure ---
   const logger = new ConsoleLoggerAdapter();
   const eventBus = new InProcessEventBus(logger);
@@ -205,7 +196,10 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   // --- Agent registry ---
   if (!isAgentRegistryInitialized()) {
     const agentLoader = new AgentResourceLoader();
-    const agentRegistryResult = AgentRegistry.loadFromResources(agentLoader, resourceRoot);
+    const agentRegistryResult = AgentRegistry.loadFromResources(
+      agentLoader,
+      join(options.projectRoot, "src/resources"),
+    );
     if (!agentRegistryResult.ok) {
       throw new Error(`Failed to load agent registry: ${agentRegistryResult.error.message}`);
     }
@@ -249,7 +243,8 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     : new TerminalReviewUIAdapter();
 
   // --- Shared: modelResolver + templateLoader (needed by execution & review) ---
-  const templateLoader = (path: string) => readFileSync(join(resourceRoot, path), "utf-8");
+  const templateLoader = (path: string) =>
+    readFileSync(join(options.projectRoot, "src/resources", path), "utf-8");
 
   const mergeSettingsForModel = new MergeSettingsUseCase();
   const settingsForModel = mergeSettingsForModel.execute({
@@ -328,7 +323,10 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     new WorktreeStateRule(worktreeStateGitOps),
     new BudgetCheckRule(),
   ]);
-  const executeProtocol = readFileSync(join(resourceRoot, "protocols/execute.md"), "utf-8");
+  const executeProtocol = readFileSync(
+    join(options.projectRoot, "src/resources/protocols/execute.md"),
+    "utf-8",
+  );
 
   const executeSlice = new ExecuteSliceUseCase({
     taskRepository: taskRepo,
@@ -469,40 +467,15 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     logger,
     templateLoader,
   );
-  api.registerCommand("tff:verify", {
-    description: "Verify acceptance criteria for the current slice",
-    handler: async (args: string, _ctx: ExtensionCommandContext) => {
-      const sliceLabel = args.trim();
-      if (!sliceLabel) {
-        api.sendUserMessage("Usage: /tff:verify <slice-label>");
-        return;
-      }
-      const sliceResult = await sliceRepo.findByLabel(sliceLabel);
-      if (!sliceResult.ok || !sliceResult.data) {
-        api.sendUserMessage(`Slice not found: ${sliceLabel}`);
-        return;
-      }
-      const result = await verifyUseCase.execute({
-        sliceId: sliceResult.data.id,
-        workingDirectory: options.projectRoot,
-        timeoutMs: 300_000,
-        maxFixCycles: 2,
-      });
-      if (!result.ok) {
-        api.sendUserMessage(`Verification failed: ${result.error.message}`);
-        return;
-      }
-      api.sendUserMessage(
-        `Verification complete: ${result.data.finalVerdict} (${result.data.verifications.length} verification rounds)`,
-      );
-    },
-  });
+  void verifyUseCase; // Available for verify command wiring
 
   // --- State sync wiring (moved before ship/complete for dependency injection) ---
   const ghCliAdapter = new GhCliAdapter(options.projectRoot);
   const mergeGateAdapter = new PiMergeGateAdapter();
-  const shipRecordRepository = new SqliteShipRecordRepository(stateDb);
-  const completionRecordRepository = new SqliteCompletionRecordRepository(stateDb);
+  const shipRecordDb = new Database(join(rootTffDir, "ship-records.db"));
+  const shipRecordRepository = new SqliteShipRecordRepository(shipRecordDb);
+  const completionRecordDb = new Database(join(rootTffDir, "completion-records.db"));
+  const completionRecordRepository = new SqliteCompletionRecordRepository(completionRecordDb);
 
   const stateBranchOps = new GitStateBranchOpsAdapter(options.projectRoot);
   const stateExporter = new StateExporter({
@@ -561,34 +534,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     gitStateSyncAdapter,
     options.projectRoot,
   );
-  api.registerCommand("tff:ship", {
-    description: "Ship the current slice — review, create PR, merge gate",
-    handler: async (args: string, _ctx: ExtensionCommandContext) => {
-      const sliceLabel = args.trim();
-      if (!sliceLabel) {
-        api.sendUserMessage("Usage: /tff:ship <slice-label>");
-        return;
-      }
-      const sliceResult = await sliceRepo.findByLabel(sliceLabel);
-      if (!sliceResult.ok || !sliceResult.data) {
-        api.sendUserMessage(`Slice not found: ${sliceLabel}`);
-        return;
-      }
-      const milestoneLabel = sliceLabel.replace(/-S\d+$/, "");
-      const result = await shipSliceUseCase.execute({
-        sliceId: sliceResult.data.id,
-        workingDirectory: options.projectRoot,
-        baseBranch: `milestone/${milestoneLabel}`,
-        headBranch: `slice/${sliceLabel}`,
-        maxFixCycles: 2,
-      });
-      if (!result.ok) {
-        api.sendUserMessage(`Ship failed: ${result.error.message}`);
-        return;
-      }
-      api.sendUserMessage(`Ship complete: PR ${result.data.prUrl ?? "created"}`);
-    },
-  });
+  void shipSliceUseCase;
 
   // --- Complete milestone pipeline wiring ---
   const milestoneQueryAdapter = new MilestoneQueryAdapter(
@@ -597,7 +543,8 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     options.projectRoot,
   );
   const milestoneTransitionAdapter = new MilestoneTransitionAdapter(milestoneRepo, dateProvider);
-  const milestoneAuditRecordRepo = new SqliteMilestoneAuditRecordRepository(stateDb);
+  const auditRecordDb = new Database(join(rootTffDir, "audit-records.db"));
+  const milestoneAuditRecordRepo = new SqliteMilestoneAuditRecordRepository(auditRecordDb);
 
   // --- Map codebase use case (shared with CompleteMilestone + /tff:map-codebase) ---
   const docWriterAdapter = new PiDocWriterAdapter(
@@ -623,40 +570,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     gitStateSyncAdapter,
     mapCodebaseUseCase,
   );
-  api.registerCommand("tff:complete-milestone", {
-    description: "Complete the active milestone — audit, create PR, merge gate",
-    handler: async (_args: string, _ctx: ExtensionCommandContext) => {
-      const project = await projectRepo.findSingleton();
-      if (!project.ok || !project.data) {
-        api.sendUserMessage("No project found.");
-        return;
-      }
-      const milestones = await milestoneRepo.findByProjectId(project.data.id);
-      if (!milestones.ok) {
-        api.sendUserMessage("Failed to load milestones.");
-        return;
-      }
-      const active = milestones.data.find((m) => m.status === "in_progress");
-      if (!active) {
-        api.sendUserMessage("No active milestone found.");
-        return;
-      }
-      const result = await completeMilestoneUseCase.execute({
-        milestoneId: active.id,
-        milestoneLabel: active.label,
-        milestoneTitle: active.title,
-        headBranch: `milestone/${active.label}`,
-        baseBranch: "main",
-        workingDirectory: options.projectRoot,
-        maxFixCycles: 2,
-      });
-      if (!result.ok) {
-        api.sendUserMessage(`Milestone completion failed: ${result.error.message}`);
-        return;
-      }
-      api.sendUserMessage(`Milestone ${active.label} completed`);
-    },
-  });
+  void completeMilestoneUseCase;
 
   // --- Restore + guard wiring ---
   const backupService = new BackupService();
@@ -805,7 +719,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   // --- /tff:sync command ---
   api.registerCommand("tff:sync", {
     description: "Force-push or force-pull state to/from state branch",
-    handler: async (args: string, _ctx: ExtensionCommandContext) => {
+    handler: async (args: string) => {
       const guardResult = await stateGuard.ensure(rootTffDir);
       if (!guardResult.ok) {
         api.sendUserMessage(`State guard failed: ${guardResult.error.message}`);
@@ -912,7 +826,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const settingsResult = mergeSettings.execute({ team: null, local: null, env: {} });
   const hotkeys = settingsResult.ok ? settingsResult.data.hotkeys : HOTKEYS_DEFAULTS;
 
-  const budgetTrackingPort = new LoggingBudgetAdapter(logger);
+  const budgetTrackingPort = new AlwaysUnderBudgetAdapter();
   registerOverlayExtension(api, {
     overlayDataPort: overlayDataAdapter,
     budgetTrackingPort,

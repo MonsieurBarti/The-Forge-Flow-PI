@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import type { MapCodebaseUseCase } from "@hexagons/workflow/application/map-codebase.use-case";
 import { err, ok, type Result } from "@kernel";
 import type { DateProviderPort, EventBusPort, LoggerPort } from "@kernel/ports";
 import type { GitPort } from "@kernel/ports/git.port";
@@ -48,16 +49,7 @@ export class CompleteMilestoneUseCase {
     private readonly generateId: () => string,
     private readonly logger: LoggerPort,
     private readonly stateSyncPort?: StateSyncPort,
-    private readonly mapCodebase?: {
-      execute: (input: {
-        tffDir: string;
-        workingDirectory: string;
-        mode: "full" | "incremental";
-        milestoneLabel?: string;
-        baseBranch?: string;
-        headBranch?: string;
-      }) => Promise<Result<unknown, unknown>>;
-    },
+    private readonly mapCodebase?: Pick<MapCodebaseUseCase, "execute">,
   ) {}
 
   async execute(

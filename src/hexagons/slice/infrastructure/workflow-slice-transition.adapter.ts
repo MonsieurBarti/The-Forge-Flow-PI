@@ -1,5 +1,7 @@
+import { SliceTransitionError } from "@hexagons/workflow/domain/errors/slice-transition.error";
+import { SliceTransitionPort } from "@hexagons/workflow/domain/ports/slice-transition.port";
 import type { DateProviderPort } from "@kernel";
-import { err, isErr, ok, type Result, SliceTransitionError, SliceTransitionPort } from "@kernel";
+import { err, isErr, ok, type Result } from "@kernel";
 import type { SliceRepositoryPort } from "../domain/ports/slice-repository.port";
 import type { SliceStatus } from "../domain/slice.schemas";
 
