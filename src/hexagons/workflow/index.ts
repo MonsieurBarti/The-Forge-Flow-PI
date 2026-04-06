@@ -1,5 +1,6 @@
 // Domain — Autonomy Policy
 
+export { SliceTransitionError, SliceTransitionPort } from "@kernel";
 export type { MapCodebaseInput, MapCodebaseOutput } from "./application/map-codebase.use-case";
 // Application
 export { MapCodebaseUseCase } from "./application/map-codebase.use-case";
@@ -38,7 +39,6 @@ export { GuardRejectedError } from "./domain/errors/guard-rejected.error";
 export { NoMatchingTransitionError } from "./domain/errors/no-matching-transition.error";
 export { NoSliceAssignedError } from "./domain/errors/no-slice-assigned.error";
 export { SliceAlreadyAssignedError } from "./domain/errors/slice-already-assigned.error";
-export { SliceTransitionError } from "./domain/errors/slice-transition.error";
 export { WorkflowBaseError } from "./domain/errors/workflow-base.error";
 // Domain — Escalation
 export { Escalation } from "./domain/escalation.vo";
@@ -78,7 +78,6 @@ export {
 export type { DocType } from "./domain/ports/doc-writer.port";
 export { DocWriterPort } from "./domain/ports/doc-writer.port";
 export { ModelProfileResolverPort } from "./domain/ports/model-profile-resolver.port";
-export { SliceTransitionPort } from "./domain/ports/slice-transition.port";
 export type { WorkflowJournalEntry } from "./domain/ports/workflow-journal.port";
 export {
   WorkflowJournalEntrySchema,

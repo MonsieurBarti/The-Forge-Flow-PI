@@ -2,7 +2,6 @@ import { isOk, ok, type Result } from "@kernel";
 import { describe, expect, it } from "vitest";
 import { BudgetTrackingPort } from "../domain/ports/budget-tracking.port";
 import { ProjectSettingsBuilder } from "../domain/project-settings.builder";
-import { AlwaysUnderBudgetAdapter } from "../infrastructure/always-under-budget.adapter";
 import { ResolveModelUseCase } from "./resolve-model.use-case";
 
 // Helper: budget adapter that returns a fixed percentage
@@ -19,7 +18,7 @@ describe("ResolveModelUseCase", () => {
   const defaultSettings = new ProjectSettingsBuilder().build();
 
   describe("complexity tier mapping (AC4)", () => {
-    const useCase = new ResolveModelUseCase(new AlwaysUnderBudgetAdapter());
+    const useCase = new ResolveModelUseCase(new FixedBudgetAdapter(0));
 
     it("S complexity → budget profile → sonnet", async () => {
       const result = await useCase.execute({
@@ -88,7 +87,7 @@ describe("ResolveModelUseCase", () => {
   });
 
   describe("fallback chains (AC6)", () => {
-    const useCase = new ResolveModelUseCase(new AlwaysUnderBudgetAdapter());
+    const useCase = new ResolveModelUseCase(new FixedBudgetAdapter(0));
     const settingsWithFallback = new ProjectSettingsBuilder()
       .withModelRouting({
         profiles: {
@@ -124,7 +123,7 @@ describe("ResolveModelUseCase", () => {
   });
 
   describe("phase overrides (AC7)", () => {
-    const useCase = new ResolveModelUseCase(new AlwaysUnderBudgetAdapter());
+    const useCase = new ResolveModelUseCase(new FixedBudgetAdapter(0));
     const settingsWithPhaseOverride = new ProjectSettingsBuilder()
       .withModelRouting({
         profiles: {

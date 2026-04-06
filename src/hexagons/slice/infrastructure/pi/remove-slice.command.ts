@@ -1,4 +1,4 @@
-import type { ExtensionAPI } from "@infrastructure/pi";
+import type { ExtensionAPI, ExtensionCommandContext } from "@infrastructure/pi";
 import type { RemoveSliceUseCase } from "../../application/remove-slice.use-case";
 
 export interface RemoveSliceCommandDeps {
@@ -8,7 +8,7 @@ export interface RemoveSliceCommandDeps {
 export function registerRemoveSliceCommand(api: ExtensionAPI, deps: RemoveSliceCommandDeps): void {
   api.registerCommand("tff:remove-slice", {
     description: "Remove a future slice from the milestone",
-    handler: async (args: string) => {
+    handler: async (args: string, _ctx: ExtensionCommandContext) => {
       const sliceLabel = args.trim();
       if (!sliceLabel) {
         api.sendUserMessage("Usage: /tff:remove-slice <slice-label>");

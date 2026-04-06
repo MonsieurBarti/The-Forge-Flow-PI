@@ -1,10 +1,15 @@
 import type { MetricsRepositoryPort, QualitySnapshot } from "@hexagons/execution";
-import type { DateProviderPort, EventBusPort, PersistenceError, Result } from "@kernel";
+import type {
+  DateProviderPort,
+  EventBusPort,
+  PersistenceError,
+  Result,
+  SliceTransitionError,
+  SliceTransitionPort,
+} from "@kernel";
 import { err, isErr, ok } from "@kernel";
-import type { SliceTransitionError } from "../domain/errors/slice-transition.error";
 import { WorkflowBaseError } from "../domain/errors/workflow-base.error";
 import { mapPhaseToSliceStatus } from "../domain/phase-status-mapping";
-import type { SliceTransitionPort } from "../domain/ports/slice-transition.port";
 import type { WorkflowJournalPort } from "../domain/ports/workflow-journal.port";
 import type { WorkflowSessionRepositoryPort } from "../domain/ports/workflow-session.repository.port";
 import type {

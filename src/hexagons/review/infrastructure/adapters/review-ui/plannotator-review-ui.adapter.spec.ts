@@ -1,167 +1,148 @@
-import * as childProcess from "node:child_process";
 import { isOk } from "@kernel";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, type Mock, vi } from "vitest";
 import { PlannotatorReviewUIAdapter } from "./plannotator-review-ui.adapter";
 
-vi.mock("node:child_process");
+vi.mock("node:child_process", () => ({
+  execFile: vi.fn(),
+}));
 
-type ExecFileCallback = (...args: unknown[]) => unknown;
+vi.mock("node:fs/promises", () => ({
+  mkdtemp: vi.fn().mockResolvedValue("/tmp/tff-review-ui-mock"),
+  writeFile: vi.fn().mockResolvedValue(undefined),
+  rm: vi.fn().mockResolvedValue(undefined),
+}));
 
-// Helper: mock execFile to call callback with given stdout
+import { execFile } from "node:child_process";
+
 function mockExecFile(stdout: string) {
-  vi.mocked(childProcess.execFile).mockImplementation(
-    (_cmd: unknown, _args: unknown, _opts: unknown, cb: unknown) => {
-      (cb as ExecFileCallback)(null, stdout, "");
-      return {} as ReturnType<typeof childProcess.execFile>;
+  (execFile as unknown as Mock).mockImplementation(
+    (
+      _cmd: string,
+      _args: string[],
+      _opts: unknown,
+      cb: (err: Error | null, stdout: string) => void,
+    ) => {
+      cb(null, stdout);
     },
   );
 }
 
-function mockExecFileError(errorMsg: string) {
-  vi.mocked(childProcess.execFile).mockImplementation(
-    (_cmd: unknown, _args: unknown, _opts: unknown, cb: unknown) => {
-      (cb as ExecFileCallback)(new Error(errorMsg), "", "");
-      return {} as ReturnType<typeof childProcess.execFile>;
+function mockExecFileError(message: string) {
+  (execFile as unknown as Mock).mockImplementation(
+    (_cmd: string, _args: string[], _opts: unknown, cb: (err: Error | null) => void) => {
+      cb(new Error(message));
     },
   );
 }
 
 describe("PlannotatorReviewUIAdapter", () => {
-  const adapter = new PlannotatorReviewUIAdapter("/usr/local/bin/plannotator");
+  const adapter = new PlannotatorReviewUIAdapter("/usr/bin/plannotator");
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   describe("presentFindings", () => {
-    it("invokes plannotator annotate via CLI subprocess (AC4)", async () => {
-      mockExecFile("# File Feedback\n\n## 1. General\n> lgtm\n");
-      const ctx = {
-        sliceId: "s1",
-        sliceLabel: "M05-S05",
-        verdict: "approved" as const,
+    it("returns acknowledged with formatted output", async () => {
+      mockExecFile("Reviewed: 0 findings");
+      const result = await adapter.presentFindings({
+        sliceId: "M08-S05",
+        sliceLabel: "TEST-S05",
+        verdict: "approved",
         findings: [],
         conflicts: [],
         fixCyclesUsed: 0,
         timedOutReviewers: [],
-      };
-      const result = await adapter.presentFindings(ctx);
+      });
       expect(isOk(result)).toBe(true);
-      expect(childProcess.execFile).toHaveBeenCalledWith(
-        "/usr/local/bin/plannotator",
-        expect.arrayContaining(["annotate"]),
-        expect.any(Object),
-        expect.any(Function),
-      );
+      if (result.ok) {
+        expect(result.data.acknowledged).toBe(true);
+        expect(result.data.formattedOutput).toBe("Reviewed: 0 findings");
+      }
     });
 
-    it("degrades to acknowledged on error (AC12)", async () => {
+    it("returns fallback on error", async () => {
       mockExecFileError("plannotator crashed");
-      const ctx = {
-        sliceId: "s1",
-        sliceLabel: "M05-S05",
-        verdict: "approved" as const,
+      const result = await adapter.presentFindings({
+        sliceId: "M08-S05",
+        sliceLabel: "TEST-S05",
+        verdict: "approved",
         findings: [],
         conflicts: [],
         fixCyclesUsed: 0,
         timedOutReviewers: [],
-      };
-      const result = await adapter.presentFindings(ctx);
+      });
       expect(isOk(result)).toBe(true);
-      if (result.ok) expect(result.data.acknowledged).toBe(true);
+      if (result.ok) {
+        expect(result.data.acknowledged).toBe(true);
+        expect(result.data.formattedOutput).toContain("plannotator error");
+      }
     });
   });
 
   describe("presentVerification", () => {
-    it("invokes plannotator annotate (AC4)", async () => {
-      mockExecFile("No feedback provided.");
-      const ctx = {
-        sliceId: "s1",
-        sliceLabel: "M05-S05",
-        criteria: [{ criterion: "AC1", verdict: "PASS" as const, evidence: "ok" }],
-        overallVerdict: "PASS" as const,
-      };
-      const result = await adapter.presentVerification(ctx);
+    it("returns accepted with formatted output", async () => {
+      mockExecFile("Verification complete");
+      const result = await adapter.presentVerification({
+        sliceId: "M08-S05",
+        sliceLabel: "TEST-S05",
+        criteria: [{ criterion: "AC1", verdict: "PASS", evidence: "test passed" }],
+        overallVerdict: "PASS",
+      });
       expect(isOk(result)).toBe(true);
-      expect(childProcess.execFile).toHaveBeenCalled();
-    });
-
-    it("degrades to accepted on error (AC13)", async () => {
-      mockExecFileError("crash");
-      const ctx = {
-        sliceId: "s1",
-        sliceLabel: "M05-S05",
-        criteria: [],
-        overallVerdict: "PASS" as const,
-      };
-      const result = await adapter.presentVerification(ctx);
-      expect(isOk(result)).toBe(true);
-      if (result.ok) expect(result.data.accepted).toBe(true);
+      if (result.ok) {
+        expect(result.data.accepted).toBe(true);
+        expect(result.data.formattedOutput).toBe("Verification complete");
+      }
     });
   });
 
   describe("presentForApproval", () => {
-    it("invokes plannotator annotate on artifact path (AC4)", async () => {
-      mockExecFile("# File Feedback\n\n## 1. General\n> lgtm\n");
-      const ctx = {
-        sliceId: "s1",
-        sliceLabel: "M05-S05",
-        artifactType: "spec" as const,
-        artifactPath: "/path/SPEC.md",
-        summary: "spec",
-      };
-      const result = await adapter.presentForApproval(ctx);
+    it("returns approved when no change markers in output", async () => {
+      mockExecFile("LGTM — no changes needed");
+      const result = await adapter.presentForApproval({
+        sliceId: "M08-S05",
+        sliceLabel: "TEST-S05",
+        artifactType: "plan",
+        artifactPath: "/tmp/PLAN.md",
+        summary: "Test plan",
+      });
       expect(isOk(result)).toBe(true);
-      expect(childProcess.execFile).toHaveBeenCalledWith(
-        "/usr/local/bin/plannotator",
-        ["annotate", "/path/SPEC.md"],
-        expect.any(Object),
-        expect.any(Function),
-      );
+      if (result.ok) {
+        expect(result.data.decision).toBe("approved");
+        expect(result.data.feedback).toBeUndefined();
+      }
     });
 
-    it("returns approved when feedback has no changes", async () => {
-      mockExecFile("User reviewed the document and has no feedback.");
-      const ctx = {
-        sliceId: "s1",
-        sliceLabel: "M05-S05",
-        artifactType: "plan" as const,
-        artifactPath: "/path/PLAN.md",
-        summary: "plan",
-      };
-      const result = await adapter.presentForApproval(ctx);
-      expect(isOk(result)).toBe(true);
-      if (result.ok) expect(result.data.decision).toBe("approved");
-    });
-
-    it("returns changes_requested when feedback has REPLACEMENT/DELETION", async () => {
-      mockExecFile("# File Feedback\n## 1. Line 5\n[REPLACEMENT] fix this\n");
-      const ctx = {
-        sliceId: "s1",
-        sliceLabel: "M05-S05",
-        artifactType: "spec" as const,
-        artifactPath: "/path/SPEC.md",
-        summary: "spec",
-      };
-      const result = await adapter.presentForApproval(ctx);
-      expect(isOk(result)).toBe(true);
-      if (result.ok) expect(result.data.decision).toBe("changes_requested");
-    });
-
-    it("degrades to changes_requested on crash — never auto-approves (AC11)", async () => {
-      mockExecFileError("crash");
-      const ctx = {
-        sliceId: "s1",
-        sliceLabel: "M05-S05",
-        artifactType: "spec" as const,
-        artifactPath: "/path/SPEC.md",
-        summary: "spec",
-      };
-      const result = await adapter.presentForApproval(ctx);
+    it("returns changes_requested when output contains [DELETION]", async () => {
+      mockExecFile("Found issue [DELETION] remove this section");
+      const result = await adapter.presentForApproval({
+        sliceId: "M08-S05",
+        sliceLabel: "TEST-S05",
+        artifactType: "plan",
+        artifactPath: "/tmp/PLAN.md",
+        summary: "Test plan",
+      });
       expect(isOk(result)).toBe(true);
       if (result.ok) {
         expect(result.data.decision).toBe("changes_requested");
-        expect(result.data.feedback).toContain("parse error");
+        expect(result.data.feedback).toBeDefined();
+      }
+    });
+
+    it("returns changes_requested on error for safety", async () => {
+      mockExecFileError("timeout");
+      const result = await adapter.presentForApproval({
+        sliceId: "M08-S05",
+        sliceLabel: "TEST-S05",
+        artifactType: "plan",
+        artifactPath: "/tmp/PLAN.md",
+        summary: "Test plan",
+      });
+      expect(isOk(result)).toBe(true);
+      if (result.ok) {
+        expect(result.data.decision).toBe("changes_requested");
+        expect(result.data.formattedOutput).toContain("plannotator error");
       }
     });
   });

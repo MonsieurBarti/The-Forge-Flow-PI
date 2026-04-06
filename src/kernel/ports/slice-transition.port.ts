@@ -1,10 +1,9 @@
-import type { SliceStatus } from "@hexagons/slice";
-import type { Result } from "@kernel";
 import type { SliceTransitionError } from "../errors/slice-transition.error";
+import type { Result } from "../result";
 
 export abstract class SliceTransitionPort {
   abstract transition(
     sliceId: string,
-    targetStatus: SliceStatus,
+    targetStatus: string,
   ): Promise<Result<void, SliceTransitionError>>;
 }

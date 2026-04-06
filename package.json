@@ -5,8 +5,32 @@
   "engines": {
     "node": ">=22"
   },
+  "bin": {
+    "tff": "dist/cli/loader.js"
+  },
+  "piConfig": {
+    "name": "tff",
+    "configDir": ".tff"
+  },
+  "author": "MonsieurBarti",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MonsieurBarti/The-Forge-Flow-PI.git"
+  },
+  "homepage": "https://github.com/MonsieurBarti/The-Forge-Flow-PI#readme",
+  "files": [
+    "dist/",
+    "src/resources/",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json && npm run copy-resources && chmod +x dist/cli/loader.js",
+    "copy-resources": "cp -r src/resources/agents src/resources/prompts src/resources/protocols dist/resources/",
     "lint": "biome check .",
     "lint:fix": "biome check --fix .",
     "format": "biome format --fix .",
@@ -18,15 +42,17 @@
     "@mariozechner/pi-ai": "^0.64.0",
     "@mariozechner/pi-coding-agent": "^0.64.0",
     "@mariozechner/pi-tui": "^0.64.0",
+    "better-sqlite3": "^11.0.0",
     "yaml": "^2.8.3",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.0",
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
     "@faker-js/faker": "^9.0.0",
     "@types/better-sqlite3": "^7.6.0",
     "@types/node": "^22.0.0",
-    "better-sqlite3": "^11.0.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
   }
