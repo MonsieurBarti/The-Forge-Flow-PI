@@ -679,7 +679,7 @@ The design spec used M01a/M01b/M02-M06. Actual milestones are M01-M09:
 
 ### M06: PI-Native Integration [PLANNED]
 
-> Full spec: `docs/superpowers/specs/2026-03-31-pi-native-integration.md`
+> Full spec: `docs/2026-03-31-pi-native-integration.md`
 
 **Goal:** Deep PI SDK integration — promote `pi-ai` and `pi-tui` to direct dependencies, wire agent events from per-task sessions, build TUI overlay infrastructure with persistent dashboards.
 
