@@ -10,6 +10,6 @@
 | Build Hygiene & Dependency Fix | closed | 0/0 | 0% |
 | PI Extension Audit & Entry Point Wiring | reviewing | 0/0 | 0% |
 | Package Metadata & Documentation | discussing | 0/0 | 0% |
-| Release-Please Setup | executing | 0/6 | 0% |
+| Release-Please Setup | completing | 0/6 | 0% |
 | Production Adapter Completeness | discussing | 0/0 | 0% |
 | Standalone CLI Packaging | discussing | 0/0 | 0% |
