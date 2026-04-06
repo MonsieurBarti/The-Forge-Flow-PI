@@ -5,6 +5,13 @@
   "engines": {
     "node": ">=22"
   },
+  "author": "MonsieurBarti",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MonsieurBarti/The-Forge-Flow-PI.git"
+  },
+  "homepage": "https://github.com/MonsieurBarti/The-Forge-Flow-PI#readme",
   "scripts": {
     "build": "tsc -p tsconfig.build.json && npm run copy-resources",
     "copy-resources": "cp -r src/resources/agents src/resources/prompts src/resources/protocols dist/resources/",
