@@ -1,6 +1,5 @@
 import { join } from "node:path";
-import type { SliceTransitionPort } from "@hexagons/workflow/domain/ports/slice-transition.port";
-import { err, ok, type Result } from "@kernel";
+import { err, ok, type Result, type SliceTransitionPort } from "@kernel";
 import type { DateProviderPort, EventBusPort, LoggerPort } from "@kernel/ports";
 import type { GitPort } from "@kernel/ports/git.port";
 import type { GitHubPort } from "@kernel/ports/github.port";

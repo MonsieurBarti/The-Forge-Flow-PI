@@ -75,7 +75,7 @@ describe("registerSettingsCommand", () => {
       } as unknown as SettingsCommandDeps["mergeSettings"],
     });
 
-    const { fns } = await invokeHandler(deps);
+    await invokeHandler(deps);
 
     expect(deps.formatCascade.format).not.toHaveBeenCalled();
   });
