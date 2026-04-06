@@ -11,5 +11,5 @@
 | PI Extension Audit & Entry Point Wiring | reviewing | 0/0 | 0% |
 | Package Metadata & Documentation | discussing | 0/0 | 0% |
 | Release-Please Setup | closed | 0/6 | 0% |
-| Production Adapter Completeness | executing | 0/0 | 0% |
+| Production Adapter Completeness | verifying | 0/0 | 0% |
 | Standalone CLI Packaging | discussing | 0/0 | 0% |
