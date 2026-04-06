@@ -29,7 +29,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && npm run copy-resources && chmod +x dist/cli/loader.js",
+    "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json && npm run copy-resources && chmod +x dist/cli/loader.js",
     "copy-resources": "cp -r src/resources/agents src/resources/prompts src/resources/protocols dist/resources/",
     "lint": "biome check .",
     "lint:fix": "biome check --fix .",
@@ -53,6 +53,7 @@
     "@faker-js/faker": "^9.0.0",
     "@types/better-sqlite3": "^7.6.0",
     "@types/node": "^22.0.0",
+    "tsc-alias": "^1.8.16",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
   }
