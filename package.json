@@ -12,6 +12,15 @@
     "url": "https://github.com/MonsieurBarti/The-Forge-Flow-PI.git"
   },
   "homepage": "https://github.com/MonsieurBarti/The-Forge-Flow-PI#readme",
+  "files": [
+    "dist/",
+    "src/resources/",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json && npm run copy-resources",
     "copy-resources": "cp -r src/resources/agents src/resources/prompts src/resources/protocols dist/resources/",
@@ -32,6 +41,8 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.0",
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
     "@faker-js/faker": "^9.0.0",
     "@types/better-sqlite3": "^7.6.0",
     "@types/node": "^22.0.0",
