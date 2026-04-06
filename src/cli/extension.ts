@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { ExecuteSliceUseCase } from "@hexagons/execution/application/execute-slice.use-case";
 import { GetSliceExecutorsUseCase } from "@hexagons/execution/application/get-slice-executors.use-case";
 import { ReplayJournalUseCase } from "@hexagons/execution/application/replay-journal.use-case";
@@ -249,7 +249,11 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     : new TerminalReviewUIAdapter();
 
   // --- Shared: modelResolver + templateLoader (needed by execution & review) ---
-  const templateLoader = (path: string) => readFileSync(join(resourceRoot, path), "utf-8");
+  const templateLoader = (path: string) => {
+    const resolved = resolve(resourceRoot, path);
+    if (!resolved.startsWith(resourceRoot)) throw new Error("Path traversal detected");
+    return readFileSync(resolved, "utf-8");
+  };
 
   const mergeSettingsForModel = new MergeSettingsUseCase();
   const settingsForModel = mergeSettingsForModel.execute({
