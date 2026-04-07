@@ -140,9 +140,12 @@ export class StartDiscussUseCase {
     const sliceCodeBranch = `slice/${input.sliceId}`;
     const parentStateBranch = `tff-state/${baseBranch}`;
 
-    // 3a. Create worktree
-    const wtResult = await worktreePort.create(input.sliceId, baseBranch);
-    if (!wtResult.ok) return err(wtResult.error);
+    // 3a. Create worktree (skip if already exists — reuse from prior attempt)
+    const worktreeExists = await worktreePort.exists(input.sliceId);
+    if (!worktreeExists) {
+      const wtResult = await worktreePort.create(input.sliceId, baseBranch);
+      if (!wtResult.ok) return err(wtResult.error);
+    }
 
     // 3b. Create state branch
     const sbResult = await stateSyncPort.createStateBranch(sliceCodeBranch, parentStateBranch);

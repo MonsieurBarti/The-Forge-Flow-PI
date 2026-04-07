@@ -1,5 +1,7 @@
 ## New Project Workflow
 
+**CRITICAL: NEVER run `git merge` or `git push` directly. Merges happen ONLY via `/tff ship`.**
+
 Follow these steps in order:
 
 **Step 1 — Understand the project**

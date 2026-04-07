@@ -1,5 +1,7 @@
 ## New Milestone Workflow
 
+**CRITICAL: NEVER run `git merge` or `git push` directly. Merges happen ONLY via `/tff ship`.**
+
 IMPORTANT: Follow these steps IN ORDER. Do NOT skip ahead.
 
 **Step 1 — Milestone scope**

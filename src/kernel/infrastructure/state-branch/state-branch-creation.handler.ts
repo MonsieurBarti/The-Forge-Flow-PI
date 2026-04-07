@@ -78,14 +78,18 @@ export class StateBranchCreationHandler {
       const milestone = milestoneResult.data;
       const codeBranch = `milestone/${milestone.label}`;
 
-      // Create the code branch from main (needed for worktree creation later)
+      // Create the code branch from current HEAD (needed for worktree creation later)
       if (this.gitPort) {
         const branchExists = await this.gitPort.branchExists(codeBranch);
         if (!branchExists.ok || !branchExists.data) {
-          const createResult = await this.gitPort.createBranch(codeBranch, "main");
+          // Detect the actual default branch (could be main, master, etc.)
+          const currentBranchResult = await this.gitPort.currentBranch();
+          const baseBranch =
+            currentBranchResult.ok && currentBranchResult.data ? currentBranchResult.data : "HEAD";
+          const createResult = await this.gitPort.createBranch(codeBranch, baseBranch);
           if (!createResult.ok) {
             this.logger.warn(
-              `StateBranchCreationHandler: failed to create code branch ${codeBranch}: ${createResult.error.message}`,
+              `StateBranchCreationHandler: failed to create code branch ${codeBranch} from ${baseBranch}: ${createResult.error.message}`,
             );
           }
         }

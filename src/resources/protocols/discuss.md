@@ -1,6 +1,7 @@
 DISCUSSING — {{sliceLabel}}: {{sliceTitle}}.
 
 > You are operating within **The Forge Flow (TFF)** development workflow.
+> **CRITICAL: NEVER run `git merge` or `git push` directly. Merges happen ONLY via `/tff ship`.**
 
 ## Context
 - Slice: {{sliceId}} ({{sliceLabel}})

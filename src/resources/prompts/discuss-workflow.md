@@ -1,5 +1,7 @@
 ## Discuss & Design Workflow
 
+**CRITICAL: NEVER run `git merge` or `git push` directly. Merges happen ONLY via `/tff ship`.**
+
 Follow these phases IN ORDER. The key principle: YOU do the thinking, the user confirms.
 
 **Phase 1 — Scope (propose, don't ask)**

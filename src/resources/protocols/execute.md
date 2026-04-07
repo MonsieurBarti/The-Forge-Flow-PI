@@ -12,6 +12,12 @@ EXECUTING — {{sliceLabel}}: {{sliceTitle}}.
 TDD: RED ⇒ GREEN ⇒ REFACTOR ⇒ commit.
 Commit: `<type>({{sliceLabel}}/{{taskLabel}}): <summary>`
 
+## CRITICAL RULES
+- NEVER run `git merge` — merges happen only via `/tff ship` which creates a PR
+- NEVER push to remote — pushing happens only via `/tff ship`
+- NEVER checkout main or milestone branches — stay on the slice branch
+- Work ONLY in the worktree directory, not the main repo
+
 ## Task
 {{taskDescription}}
 
