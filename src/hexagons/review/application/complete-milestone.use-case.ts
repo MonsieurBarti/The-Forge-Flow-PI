@@ -292,7 +292,7 @@ export class CompleteMilestoneUseCase {
     parsed: CompleteMilestoneRequest,
     _cycle: number,
   ): Promise<string | undefined> {
-    // Audit is now a pre-gate (/tff:audit-milestone). Fix cycles only push changes.
+    // Audit is now a pre-gate (/tff audit-milestone). Fix cycles only push changes.
     const pushResult = await this.gitPort.pushFrom(parsed.workingDirectory, parsed.headBranch);
     if (!pushResult.ok) {
       this.logger.warn("Push failed during fix cycle", {

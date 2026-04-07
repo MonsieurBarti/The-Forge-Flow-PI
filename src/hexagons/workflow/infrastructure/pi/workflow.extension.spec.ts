@@ -10,6 +10,7 @@ import { createMockExtensionAPI } from "@infrastructure/pi/testing";
 import type { Result } from "@kernel";
 import { InProcessEventBus, SilentLoggerAdapter, SystemDateProvider } from "@kernel";
 import { describe, expect, it } from "vitest";
+import { TffDispatcher } from "../../../../cli/tff-dispatcher";
 import type { ContextPackage } from "../../domain/context-package.value-object";
 import type { ContextStagingError } from "../../domain/errors/context-staging.error";
 import { ContextStagingPort } from "../../domain/ports/context-staging.port";
@@ -48,76 +49,73 @@ function makeDeps(): WorkflowExtensionDeps {
 }
 
 describe("registerWorkflowExtension", () => {
-  it("registers tff:status command", () => {
-    const { api, fns } = createMockExtensionAPI();
-    registerWorkflowExtension(api, makeDeps());
-    expect(fns.registerCommand).toHaveBeenCalledWith(
-      "tff:status",
-      expect.objectContaining({ description: expect.any(String) }),
-    );
+  it("registers status subcommand", () => {
+    const { api } = createMockExtensionAPI();
+    const dispatcher = new TffDispatcher();
+    registerWorkflowExtension(dispatcher, api, makeDeps());
+    expect(dispatcher.getSubcommands().find((s) => s.name === "status")).toBeDefined();
   });
 
   it("registers tff_status tool", () => {
     const { api, fns } = createMockExtensionAPI();
-    registerWorkflowExtension(api, makeDeps());
+    const dispatcher = new TffDispatcher();
+    registerWorkflowExtension(dispatcher, api, makeDeps());
     expect(fns.registerTool).toHaveBeenCalledWith(expect.objectContaining({ name: "tff_status" }));
   });
 
-  it("registers tff:discuss command", () => {
-    const { api, fns } = createMockExtensionAPI();
-    registerWorkflowExtension(api, makeDeps());
-    expect(fns.registerCommand).toHaveBeenCalledWith(
-      "tff:discuss",
-      expect.objectContaining({ description: expect.any(String) }),
-    );
+  it("registers discuss subcommand", () => {
+    const { api } = createMockExtensionAPI();
+    const dispatcher = new TffDispatcher();
+    registerWorkflowExtension(dispatcher, api, makeDeps());
+    expect(dispatcher.getSubcommands().find((s) => s.name === "discuss")).toBeDefined();
   });
 
   it("registers discuss-related tools", () => {
     const { api, fns } = createMockExtensionAPI();
-    registerWorkflowExtension(api, makeDeps());
+    const dispatcher = new TffDispatcher();
+    registerWorkflowExtension(dispatcher, api, makeDeps());
     const toolNames = fns.registerTool.mock.calls.map((call) => call[0].name);
     expect(toolNames).toContain("tff_write_spec");
     expect(toolNames).toContain("tff_classify_complexity");
     expect(toolNames).toContain("tff_workflow_transition");
   });
 
-  it("registers tff:research command", () => {
-    const { api, fns } = createMockExtensionAPI();
-    registerWorkflowExtension(api, makeDeps());
-    expect(fns.registerCommand).toHaveBeenCalledWith(
-      "tff:research",
-      expect.objectContaining({ description: expect.any(String) }),
-    );
+  it("registers research subcommand", () => {
+    const { api } = createMockExtensionAPI();
+    const dispatcher = new TffDispatcher();
+    registerWorkflowExtension(dispatcher, api, makeDeps());
+    expect(dispatcher.getSubcommands().find((s) => s.name === "research")).toBeDefined();
   });
 
   it("registers tff_write_research tool", () => {
     const { api, fns } = createMockExtensionAPI();
-    registerWorkflowExtension(api, makeDeps());
+    const dispatcher = new TffDispatcher();
+    registerWorkflowExtension(dispatcher, api, makeDeps());
     const toolNames = fns.registerTool.mock.calls.map((call) => call[0].name);
     expect(toolNames).toContain("tff_write_research");
   });
 
-  it("registers tff:plan command", () => {
-    const { api, fns } = createMockExtensionAPI();
-    registerWorkflowExtension(api, makeDeps());
-    expect(fns.registerCommand).toHaveBeenCalledWith(
-      "tff:plan",
-      expect.objectContaining({ description: expect.any(String) }),
-    );
+  it("registers plan subcommand", () => {
+    const { api } = createMockExtensionAPI();
+    const dispatcher = new TffDispatcher();
+    registerWorkflowExtension(dispatcher, api, makeDeps());
+    expect(dispatcher.getSubcommands().find((s) => s.name === "plan")).toBeDefined();
   });
 
   it("registers tff_write_plan tool", () => {
     const { api, fns } = createMockExtensionAPI();
-    registerWorkflowExtension(api, makeDeps());
+    const dispatcher = new TffDispatcher();
+    registerWorkflowExtension(dispatcher, api, makeDeps());
     const toolNames = fns.registerTool.mock.calls.map((call) => call[0].name);
     expect(toolNames).toContain("tff_write_plan");
   });
 
   it("write-spec tool calls ReviewUIPort.presentForApproval after write (AC5, AC6)", () => {
     const { api, fns } = createMockExtensionAPI();
+    const dispatcher = new TffDispatcher();
     const deps = makeDeps();
     const reviewUI = deps.reviewUI as InMemoryReviewUIAdapter;
-    registerWorkflowExtension(api, deps);
+    registerWorkflowExtension(dispatcher, api, deps);
 
     const writeSpecCall = fns.registerTool.mock.calls.find(
       (call: unknown[]) => (call[0] as { name: string }).name === "tff_write_spec",
@@ -127,27 +125,24 @@ describe("registerWorkflowExtension", () => {
     expect(reviewUI.presentations).toHaveLength(0);
   });
 
-  it("registers tff:quick command", () => {
-    const { api, fns } = createMockExtensionAPI();
-    registerWorkflowExtension(api, makeDeps());
-    expect(fns.registerCommand).toHaveBeenCalledWith(
-      "tff:quick",
-      expect.objectContaining({ description: expect.any(String) }),
-    );
+  it("registers quick subcommand", () => {
+    const { api } = createMockExtensionAPI();
+    const dispatcher = new TffDispatcher();
+    registerWorkflowExtension(dispatcher, api, makeDeps());
+    expect(dispatcher.getSubcommands().find((s) => s.name === "quick")).toBeDefined();
   });
 
-  it("registers tff:debug command", () => {
-    const { api, fns } = createMockExtensionAPI();
-    registerWorkflowExtension(api, makeDeps());
-    expect(fns.registerCommand).toHaveBeenCalledWith(
-      "tff:debug",
-      expect.objectContaining({ description: expect.any(String) }),
-    );
+  it("registers debug subcommand", () => {
+    const { api } = createMockExtensionAPI();
+    const dispatcher = new TffDispatcher();
+    registerWorkflowExtension(dispatcher, api, makeDeps());
+    expect(dispatcher.getSubcommands().find((s) => s.name === "debug")).toBeDefined();
   });
 
   it("registers tff_quick_start tool", () => {
     const { api, fns } = createMockExtensionAPI();
-    registerWorkflowExtension(api, makeDeps());
+    const dispatcher = new TffDispatcher();
+    registerWorkflowExtension(dispatcher, api, makeDeps());
     const toolNames = fns.registerTool.mock.calls.map((call) => call[0].name);
     expect(toolNames).toContain("tff_quick_start");
   });

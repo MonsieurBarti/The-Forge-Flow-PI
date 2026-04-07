@@ -1,5 +1,6 @@
 import type { SliceRepositoryPort } from "@hexagons/slice/domain/ports/slice-repository.port";
 import type { ExtensionAPI } from "@infrastructure/pi";
+import type { TffDispatcher } from "../../../../cli/tff-dispatcher";
 import {
   ExecutionCoordinator,
   type ExecutionCoordinatorDeps,
@@ -21,6 +22,7 @@ export interface ExecutionExtensionExtraDeps {
 }
 
 export function registerExecutionExtension(
+  dispatcher: TffDispatcher,
   api: ExtensionAPI,
   deps: ExecutionCoordinatorDeps,
   extra?: ExecutionExtensionExtraDeps,
@@ -32,7 +34,7 @@ export function registerExecutionExtension(
   api.registerTool(createResumeExecutionTool(coordinator));
 
   if (extra?.rollback) {
-    registerRollbackCommand(api, extra.rollback);
+    registerRollbackCommand(dispatcher, api, extra.rollback);
     api.registerTool(createRollbackTool(extra.rollback));
   }
 }

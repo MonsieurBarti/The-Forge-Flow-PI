@@ -52,7 +52,7 @@ export class CreateMilestoneUseCase {
     const projectResult = await this.projectRepo.findSingleton();
     if (isErr(projectResult)) return projectResult;
     if (!projectResult.data) {
-      return err(new CreateMilestoneError("No project found. Run /tff:new first."));
+      return err(new CreateMilestoneError("No project found. Run /tff new first."));
     }
 
     // 2. Count existing milestones to derive next label

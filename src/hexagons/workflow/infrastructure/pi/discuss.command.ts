@@ -1,34 +1,51 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { MilestoneRepositoryPort } from "@hexagons/milestone";
+import type { ProjectRepositoryPort } from "@hexagons/project";
 import type { SliceRepositoryPort } from "@hexagons/slice";
 import type { ExtensionAPI } from "@infrastructure/pi";
 import { isErr, isOk } from "@kernel";
+import type { TffDispatcher } from "../../../../cli/tff-dispatcher";
 import type { StartDiscussUseCase } from "../../use-cases/start-discuss.use-case";
 import type { SuggestNextStepUseCase } from "../../use-cases/suggest-next-step.use-case";
 import { buildDiscussProtocolMessage } from "./discuss-protocol";
+import { resolveNextSlice } from "./resolve-next-slice";
 
 export interface DiscussCommandDeps {
   startDiscuss: StartDiscussUseCase;
   sliceRepo: SliceRepositoryPort;
   milestoneRepo: MilestoneRepositoryPort;
+  projectRepo: ProjectRepositoryPort;
   suggestNextStep: SuggestNextStepUseCase;
   tffDir: string;
   withGuard?: () => Promise<void>;
 }
 
-export function registerDiscussCommand(api: ExtensionAPI, deps: DiscussCommandDeps): void {
-  api.registerCommand("tff:discuss", {
+export function registerDiscussCommand(
+  dispatcher: TffDispatcher,
+  api: ExtensionAPI,
+  deps: DiscussCommandDeps,
+): void {
+  dispatcher.register({
+    name: "discuss",
     description: "Start the discuss phase for a slice -- multi-turn Q&A producing SPEC.md",
     handler: async (args: string, ctx) => {
-      if (ctx?.newSession) await ctx.newSession();
       await deps.withGuard?.();
 
-      // 1. Resolve target slice from args (label or ID)
-      const identifier = args.trim();
+      // 1. Resolve target slice from args (label or ID), auto-detect if empty
+      let identifier = args.trim();
       if (!identifier) {
-        api.sendUserMessage("Usage: /tff:discuss <slice-label-or-id>");
-        return;
+        const next = await resolveNextSlice(
+          "discussing",
+          deps.projectRepo,
+          deps.milestoneRepo,
+          deps.sliceRepo,
+        );
+        if (typeof next === "string") {
+          api.sendUserMessage(next);
+          return;
+        }
+        identifier = next.sliceLabel;
       }
 
       // Try findByLabel first (e.g., "M01-S01"), fall back to findById (UUID)
@@ -103,7 +120,8 @@ export function registerDiscussCommand(api: ExtensionAPI, deps: DiscussCommandDe
       const nextStep =
         isOk(nextStepResult) && nextStepResult.data ? nextStepResult.data.displayText : "";
 
-      // 7. Send discuss protocol message
+      // 7. Clear session and send discuss protocol message
+      if (ctx?.newSession) await ctx.newSession();
       api.sendUserMessage(
         buildDiscussProtocolMessage({
           sliceId: slice.id,

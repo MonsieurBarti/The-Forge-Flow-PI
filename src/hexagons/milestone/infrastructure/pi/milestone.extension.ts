@@ -1,6 +1,7 @@
 import type { ReviewUIPort } from "@hexagons/review";
 import type { ExtensionAPI } from "@infrastructure/pi";
 import { createZodTool } from "@infrastructure/pi";
+import type { TffDispatcher } from "../../../../cli/tff-dispatcher";
 import type { CreateMilestoneUseCase } from "../../use-cases/create-milestone.use-case";
 import { CreateMilestoneParamsSchema } from "../../use-cases/create-milestone.use-case";
 
@@ -10,8 +11,13 @@ export interface MilestoneExtensionDeps {
   loadPrompt: (path: string) => string;
 }
 
-export function registerMilestoneExtension(api: ExtensionAPI, deps: MilestoneExtensionDeps): void {
-  api.registerCommand("tff:new-milestone", {
+export function registerMilestoneExtension(
+  dispatcher: TffDispatcher,
+  api: ExtensionAPI,
+  deps: MilestoneExtensionDeps,
+): void {
+  dispatcher.register({
+    name: "new-milestone",
     description: "Create a new milestone for the current project",
     handler: async (_args, _ctx) => {
       api.sendUserMessage(deps.loadPrompt("prompts/new-milestone-workflow.md"));
@@ -59,7 +65,7 @@ export function registerMilestoneExtension(api: ExtensionAPI, deps: MilestoneExt
                 "1. Propose a breakdown into 3-8 slices (each a coherent unit of work)",
                 "2. After user approval, create each slice with `tff_add_slice` using milestoneId above",
                 "3. Give each slice a descriptive title (NOT the label — labels are auto-assigned)",
-                "4. When all slices are created, suggest `/tff:discuss` to begin scoping the first slice",
+                "4. When all slices are created, suggest `/tff discuss` to begin scoping the first slice",
               ].join("\n"),
             },
           ],

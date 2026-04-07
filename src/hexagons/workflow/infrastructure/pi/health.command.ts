@@ -1,5 +1,6 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@infrastructure/pi";
 import type { HealthCheckReport, HealthCheckService } from "@kernel/services/health-check.service";
+import type { TffDispatcher } from "../../../../cli/tff-dispatcher";
 
 export interface HealthCommandDeps {
   healthCheck: HealthCheckService;
@@ -50,8 +51,13 @@ export function formatHealthReport(report: HealthCheckReport): string {
   return lines.join("\n");
 }
 
-export function registerHealthCommand(api: ExtensionAPI, deps: HealthCommandDeps): void {
-  api.registerCommand("tff:health", {
+export function registerHealthCommand(
+  dispatcher: TffDispatcher,
+  api: ExtensionAPI,
+  deps: HealthCommandDeps,
+): void {
+  dispatcher.register({
+    name: "health",
     description: "Run state consistency checks",
     handler: async (_args: string, _ctx: ExtensionCommandContext) => {
       const result = await deps.healthCheck.runAll(deps.tffDir);

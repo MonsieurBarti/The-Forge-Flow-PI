@@ -12,6 +12,7 @@ import { InMemoryTaskRepository } from "@hexagons/task/infrastructure/in-memory-
 import { createMockExtensionAPI } from "@infrastructure/pi/testing";
 import { err } from "@kernel";
 import { describe, expect, it, vi } from "vitest";
+import { TffDispatcher } from "../../../../cli/tff-dispatcher";
 import { GetStatusUseCase } from "../../use-cases/get-status.use-case";
 import type { ProgressCommandDeps } from "./progress.command";
 import { formatDashboard, registerProgressCommand } from "./progress.command";
@@ -136,21 +137,21 @@ function makeRealDeps() {
 
 async function invokeHandler(deps: ProgressCommandDeps) {
   const { api, fns } = createMockExtensionAPI();
-  registerProgressCommand(api, deps);
-  const [, options] = fns.registerCommand.mock.calls[0];
-  await options.handler("", undefined);
+  const dispatcher = new TffDispatcher();
+  registerProgressCommand(dispatcher, api, deps);
+  // biome-ignore lint/style/noNonNullAssertion: test helper — command is always registered
+  const handler = dispatcher.getSubcommands().find((s) => s.name === "progress")!.handler;
+  await handler("", undefined as never);
   return { fns };
 }
 
 describe("registerProgressCommand", () => {
-  it("registers tff:progress command", () => {
-    const { api, fns } = createMockExtensionAPI();
+  it("registers progress subcommand", () => {
+    const { api } = createMockExtensionAPI();
+    const dispatcher = new TffDispatcher();
     const { getStatus } = makeRealDeps();
-    registerProgressCommand(api, { getStatus, tffDir: "/tmp" });
-    expect(fns.registerCommand).toHaveBeenCalledWith(
-      "tff:progress",
-      expect.objectContaining({ description: expect.any(String) }),
-    );
+    registerProgressCommand(dispatcher, api, { getStatus, tffDir: "/tmp" });
+    expect(dispatcher.getSubcommands().find((s) => s.name === "progress")).toBeDefined();
   });
 
   it("calls getStatus and sends dashboard message", async () => {

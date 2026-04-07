@@ -14,5 +14,5 @@ Ask the user to confirm or adjust.
 Once confirmed, call `tff_init_project` with the approved name and vision.
 
 **Step 4 — Next**
-After init, suggest `/tff:new-milestone` to create the first milestone.
+After init, suggest `/tff new-milestone` to create the first milestone.
 Do NOT create milestones automatically — wait for the user to invoke the command.

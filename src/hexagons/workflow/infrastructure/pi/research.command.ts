@@ -1,33 +1,50 @@
 import type { MilestoneRepositoryPort } from "@hexagons/milestone";
+import type { ProjectRepositoryPort } from "@hexagons/project";
 import type { SliceRepositoryPort } from "@hexagons/slice";
 import type { ExtensionAPI } from "@infrastructure/pi";
 import { isErr, isOk } from "@kernel";
+import type { TffDispatcher } from "../../../../cli/tff-dispatcher";
 import type { ArtifactFilePort } from "../../domain/ports/artifact-file.port";
 import type { WorkflowSessionRepositoryPort } from "../../domain/ports/workflow-session.repository.port";
 import type { SuggestNextStepUseCase } from "../../use-cases/suggest-next-step.use-case";
 import { buildResearchProtocolMessage } from "./research-protocol";
+import { resolveNextSlice } from "./resolve-next-slice";
 
 export interface ResearchCommandDeps {
   sliceRepo: SliceRepositoryPort;
   milestoneRepo: MilestoneRepositoryPort;
+  projectRepo: ProjectRepositoryPort;
   sessionRepo: WorkflowSessionRepositoryPort;
   artifactFile: ArtifactFilePort;
   suggestNextStep: SuggestNextStepUseCase;
   withGuard?: () => Promise<void>;
 }
 
-export function registerResearchCommand(api: ExtensionAPI, deps: ResearchCommandDeps): void {
-  api.registerCommand("tff:research", {
+export function registerResearchCommand(
+  dispatcher: TffDispatcher,
+  api: ExtensionAPI,
+  deps: ResearchCommandDeps,
+): void {
+  dispatcher.register({
+    name: "research",
     description:
       "Start the research phase for a slice — explore the codebase and produce RESEARCH.md",
     handler: async (args: string, ctx) => {
-      if (ctx?.newSession) await ctx.newSession();
       await deps.withGuard?.();
-      // 1. Resolve target slice from args (label or ID)
-      const identifier = args.trim();
+      // 1. Resolve target slice from args (label or ID), auto-detect if empty
+      let identifier = args.trim();
       if (!identifier) {
-        api.sendUserMessage("Usage: /tff:research <slice-label-or-id>");
-        return;
+        const next = await resolveNextSlice(
+          "researching",
+          deps.projectRepo,
+          deps.milestoneRepo,
+          deps.sliceRepo,
+        );
+        if (typeof next === "string") {
+          api.sendUserMessage(next);
+          return;
+        }
+        identifier = next.sliceLabel;
       }
 
       // Try findByLabel first (e.g., "M03-S05"), fall back to findById (UUID)
@@ -72,14 +89,14 @@ export function registerResearchCommand(api: ExtensionAPI, deps: ResearchCommand
         return;
       }
       if (!sessionResult.data) {
-        api.sendUserMessage("No workflow session found, run /tff:discuss first");
+        api.sendUserMessage("No workflow session found, run /tff discuss first");
         return;
       }
       const session = sessionResult.data;
 
       // 4. Validate phase
       if (session.currentPhase !== "researching") {
-        api.sendUserMessage("not researching, run /tff:discuss first");
+        api.sendUserMessage("not researching, run /tff discuss first");
         return;
       }
 
@@ -90,7 +107,7 @@ export function registerResearchCommand(api: ExtensionAPI, deps: ResearchCommand
         return;
       }
       if (!specResult.data) {
-        api.sendUserMessage("No SPEC.md found, run /tff:discuss first");
+        api.sendUserMessage("No SPEC.md found, run /tff discuss first");
         return;
       }
 
@@ -101,7 +118,8 @@ export function registerResearchCommand(api: ExtensionAPI, deps: ResearchCommand
       const nextStep =
         isOk(nextStepResult) && nextStepResult.data ? nextStepResult.data.displayText : "";
 
-      // 7. Send research protocol message
+      // 7. Clear session and send research protocol message
+      if (ctx?.newSession) await ctx.newSession();
       api.sendUserMessage(
         buildResearchProtocolMessage({
           sliceId: slice.id,

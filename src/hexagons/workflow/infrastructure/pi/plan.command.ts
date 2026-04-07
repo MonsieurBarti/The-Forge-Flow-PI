@@ -1,32 +1,49 @@
 import type { MilestoneRepositoryPort } from "@hexagons/milestone";
+import type { ProjectRepositoryPort } from "@hexagons/project";
 import type { SliceRepositoryPort } from "@hexagons/slice";
 import type { ExtensionAPI } from "@infrastructure/pi";
 import { isErr, isOk } from "@kernel";
+import type { TffDispatcher } from "../../../../cli/tff-dispatcher";
 import type { ArtifactFilePort } from "../../domain/ports/artifact-file.port";
 import type { WorkflowSessionRepositoryPort } from "../../domain/ports/workflow-session.repository.port";
 import type { SuggestNextStepUseCase } from "../../use-cases/suggest-next-step.use-case";
 import { buildPlanProtocolMessage } from "./plan-protocol";
+import { resolveNextSlice } from "./resolve-next-slice";
 
 export interface PlanCommandDeps {
   sliceRepo: SliceRepositoryPort;
   milestoneRepo: MilestoneRepositoryPort;
+  projectRepo: ProjectRepositoryPort;
   sessionRepo: WorkflowSessionRepositoryPort;
   artifactFile: ArtifactFilePort;
   suggestNextStep: SuggestNextStepUseCase;
   withGuard?: () => Promise<void>;
 }
 
-export function registerPlanCommand(api: ExtensionAPI, deps: PlanCommandDeps): void {
-  api.registerCommand("tff:plan", {
+export function registerPlanCommand(
+  dispatcher: TffDispatcher,
+  api: ExtensionAPI,
+  deps: PlanCommandDeps,
+): void {
+  dispatcher.register({
+    name: "plan",
     description: "Start the planning phase — decompose spec into tasks with wave detection",
     handler: async (args: string, ctx) => {
-      if (ctx?.newSession) await ctx.newSession();
       await deps.withGuard?.();
-      // 1. Resolve target slice from args (label or ID)
-      const identifier = args.trim();
+      // 1. Resolve target slice from args (label or ID), auto-detect if empty
+      let identifier = args.trim();
       if (!identifier) {
-        api.sendUserMessage("Usage: /tff:plan <slice-label-or-id>");
-        return;
+        const next = await resolveNextSlice(
+          "planning",
+          deps.projectRepo,
+          deps.milestoneRepo,
+          deps.sliceRepo,
+        );
+        if (typeof next === "string") {
+          api.sendUserMessage(next);
+          return;
+        }
+        identifier = next.sliceLabel;
       }
 
       // Try findByLabel first (e.g., "M03-S07"), fall back to findById (UUID)
@@ -71,7 +88,7 @@ export function registerPlanCommand(api: ExtensionAPI, deps: PlanCommandDeps): v
         return;
       }
       if (!sessionResult.data) {
-        api.sendUserMessage("No workflow session found. Run /tff:discuss first.");
+        api.sendUserMessage("No workflow session found. Run /tff discuss first.");
         return;
       }
       const session = sessionResult.data;
@@ -89,7 +106,7 @@ export function registerPlanCommand(api: ExtensionAPI, deps: PlanCommandDeps): v
         return;
       }
       if (!specResult.data) {
-        api.sendUserMessage("No SPEC.md found. Run /tff:discuss first.");
+        api.sendUserMessage("No SPEC.md found. Run /tff discuss first.");
         return;
       }
 
@@ -107,7 +124,8 @@ export function registerPlanCommand(api: ExtensionAPI, deps: PlanCommandDeps): v
       const nextStep =
         isOk(nextStepResult) && nextStepResult.data ? nextStepResult.data.displayText : "";
 
-      // 8. Send plan protocol message
+      // 8. Clear session and send plan protocol message
+      if (ctx?.newSession) await ctx.newSession();
       api.sendUserMessage(
         buildPlanProtocolMessage({
           sliceId: slice.id,

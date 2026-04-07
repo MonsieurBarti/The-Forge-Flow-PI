@@ -27,7 +27,7 @@ export function buildMarkdown(snapshot: OverlayProjectSnapshot, budgetPercent: n
   }>;
 
   if (!project) {
-    return "# No project data\n\nRun `/tff:new` to initialize a project.";
+    return "# No project data\n\nRun `/tff new` to initialize a project.";
   }
 
   // Compute totals

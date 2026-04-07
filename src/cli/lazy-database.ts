@@ -39,7 +39,7 @@ export function createLazyDatabase(dbPath: string): Database.Database & { ensure
     if (existsSync(dirname(dbPath))) {
       return openDb();
     }
-    throw new Error("No TFF project found. Run /tff:new to initialize.");
+    throw new Error("No TFF project found. Run /tff new to initialize.");
   }
 
   return new Proxy({} as Database.Database & { ensureReady(): void }, {

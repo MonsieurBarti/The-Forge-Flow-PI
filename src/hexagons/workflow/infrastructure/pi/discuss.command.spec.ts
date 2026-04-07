@@ -1,10 +1,15 @@
 import { MilestoneBuilder } from "@hexagons/milestone/domain/milestone.builder";
 import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/in-memory-milestone.repository";
+import { InMemoryProjectRepository } from "@hexagons/project/infrastructure/in-memory-project.repository";
 import { SliceBuilder } from "@hexagons/slice/domain/slice.builder";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
-import { createMockExtensionAPI, createMockExtensionContext } from "@infrastructure/pi/testing";
+import {
+  createMockExtensionAPI,
+  createMockExtensionCommandContext,
+} from "@infrastructure/pi/testing";
 import { InProcessEventBus, SilentLoggerAdapter } from "@kernel";
 import { describe, expect, it } from "vitest";
+import { TffDispatcher } from "../../../../cli/tff-dispatcher";
 import { WorkflowSessionBuilder } from "../../domain/workflow-session.builder";
 import { StartDiscussUseCase } from "../../use-cases/start-discuss.use-case";
 import { SuggestNextStepUseCase } from "../../use-cases/suggest-next-step.use-case";
@@ -31,6 +36,7 @@ function makeDeps() {
     startDiscuss,
     sliceRepo,
     milestoneRepo: new InMemoryMilestoneRepository(),
+    projectRepo: new InMemoryProjectRepository(),
     sessionRepo,
     suggestNextStep: new SuggestNextStepUseCase(sessionRepo, sliceRepo),
     tffDir: "/tmp/.tff",
@@ -39,29 +45,31 @@ function makeDeps() {
 
 async function invokeHandler(deps: ReturnType<typeof makeDeps>, args: string) {
   const { api, fns } = createMockExtensionAPI();
-  registerDiscussCommand(api, deps);
-  const [, options] = fns.registerCommand.mock.calls[0];
-  const ctx = createMockExtensionContext();
-  await options.handler(args, ctx);
+  const dispatcher = new TffDispatcher();
+  registerDiscussCommand(dispatcher, api, deps);
+  // biome-ignore lint/style/noNonNullAssertion: test helper — command is always registered
+  const handler = dispatcher.getSubcommands().find((s) => s.name === "discuss")!.handler;
+  const ctx = createMockExtensionCommandContext();
+  await handler(args, ctx);
   return { fns };
 }
 
 describe("registerDiscussCommand", () => {
-  it("registers tff:discuss command", () => {
-    const { api, fns } = createMockExtensionAPI();
+  it("registers discuss subcommand", () => {
+    const { api } = createMockExtensionAPI();
+    const dispatcher = new TffDispatcher();
     const deps = makeDeps();
-    registerDiscussCommand(api, deps);
-    expect(fns.registerCommand).toHaveBeenCalledWith(
-      "tff:discuss",
-      expect.objectContaining({ description: expect.any(String) }),
-    );
+    registerDiscussCommand(dispatcher, api, deps);
+    expect(dispatcher.getSubcommands().find((s) => s.name === "discuss")).toBeDefined();
   });
 
   describe("command handler", () => {
-    it("returns usage if no args provided", async () => {
+    it("returns no-project message when no args and no project exists", async () => {
       const deps = makeDeps();
       const { fns } = await invokeHandler(deps, "  ");
-      expect(fns.sendUserMessage).toHaveBeenCalledWith("Usage: /tff:discuss <slice-label-or-id>");
+      expect(fns.sendUserMessage).toHaveBeenCalledWith(
+        "No TFF project found. Run /tff new to initialize.",
+      );
     });
 
     it("returns error if slice not found", async () => {

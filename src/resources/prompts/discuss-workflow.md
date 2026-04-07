@@ -39,4 +39,4 @@ Propose a complexity tier (S | F-lite | F-full) with reasoning.
 Explain what each tier means: S = skip research, go straight to plan; F-lite/F-full = research phase first.
 **Wait for user confirmation** before calling `tff_classify_complexity`.
 Then call `tff_workflow_transition` to move to the next phase.
-Suggest `/tff:research` (F-lite/F-full) or `/tff:plan` (S-tier).
+Suggest `/tff research` (F-lite/F-full) or `/tff plan` (S-tier).

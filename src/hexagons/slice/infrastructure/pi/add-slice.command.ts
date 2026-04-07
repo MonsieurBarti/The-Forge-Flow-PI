@@ -1,4 +1,5 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@infrastructure/pi";
+import type { TffDispatcher } from "../../../../cli/tff-dispatcher";
 import type { AddSliceUseCase } from "../../application/add-slice.use-case";
 
 export interface AddSliceCommandDeps {
@@ -6,8 +7,13 @@ export interface AddSliceCommandDeps {
   activeMilestoneId: () => Promise<string | null>;
 }
 
-export function registerAddSliceCommand(api: ExtensionAPI, deps: AddSliceCommandDeps): void {
-  api.registerCommand("tff:add-slice", {
+export function registerAddSliceCommand(
+  dispatcher: TffDispatcher,
+  api: ExtensionAPI,
+  deps: AddSliceCommandDeps,
+): void {
+  dispatcher.register({
+    name: "add-slice",
     description: "Add a new slice to the active milestone",
     handler: async (args: string, _ctx: ExtensionCommandContext) => {
       const milestoneId = await deps.activeMilestoneId();
@@ -24,7 +30,7 @@ export function registerAddSliceCommand(api: ExtensionAPI, deps: AddSliceCommand
         .trim();
 
       if (!title) {
-        api.sendUserMessage("Usage: /tff:add-slice <title> [--after <label>]");
+        api.sendUserMessage("Usage: /tff add-slice <title> [--after <label>]");
         return;
       }
 

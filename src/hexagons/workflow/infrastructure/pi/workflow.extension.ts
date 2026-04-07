@@ -8,6 +8,7 @@ import type { ExtensionAPI } from "@infrastructure/pi";
 import { createZodTool } from "@infrastructure/pi";
 import type { DateProviderPort, EventBusPort, SliceTransitionPort } from "@kernel";
 import { z } from "zod";
+import type { TffDispatcher } from "../../../../cli/tff-dispatcher";
 import type { NextStepSuggestionProps } from "../../domain/next-step-suggestion.vo";
 import type { ArtifactFilePort } from "../../domain/ports/artifact-file.port";
 import type { AutonomyModeProvider } from "../../domain/ports/autonomy-mode.provider";
@@ -62,7 +63,7 @@ function formatStatusReport(report: StatusReport): string {
   const lines: string[] = [];
 
   if (!report.project) {
-    lines.push("No TFF project found. Run /tff:new to initialize.");
+    lines.push("No TFF project found. Run /tff new to initialize.");
     return lines.join("\n");
   }
 
@@ -71,7 +72,7 @@ function formatStatusReport(report: StatusReport): string {
   lines.push("");
 
   if (!report.activeMilestone) {
-    lines.push("No active milestone. Run /tff:new-milestone to create one.");
+    lines.push("No active milestone. Run /tff new-milestone to create one.");
     return lines.join("\n");
   }
 
@@ -97,7 +98,11 @@ function formatStatusReport(report: StatusReport): string {
   return lines.join("\n");
 }
 
-export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExtensionDeps): void {
+export function registerWorkflowExtension(
+  dispatcher: TffDispatcher,
+  api: ExtensionAPI,
+  deps: WorkflowExtensionDeps,
+): void {
   const tffDir = deps.tffDir ?? ".tff";
 
   // --- Status use case + tool ---
@@ -110,7 +115,8 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
 
   const suggestNextStep = new SuggestNextStepUseCase(deps.workflowSessionRepo, deps.sliceRepo);
 
-  api.registerCommand("tff:status", {
+  dispatcher.register({
+    name: "status",
     description: "Show current TFF project status",
     handler: async (_args, _ctx) => {
       await deps.withGuard?.();
@@ -190,10 +196,11 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
   );
 
   // --- Discuss command ---
-  registerDiscussCommand(api, {
+  registerDiscussCommand(dispatcher, api, {
     startDiscuss,
     sliceRepo: deps.sliceRepo,
     milestoneRepo: deps.milestoneRepo,
+    projectRepo: deps.projectRepo,
     suggestNextStep,
     tffDir,
     withGuard: deps.withGuard,
@@ -208,9 +215,10 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
   api.registerTool(createWriteResearchTool(writeResearch));
 
   // --- Research command ---
-  registerResearchCommand(api, {
+  registerResearchCommand(dispatcher, api, {
     sliceRepo: deps.sliceRepo,
     milestoneRepo: deps.milestoneRepo,
+    projectRepo: deps.projectRepo,
     sessionRepo: deps.workflowSessionRepo,
     artifactFile: deps.artifactFile,
     suggestNextStep,
@@ -227,9 +235,10 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
   api.registerTool(createWritePlanTool(writePlan, deps.reviewUI));
 
   // --- Plan command ---
-  registerPlanCommand(api, {
+  registerPlanCommand(dispatcher, api, {
     sliceRepo: deps.sliceRepo,
     milestoneRepo: deps.milestoneRepo,
+    projectRepo: deps.projectRepo,
     sessionRepo: deps.workflowSessionRepo,
     artifactFile: deps.artifactFile,
     suggestNextStep,
@@ -246,7 +255,7 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
     deps.autonomyModeProvider,
   );
 
-  registerQuickCommand(api, { quickStart, tffDir, withGuard: deps.withGuard });
-  registerDebugCommand(api, { quickStart, tffDir, withGuard: deps.withGuard });
+  registerQuickCommand(dispatcher, api, { quickStart, tffDir, withGuard: deps.withGuard });
+  registerDebugCommand(dispatcher, api, { quickStart, tffDir, withGuard: deps.withGuard });
   api.registerTool(createQuickStartTool({ quickStart, tffDir }));
 }

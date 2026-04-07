@@ -1,5 +1,6 @@
 import type { SliceRepositoryPort } from "@hexagons/slice/domain/ports/slice-repository.port";
 import type { ExtensionAPI, ExtensionCommandContext } from "@infrastructure/pi";
+import type { TffDispatcher } from "../../../../cli/tff-dispatcher";
 import type { RollbackSliceUseCase } from "../../application/rollback-slice.use-case";
 import type { CheckpointRepositoryPort } from "../../domain/ports/checkpoint-repository.port";
 
@@ -9,15 +10,20 @@ export interface RollbackCommandDeps {
   sliceRepo: SliceRepositoryPort;
 }
 
-export function registerRollbackCommand(api: ExtensionAPI, deps: RollbackCommandDeps): void {
-  api.registerCommand("tff:rollback", {
+export function registerRollbackCommand(
+  dispatcher: TffDispatcher,
+  api: ExtensionAPI,
+  deps: RollbackCommandDeps,
+): void {
+  dispatcher.register({
+    name: "rollback",
     description: "Revert execution commits for a slice",
     handler: async (args: string, _ctx: ExtensionCommandContext) => {
       const baseCommitMatch = args.match(/--base-commit\s+(\S+)/);
       const sliceLabel = args.replace(/--base-commit\s+\S+/, "").trim();
 
       if (!sliceLabel) {
-        api.sendUserMessage("Usage: /tff:rollback <slice-label> [--base-commit <hash>]");
+        api.sendUserMessage("Usage: /tff rollback <slice-label> [--base-commit <hash>]");
         return;
       }
 

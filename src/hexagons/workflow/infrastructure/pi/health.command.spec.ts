@@ -2,6 +2,7 @@ import { createMockExtensionAPI } from "@infrastructure/pi/testing";
 import { ok } from "@kernel";
 import type { HealthCheckReport } from "@kernel/services/health-check.service";
 import { describe, expect, it, vi } from "vitest";
+import { TffDispatcher } from "../../../../cli/tff-dispatcher";
 import type { HealthCommandDeps } from "./health.command";
 import { formatHealthReport, registerHealthCommand } from "./health.command";
 
@@ -24,24 +25,24 @@ function makeDeps(report: HealthCheckReport = makeReport()): HealthCommandDeps {
 }
 
 describe("registerHealthCommand", () => {
-  it("registers tff:health command", () => {
-    const { api, fns } = createMockExtensionAPI();
+  it("registers health subcommand", () => {
+    const { api } = createMockExtensionAPI();
+    const dispatcher = new TffDispatcher();
     const deps = makeDeps();
-    registerHealthCommand(api, deps);
-    expect(fns.registerCommand).toHaveBeenCalledWith(
-      "tff:health",
-      expect.objectContaining({ description: expect.any(String) }),
-    );
+    registerHealthCommand(dispatcher, api, deps);
+    expect(dispatcher.getSubcommands().find((s) => s.name === "health")).toBeDefined();
   });
 
   it("calls runAll and sends formatted report", async () => {
     const report = makeReport({ fixed: ["Post-checkout hook installed"] });
     const deps = makeDeps(report);
     const { api, fns } = createMockExtensionAPI();
-    registerHealthCommand(api, deps);
+    const dispatcher = new TffDispatcher();
+    registerHealthCommand(dispatcher, api, deps);
 
-    const [, options] = fns.registerCommand.mock.calls[0];
-    await options.handler("", undefined);
+    // biome-ignore lint/style/noNonNullAssertion: test helper — command is always registered
+    const handler = dispatcher.getSubcommands().find((s) => s.name === "health")!.handler;
+    await handler("", undefined as never);
 
     expect(deps.healthCheck.runAll).toHaveBeenCalledWith("/tmp/.tff");
     expect(fns.sendUserMessage).toHaveBeenCalledWith(
@@ -51,16 +52,18 @@ describe("registerHealthCommand", () => {
 
   it("sends error message when runAll fails", async () => {
     const { api, fns } = createMockExtensionAPI();
+    const dispatcher = new TffDispatcher();
     const deps: HealthCommandDeps = {
       healthCheck: {
         runAll: vi.fn().mockResolvedValue({ ok: false, error: new Error("disk error") }),
       } as unknown as HealthCommandDeps["healthCheck"],
       tffDir: "/tmp/.tff",
     };
-    registerHealthCommand(api, deps);
+    registerHealthCommand(dispatcher, api, deps);
 
-    const [, options] = fns.registerCommand.mock.calls[0];
-    await options.handler("", undefined);
+    // biome-ignore lint/style/noNonNullAssertion: test helper — command is always registered
+    const handler = dispatcher.getSubcommands().find((s) => s.name === "health")!.handler;
+    await handler("", undefined as never);
 
     expect(fns.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("disk error"));
   });

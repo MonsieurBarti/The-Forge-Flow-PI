@@ -31,4 +31,4 @@ Call `tff_add_slice` for each approved slice using the milestoneId from step 3.
 Use descriptive titles (e.g., 'Authentication & JWT Setup'), NOT labels.
 
 **Step 6 — Summary and next**
-Show the milestone structure and suggest `/tff:discuss` to begin scoping the first slice.
+Show the milestone structure and suggest `/tff discuss` to begin scoping the first slice.

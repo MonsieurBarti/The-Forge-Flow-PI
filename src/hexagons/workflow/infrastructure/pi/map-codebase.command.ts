@@ -1,4 +1,5 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@infrastructure/pi";
+import type { TffDispatcher } from "../../../../cli/tff-dispatcher";
 import type { MapCodebaseUseCase } from "../../application/map-codebase.use-case";
 
 export interface MapCodebaseCommandDeps {
@@ -7,8 +8,13 @@ export interface MapCodebaseCommandDeps {
   workingDirectory: string;
 }
 
-export function registerMapCodebaseCommand(api: ExtensionAPI, deps: MapCodebaseCommandDeps): void {
-  api.registerCommand("tff:map-codebase", {
+export function registerMapCodebaseCommand(
+  dispatcher: TffDispatcher,
+  api: ExtensionAPI,
+  deps: MapCodebaseCommandDeps,
+): void {
+  dispatcher.register({
+    name: "map-codebase",
     description: "Generate or update codebase documentation",
     handler: async (args: string, _ctx: ExtensionCommandContext) => {
       const mode = args.includes("--mode incremental")

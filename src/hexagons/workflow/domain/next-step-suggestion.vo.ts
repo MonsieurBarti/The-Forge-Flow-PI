@@ -38,22 +38,22 @@ function gate(text: string): NextStepSuggestionProps {
 const PHASE_SUGGESTIONS: Record<string, SuggestionFactory> = {
   idle: (ctx) =>
     ctx.allSlicesClosed
-      ? cmd("/tff:complete-milestone", undefined, false)
-      : cmd("/tff:discuss", undefined, false),
+      ? cmd("/tff complete-milestone", undefined, false)
+      : cmd("/tff discuss", undefined, false),
 
   discussing: (ctx) => {
-    const target = ctx.tier === "S" ? "/tff:plan" : "/tff:research";
+    const target = ctx.tier === "S" ? "/tff plan" : "/tff research";
     const auto = ctx.autonomyMode === "plan-to-pr";
     return cmd(target, ctx.sliceLabel, auto);
   },
 
-  researching: (ctx) => cmd("/tff:plan", ctx.sliceLabel, ctx.autonomyMode === "plan-to-pr"),
+  researching: (ctx) => cmd("/tff plan", ctx.sliceLabel, ctx.autonomyMode === "plan-to-pr"),
 
   planning: () => gate("Awaiting plan approval"),
 
-  executing: (ctx) => cmd("/tff:verify", ctx.sliceLabel, ctx.autonomyMode === "plan-to-pr"),
+  executing: (ctx) => cmd("/tff verify", ctx.sliceLabel, ctx.autonomyMode === "plan-to-pr"),
 
-  verifying: (ctx) => cmd("/tff:review", ctx.sliceLabel, ctx.autonomyMode === "plan-to-pr"),
+  verifying: (ctx) => cmd("/tff review", ctx.sliceLabel, ctx.autonomyMode === "plan-to-pr"),
 
   reviewing: () => gate("Awaiting review approval"),
 
@@ -62,9 +62,9 @@ const PHASE_SUGGESTIONS: Record<string, SuggestionFactory> = {
   "completing-milestone": () => null,
 
   paused: (ctx) => ({
-    command: "/tff:resume",
+    command: "/tff resume",
     args: ctx.sliceLabel,
-    displayText: `Resume: /tff:resume ${ctx.sliceLabel ?? ""} (was: ${ctx.previousPhase ?? "unknown"})`,
+    displayText: `Resume: /tff resume ${ctx.sliceLabel ?? ""} (was: ${ctx.previousPhase ?? "unknown"})`,
     autoInvoke: false,
   }),
 

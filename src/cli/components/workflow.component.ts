@@ -61,9 +61,9 @@ interface WorkflowSlice {
 
 export function buildWorkflowMarkdown(snapshot: OverlayProjectSnapshot): string {
   const project = snapshot.project as { name: string } | null;
-  if (!project) return "# No project data\n\nRun `/tff:new` to initialize a project.";
+  if (!project) return "# No project data\n\nRun `/tff new` to initialize a project.";
   if (!snapshot.milestone)
-    return "# No active milestone\n\nRun `/tff:new-milestone` to start a new milestone.";
+    return "# No active milestone\n\nRun `/tff new-milestone` to start a new milestone.";
 
   const allSlices = snapshot.slices as WorkflowSlice[];
   const active = allSlices
@@ -71,7 +71,7 @@ export function buildWorkflowMarkdown(snapshot: OverlayProjectSnapshot): string 
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
   if (active.length === 0) {
-    return "# All slices closed\n\nRun `/tff:status` for overview.";
+    return "# All slices closed\n\nRun `/tff status` for overview.";
   }
 
   const blocks = active.map((slice) => {
