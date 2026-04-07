@@ -122,26 +122,24 @@ export function registerResearchCommand(
       const nextStep =
         isOk(nextStepResult) && nextStepResult.data ? nextStepResult.data.displayText : "";
 
-      // 7. Clear session and send research protocol message
-      if (ctx?.newSession) {
-        const switchResult = await ctx.newSession();
-        if (switchResult?.cancelled) {
-          api.sendUserMessage("Session switch was cancelled. Run /tff research again.");
-          return;
-        }
-      }
-      api.sendUserMessage(
-        buildResearchProtocolMessage({
-          sliceId: slice.id,
-          sliceLabel: slice.label,
-          sliceTitle: slice.title,
-          sliceDescription: slice.description,
-          milestoneLabel: milestone.label,
-          milestoneId: milestone.id,
-          specContent: specResult.data,
-          autonomyMode: session.autonomyMode,
-          nextStep,
-        }),
+      // 7. Send research protocol — inject into current session (no newSession)
+      api.sendMessage(
+        {
+          customType: "tff-research",
+          content: buildResearchProtocolMessage({
+            sliceId: slice.id,
+            sliceLabel: slice.label,
+            sliceTitle: slice.title,
+            sliceDescription: slice.description,
+            milestoneLabel: milestone.label,
+            milestoneId: milestone.id,
+            specContent: specResult.data,
+            autonomyMode: session.autonomyMode,
+            nextStep,
+          }),
+          display: true,
+        },
+        { triggerTurn: true },
       );
     },
   });

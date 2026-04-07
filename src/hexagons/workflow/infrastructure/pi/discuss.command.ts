@@ -118,29 +118,26 @@ export function registerDiscussCommand(
       const nextStep =
         isOk(nextStepResult) && nextStepResult.data ? nextStepResult.data.displayText : "";
 
-      // 7. Clear session and send discuss protocol message
-      // Discuss gets a fresh context — the protocol embeds all needed context
-      // (requirements, sibling slices, next step suggestion)
-      if (ctx?.newSession) {
-        const switchResult = await ctx.newSession();
-        if (switchResult?.cancelled) {
-          api.sendUserMessage("Session switch was cancelled. Run /tff discuss again.");
-          return;
-        }
-      }
-      api.sendUserMessage(
-        buildDiscussProtocolMessage({
-          sliceId: slice.id,
-          sliceLabel: slice.label,
-          sliceTitle: slice.title,
-          sliceDescription: slice.description,
-          milestoneLabel: milestone.label,
-          milestoneId: milestone.id,
-          autonomyMode: startResult.data.autonomyMode,
-          requirementsContent,
-          slicesContext,
-          nextStep,
-        }),
+      // 7. Send discuss protocol — inject into current session (no newSession)
+      // GSD-2 pattern: manual commands never call newSession, only auto-loop does
+      api.sendMessage(
+        {
+          customType: "tff-discuss",
+          content: buildDiscussProtocolMessage({
+            sliceId: slice.id,
+            sliceLabel: slice.label,
+            sliceTitle: slice.title,
+            sliceDescription: slice.description,
+            milestoneLabel: milestone.label,
+            milestoneId: milestone.id,
+            autonomyMode: startResult.data.autonomyMode,
+            requirementsContent,
+            slicesContext,
+            nextStep,
+          }),
+          display: true,
+        },
+        { triggerTurn: true },
       );
     },
   });

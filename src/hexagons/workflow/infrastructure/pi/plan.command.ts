@@ -128,27 +128,25 @@ export function registerPlanCommand(
       const nextStep =
         isOk(nextStepResult) && nextStepResult.data ? nextStepResult.data.displayText : "";
 
-      // 8. Clear session and send plan protocol message
-      if (ctx?.newSession) {
-        const switchResult = await ctx.newSession();
-        if (switchResult?.cancelled) {
-          api.sendUserMessage("Session switch was cancelled. Run /tff plan again.");
-          return;
-        }
-      }
-      api.sendUserMessage(
-        buildPlanProtocolMessage({
-          sliceId: slice.id,
-          sliceLabel: slice.label,
-          sliceTitle: slice.title,
-          sliceDescription: slice.description,
-          milestoneLabel: milestone.label,
-          milestoneId: milestone.id,
-          specContent: specResult.data,
-          researchContent,
-          autonomyMode: session.autonomyMode,
-          nextStep,
-        }),
+      // 8. Send plan protocol — inject into current session (no newSession)
+      api.sendMessage(
+        {
+          customType: "tff-plan",
+          content: buildPlanProtocolMessage({
+            sliceId: slice.id,
+            sliceLabel: slice.label,
+            sliceTitle: slice.title,
+            sliceDescription: slice.description,
+            milestoneLabel: milestone.label,
+            milestoneId: milestone.id,
+            specContent: specResult.data,
+            researchContent,
+            autonomyMode: session.autonomyMode,
+            nextStep,
+          }),
+          display: true,
+        },
+        { triggerTurn: true },
       );
     },
   });

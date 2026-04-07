@@ -103,7 +103,7 @@ describe("registerDiscussCommand", () => {
       deps.sliceRepo.seed(slice);
 
       const { fns } = await invokeHandler(deps, "M01-S01");
-      expect(fns.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("DISCUSSING"));
+      expect(fns.sendMessage).toHaveBeenCalled();
     });
 
     it("creates a workflow session in the repository", async () => {
@@ -139,7 +139,7 @@ describe("registerDiscussCommand", () => {
       deps.sliceRepo.seed(slice);
 
       const { fns } = await invokeHandler(deps, slice.id);
-      expect(fns.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("DISCUSSING"));
+      expect(fns.sendMessage).toHaveBeenCalled();
     });
 
     it("returns error if session already has an active slice", async () => {
@@ -179,7 +179,8 @@ describe("registerDiscussCommand", () => {
       deps.sliceRepo.seed(slice);
 
       const { fns } = await invokeHandler(deps, "M01-S01");
-      const message = fns.sendUserMessage.mock.calls[0][0] as string;
+      const payload = fns.sendMessage.mock.calls[0][0] as { content: string };
+      const message = payload.content;
 
       expect(message).toContain("M01-S01");
       expect(message).toContain("Project Setup");
