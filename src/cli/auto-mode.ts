@@ -153,6 +153,7 @@ export function registerAutoMode(
       autoModeActive = false;
       api.sendUserMessage(
         `Auto-mode stopped: reached ${MAX_AUTO_DISPATCHES} dispatch limit. Run /tff auto to restart.`,
+        { deliverAs: "followUp" },
       );
       return;
     }
@@ -160,14 +161,16 @@ export function registerAutoMode(
     const result = await resolveNextAction(deps);
     if (typeof result === "string") {
       // Paused — but stay active so we resume after user input
-      api.sendUserMessage(result);
+      // Use followUp to avoid "Agent is already processing" error
+      api.sendUserMessage(result, { deliverAs: "followUp" });
       return;
     }
 
-    // Dispatch via sendUserMessage which always triggers a new turn safely
+    // Dispatch via followUp to safely queue after current turn completes
     autoDispatchCount++;
     api.sendUserMessage(
       `**Auto-mode [${autoDispatchCount}]:** running /tff ${result.subcommand}${result.args ? ` ${result.args}` : ""}`,
+      { deliverAs: "followUp" },
     );
   });
 
