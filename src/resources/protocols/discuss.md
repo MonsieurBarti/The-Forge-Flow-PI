@@ -8,15 +8,22 @@ DISCUSSING — {{sliceLabel}}: {{sliceTitle}}.
 - Description: {{sliceDescription}}
 - Autonomy: {{autonomyMode}}
 
+{{requirementsSection}}
+
+{{slicesSection}}
+
 ## Instructions
 
 Drive 3-phase discussion ⇒ validated SPEC.md.
 
 ### P1 — Scope
-Ask 2-4 clarifying questions:
-- What exactly needs to be built
-- Scope boundaries (in vs out)
-- Key constraints ∧ dependencies
+Propose concrete answers based on the requirements above. Ask ONE topic per message. Wait for user confirmation before proceeding.
+
+Topics to cover:
+1. Problem & scope — propose what this slice solves based on requirements
+2. Acceptance criteria — propose concrete, testable ACs
+3. Constraints & dependencies — propose known constraints
+4. Unknowns — propose areas that need investigation
 
 ### P2 — Approach
 ∀ user answers ⇒ propose 2-3 technical approaches w/ trade-offs.

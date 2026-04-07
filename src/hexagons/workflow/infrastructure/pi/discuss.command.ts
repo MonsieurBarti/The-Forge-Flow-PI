@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { MilestoneRepositoryPort } from "@hexagons/milestone";
 import type { SliceRepositoryPort } from "@hexagons/slice";
 import type { ExtensionAPI } from "@infrastructure/pi";
@@ -75,14 +77,33 @@ export function registerDiscussCommand(api: ExtensionAPI, deps: DiscussCommandDe
         return;
       }
 
-      // 4. Get next-step suggestion
+      // 4. Read REQUIREMENTS.md for context
+      let requirementsContent = "";
+      try {
+        const reqPath = join(deps.tffDir, "milestones", milestone.label, "REQUIREMENTS.md");
+        requirementsContent = readFileSync(reqPath, "utf-8");
+      } catch {
+        // Requirements file may not exist yet — not fatal
+      }
+
+      // 5. Load sibling slices for scope context
+      let slicesContext = "";
+      const slicesResult = await deps.sliceRepo.findByMilestoneId(milestone.id);
+      if (isOk(slicesResult) && slicesResult.data.length > 0) {
+        const lines = slicesResult.data.map(
+          (s) => `- ${s.label}: ${s.title} (${s.status})${s.id === slice.id ? " ← current" : ""}`,
+        );
+        slicesContext = lines.join("\n");
+      }
+
+      // 6. Get next-step suggestion
       const nextStepResult = await deps.suggestNextStep.execute({
         milestoneId: milestone.id,
       });
       const nextStep =
         isOk(nextStepResult) && nextStepResult.data ? nextStepResult.data.displayText : "";
 
-      // 5. Send discuss protocol message
+      // 7. Send discuss protocol message
       api.sendUserMessage(
         buildDiscussProtocolMessage({
           sliceId: slice.id,
@@ -92,6 +113,8 @@ export function registerDiscussCommand(api: ExtensionAPI, deps: DiscussCommandDe
           milestoneLabel: milestone.label,
           milestoneId: milestone.id,
           autonomyMode: startResult.data.autonomyMode,
+          requirementsContent,
+          slicesContext,
           nextStep,
         }),
       );
