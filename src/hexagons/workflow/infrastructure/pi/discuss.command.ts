@@ -121,7 +121,13 @@ export function registerDiscussCommand(
       // 7. Clear session and send discuss protocol message
       // Discuss gets a fresh context — the protocol embeds all needed context
       // (requirements, sibling slices, next step suggestion)
-      if (ctx?.newSession) await ctx.newSession();
+      if (ctx?.newSession) {
+        const switchResult = await ctx.newSession();
+        if (switchResult?.cancelled) {
+          api.sendUserMessage("Session switch was cancelled. Run /tff discuss again.");
+          return;
+        }
+      }
       api.sendUserMessage(
         buildDiscussProtocolMessage({
           sliceId: slice.id,

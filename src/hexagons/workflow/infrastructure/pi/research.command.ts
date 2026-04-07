@@ -123,7 +123,13 @@ export function registerResearchCommand(
         isOk(nextStepResult) && nextStepResult.data ? nextStepResult.data.displayText : "";
 
       // 7. Clear session and send research protocol message
-      if (ctx?.newSession) await ctx.newSession();
+      if (ctx?.newSession) {
+        const switchResult = await ctx.newSession();
+        if (switchResult?.cancelled) {
+          api.sendUserMessage("Session switch was cancelled. Run /tff research again.");
+          return;
+        }
+      }
       api.sendUserMessage(
         buildResearchProtocolMessage({
           sliceId: slice.id,
