@@ -55,6 +55,7 @@ export interface WorkflowExtensionDeps {
   withGuard?: () => Promise<void>;
   workflowJournal?: WorkflowJournalPort;
   failurePolicies?: FailurePoliciesConfig;
+  loadPrompt: (path: string) => string;
 }
 
 function formatStatusReport(report: StatusReport): string {
@@ -193,6 +194,7 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
     milestoneRepo: deps.milestoneRepo,
     suggestNextStep,
     withGuard: deps.withGuard,
+    loadPrompt: deps.loadPrompt,
   });
 
   // --- Research use case + tool ---

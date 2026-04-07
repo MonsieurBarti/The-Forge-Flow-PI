@@ -28,7 +28,7 @@ export function truncateDiff(rawDiff: string): string {
 
 export function buildMilestonePRBody(auditReports: AuditReportProps[]): string {
   const sections = auditReports.map((report) => {
-    const title = report.agentType === "spec-reviewer" ? "Intent Audit" : "Security Audit";
+    const title = report.agentType === "tff-spec-reviewer" ? "Intent Audit" : "Security Audit";
     return `## ${title}\n**Verdict:** ${report.verdict} | Findings: ${report.findings.length}\n\n${report.summary}`;
   });
   return sections.join("\n\n---\n\n");

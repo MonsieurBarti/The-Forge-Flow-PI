@@ -249,7 +249,7 @@ describe("ExecuteSliceUseCase", () => {
       executorLog: [
         {
           taskId: T1_ID,
-          agentIdentity: "executor",
+          agentIdentity: "tff-executor",
           startedAt: new Date("2026-03-30T11:00:00Z"),
           completedAt: new Date("2026-03-30T11:30:00Z"),
         },
@@ -296,7 +296,7 @@ describe("ExecuteSliceUseCase", () => {
       executorLog: [
         {
           taskId: T1_ID,
-          agentIdentity: "executor",
+          agentIdentity: "tff-executor",
           startedAt: new Date("2026-03-30T11:00:00Z"),
           completedAt: new Date("2026-03-30T11:30:00Z"),
         },

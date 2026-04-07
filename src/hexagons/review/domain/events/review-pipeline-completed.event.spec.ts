@@ -14,8 +14,12 @@ describe("ReviewPipelineCompletedEvent", () => {
     blockerCount: 1,
     conflictCount: 0,
     fixCyclesUsed: 1,
-    timedOutRoles: [] as ("code-reviewer" | "spec-reviewer" | "security-auditor")[],
-    retriedRoles: ["code-reviewer"] as ("code-reviewer" | "spec-reviewer" | "security-auditor")[],
+    timedOutRoles: [] as ("tff-code-reviewer" | "tff-spec-reviewer" | "tff-security-auditor")[],
+    retriedRoles: ["tff-code-reviewer"] as (
+      | "tff-code-reviewer"
+      | "tff-spec-reviewer"
+      | "tff-security-auditor"
+    )[],
   });
 
   it("constructs with all fields", () => {
@@ -29,7 +33,7 @@ describe("ReviewPipelineCompletedEvent", () => {
     expect(event.conflictCount).toBe(0);
     expect(event.fixCyclesUsed).toBe(1);
     expect(event.timedOutRoles).toEqual([]);
-    expect(event.retriedRoles).toEqual(["code-reviewer"]);
+    expect(event.retriedRoles).toEqual(["tff-code-reviewer"]);
   });
 
   it("has correct eventName", () => {

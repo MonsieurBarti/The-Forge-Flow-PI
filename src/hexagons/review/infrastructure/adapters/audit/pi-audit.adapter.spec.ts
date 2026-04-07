@@ -76,7 +76,7 @@ describe("PiAuditAdapter", () => {
       milestoneLabel: MILESTONE_LABEL,
       requirementsContent: REQUIREMENTS,
       diffContent: DIFF_CONTENT,
-      agentType: "spec-reviewer",
+      agentType: "tff-spec-reviewer",
     });
 
     expect(dispatch.dispatchedConfigs).toHaveLength(1);
@@ -84,7 +84,7 @@ describe("PiAuditAdapter", () => {
     if (config === undefined) throw new Error("no config dispatched");
 
     expect(config.taskId).toBe(TASK_ID);
-    expect(config.agentType).toBe("spec-reviewer");
+    expect(config.agentType).toBe("tff-spec-reviewer");
     expect(config.sliceId).toBe(MILESTONE_LABEL);
     expect(config.taskPrompt).toContain(REQUIREMENTS);
     expect(config.taskPrompt).toContain(DIFF_CONTENT);
@@ -103,7 +103,7 @@ describe("PiAuditAdapter", () => {
       milestoneLabel: MILESTONE_LABEL,
       requirementsContent: REQUIREMENTS,
       diffContent: DIFF_CONTENT,
-      agentType: "security-auditor",
+      agentType: "tff-security-auditor",
     });
 
     expect(dispatch.dispatchedConfigs).toHaveLength(1);
@@ -111,7 +111,7 @@ describe("PiAuditAdapter", () => {
     if (config === undefined) throw new Error("no config dispatched");
 
     expect(config.taskId).toBe(TASK_ID);
-    expect(config.agentType).toBe("security-auditor");
+    expect(config.agentType).toBe("tff-security-auditor");
     expect(config.sliceId).toBe(MILESTONE_LABEL);
     expect(config.taskPrompt).toContain(DIFF_CONTENT);
   });
@@ -138,7 +138,7 @@ describe("PiAuditAdapter", () => {
       milestoneLabel: MILESTONE_LABEL,
       requirementsContent: REQUIREMENTS,
       diffContent: DIFF_CONTENT,
-      agentType: "spec-reviewer",
+      agentType: "tff-spec-reviewer",
     });
 
     expect(isOk(result)).toBe(true);
@@ -146,7 +146,7 @@ describe("PiAuditAdapter", () => {
 
     const report: AuditReportProps = result.data;
     expect(report.verdict).toBe("FAIL");
-    expect(report.agentType).toBe("spec-reviewer");
+    expect(report.agentType).toBe("tff-spec-reviewer");
     expect(report.findings).toHaveLength(1);
     expect(report.findings[0]?.severity).toBe("high");
     expect(report.summary).toContain("FAIL");
@@ -169,13 +169,13 @@ describe("PiAuditAdapter", () => {
       milestoneLabel: MILESTONE_LABEL,
       requirementsContent: REQUIREMENTS,
       diffContent: DIFF_CONTENT,
-      agentType: "spec-reviewer",
+      agentType: "tff-spec-reviewer",
     });
 
     expect(isErr(result)).toBe(true);
     if (result.ok) throw new Error("unreachable");
     expect(result.error.code).toBe("AUDIT.PARSE_FAILED");
-    expect(result.error.message).toContain("spec-reviewer");
+    expect(result.error.message).toContain("tff-spec-reviewer");
   });
 
   it("returns AuditError.dispatchFailed on dispatch failure", async () => {
@@ -187,12 +187,12 @@ describe("PiAuditAdapter", () => {
       milestoneLabel: MILESTONE_LABEL,
       requirementsContent: REQUIREMENTS,
       diffContent: DIFF_CONTENT,
-      agentType: "security-auditor",
+      agentType: "tff-security-auditor",
     });
 
     expect(isErr(result)).toBe(true);
     if (result.ok) throw new Error("unreachable");
     expect(result.error.code).toBe("AUDIT.DISPATCH_FAILED");
-    expect(result.error.message).toContain("security-auditor");
+    expect(result.error.message).toContain("tff-security-auditor");
   });
 });

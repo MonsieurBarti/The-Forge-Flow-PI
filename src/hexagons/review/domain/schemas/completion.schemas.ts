@@ -2,7 +2,7 @@ import { IdSchema, TimestampSchema } from "@kernel";
 import { z } from "zod";
 import { FindingPropsSchema } from "./review.schemas";
 
-export const AuditAgentTypeSchema = z.enum(["spec-reviewer", "security-auditor"]);
+export const AuditAgentTypeSchema = z.enum(["tff-spec-reviewer", "tff-security-auditor"]);
 export type AuditAgentType = z.infer<typeof AuditAgentTypeSchema>;
 
 export const AuditVerdictSchema = z.enum(["PASS", "FAIL"]);

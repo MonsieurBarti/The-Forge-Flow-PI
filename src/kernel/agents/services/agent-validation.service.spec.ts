@@ -5,7 +5,7 @@ import { AgentValidationService } from "./agent-validation.service";
 
 function makeCard(overrides: Partial<AgentCard> = {}): AgentCard {
   return {
-    type: "code-reviewer",
+    type: "tff-code-reviewer",
     displayName: "Code Reviewer",
     description: "Reviews code",
     identity: "You are a code reviewer.",
@@ -85,7 +85,7 @@ describe("AgentValidationService", () => {
     it("rejects non-review agent with rule 'must-not-be-executor'", () => {
       const result = service.validate(
         makeCard({
-          type: "fixer",
+          type: "tff-fixer",
           capabilities: ["fix"],
           freshReviewerRule: "must-not-be-executor",
         }),
@@ -96,7 +96,7 @@ describe("AgentValidationService", () => {
 
     it("accepts non-review agent with rule 'none'", () => {
       const result = service.validate(
-        makeCard({ type: "fixer", capabilities: ["fix"], freshReviewerRule: "none" }),
+        makeCard({ type: "tff-fixer", capabilities: ["fix"], freshReviewerRule: "none" }),
       );
       expect(result.ok).toBe(true);
     });

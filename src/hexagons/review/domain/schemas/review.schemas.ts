@@ -7,7 +7,11 @@ export type ReviewSeverity = z.infer<typeof ReviewSeveritySchema>;
 export const ReviewVerdictSchema = z.enum(["approved", "changes_requested", "rejected"]);
 export type ReviewVerdict = z.infer<typeof ReviewVerdictSchema>;
 
-export const ReviewRoleSchema = z.enum(["code-reviewer", "spec-reviewer", "security-auditor"]);
+export const ReviewRoleSchema = z.enum([
+  "tff-code-reviewer",
+  "tff-spec-reviewer",
+  "tff-security-auditor",
+]);
 export type ReviewRole = z.infer<typeof ReviewRoleSchema>;
 
 export const SEVERITY_RANK: Record<ReviewSeverity, number> = {

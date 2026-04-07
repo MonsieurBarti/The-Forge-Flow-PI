@@ -33,8 +33,8 @@ describe("AgentResultBuilder", () => {
   });
 
   it("overrides agentType", () => {
-    const result = new AgentResultBuilder().withAgentType("security-auditor").build();
-    expect(result.agentType).toBe("security-auditor");
+    const result = new AgentResultBuilder().withAgentType("tff-security-auditor").build();
+    expect(result.agentType).toBe("tff-security-auditor");
   });
 
   it("overrides filesChanged", () => {
@@ -56,11 +56,11 @@ describe("AgentResultBuilder", () => {
 
   it("is chainable", () => {
     const result = new AgentResultBuilder()
-      .withAgentType("fixer")
+      .withAgentType("tff-fixer")
       .withOutput("Fixed the bug")
       .withDurationMs(5000)
       .build();
-    expect(result.agentType).toBe("fixer");
+    expect(result.agentType).toBe("tff-fixer");
     expect(result.output).toBe("Fixed the bug");
     expect(result.durationMs).toBe(5000);
   });

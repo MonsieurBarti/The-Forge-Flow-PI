@@ -50,7 +50,7 @@ describe("AgentResultSchema", () => {
   it("parses valid result with DONE status", () => {
     const result = AgentResultSchema.parse({
       taskId: faker.string.uuid(),
-      agentType: "code-reviewer",
+      agentType: "tff-code-reviewer",
       status: "DONE",
       output: "Review complete. No issues found.",
       selfReview: { dimensions: ALL_PASSED_DIMS, overallConfidence: "high" },
@@ -72,7 +72,7 @@ describe("AgentResultSchema", () => {
   it("parses BLOCKED result with error", () => {
     const result = AgentResultSchema.parse({
       taskId: faker.string.uuid(),
-      agentType: "fixer",
+      agentType: "tff-fixer",
       status: "BLOCKED",
       output: "",
       selfReview: {
@@ -97,7 +97,7 @@ describe("AgentResultSchema", () => {
     expect(() =>
       AgentResultSchema.parse({
         taskId: faker.string.uuid(),
-        agentType: "fixer",
+        agentType: "tff-fixer",
         status: "DONE",
         output: "Done",
         selfReview: { dimensions: ALL_PASSED_DIMS, overallConfidence: "high" },
@@ -116,7 +116,7 @@ describe("AgentResultSchema", () => {
   it("defaults turns to empty array", () => {
     const result = AgentResultSchema.parse({
       taskId: faker.string.uuid(),
-      agentType: "fixer",
+      agentType: "tff-fixer",
       status: "DONE",
       output: "Done",
       selfReview: { dimensions: ALL_PASSED_DIMS, overallConfidence: "high" },
@@ -135,7 +135,7 @@ describe("AgentResultSchema", () => {
   it("parses result with turn metrics", () => {
     const result = AgentResultSchema.parse({
       taskId: faker.string.uuid(),
-      agentType: "fixer",
+      agentType: "tff-fixer",
       status: "DONE",
       output: "Done",
       selfReview: { dimensions: ALL_PASSED_DIMS, overallConfidence: "high" },

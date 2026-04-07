@@ -160,8 +160,8 @@ export class HealthCheckService {
       }
     }
 
-    // Only warn about missing worktrees for slices in execution phases.
-    // Worktrees are not needed during discussing, researching, or planning.
+    // Worktrees are created at the start of the discussing phase (via StartDiscussUseCase).
+    // Only warn for slices that should definitely have worktrees — executing and beyond.
     const worktreeRequiredStatuses = new Set(["executing", "verifying", "reviewing"]);
 
     for (const slice of activeSlices) {

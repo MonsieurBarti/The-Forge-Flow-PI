@@ -42,6 +42,7 @@ function makeDeps(): WorkflowExtensionDeps {
     workflowSessionRepo: new InMemoryWorkflowSessionRepository(),
     autonomyModeProvider: { getAutonomyMode: () => "guided" as const },
     reviewUI: new InMemoryReviewUIAdapter(),
+    loadPrompt: () => "stub prompt",
     maxRetries: 2,
   };
 }

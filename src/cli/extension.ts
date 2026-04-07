@@ -749,6 +749,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     discoverStack: new DiscoverStackUseCase(settingsFileAdapter),
     withGuard,
     onBeforeProjectSave: () => (stateDb as ReturnType<typeof createLazyDatabase>).ensureReady(),
+    loadPrompt: templateLoader,
   });
 
   registerMilestoneExtension(api, {
@@ -760,6 +761,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
       options.projectRoot,
     ),
     reviewUI,
+    loadPrompt: templateLoader,
   });
 
   const settingsResolver = new SettingsModelProfileResolver(new MergeSettingsUseCase());
@@ -792,6 +794,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     failurePolicies: settingsForModel.ok
       ? settingsForModel.data.workflow.failurePolicies
       : undefined,
+    loadPrompt: templateLoader,
   });
 
   // --- Health command + tool ---

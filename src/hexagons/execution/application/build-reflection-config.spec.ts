@@ -18,7 +18,7 @@ function makeParams(overrides?: Partial<BuildReflectionConfigParams>): BuildRefl
   const originalConfig = new AgentDispatchConfigBuilder()
     .withTaskId("10000001-0000-4000-a000-000000000001")
     .withSliceId("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
-    .withAgentType("executor")
+    .withAgentType("tff-executor")
     .withWorkingDirectory("/tmp/workspace")
     .withSystemPrompt("You are an executor agent.")
     .withTaskPrompt("Implement feature X.")
@@ -58,7 +58,7 @@ describe("buildReflectionConfig", () => {
 
   it("preserves agentType from original config", () => {
     const result = buildReflectionConfig(makeParams());
-    expect(result.agentType).toBe("executor");
+    expect(result.agentType).toBe("tff-executor");
   });
 
   it("preserves sliceId from original config", () => {

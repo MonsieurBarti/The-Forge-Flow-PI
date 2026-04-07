@@ -54,19 +54,19 @@ describe("context-package helpers", () => {
 
   describe("resolveAgentType", () => {
     it("returns code-reviewer for reviewing", () => {
-      expect(resolveAgentType("reviewing")).toBe("code-reviewer");
+      expect(resolveAgentType("reviewing")).toBe("tff-code-reviewer");
     });
 
     it("returns spec-reviewer for verifying", () => {
-      expect(resolveAgentType("verifying")).toBe("spec-reviewer");
+      expect(resolveAgentType("verifying")).toBe("tff-spec-reviewer");
     });
 
     it("returns fixer for executing", () => {
-      expect(resolveAgentType("executing")).toBe("fixer");
+      expect(resolveAgentType("executing")).toBe("tff-fixer");
     });
 
     it("returns fixer for discussing", () => {
-      expect(resolveAgentType("discussing")).toBe("fixer");
+      expect(resolveAgentType("discussing")).toBe("tff-fixer");
     });
 
     it("returns fixer for all phases not in PHASE_AGENT_MAP", () => {
@@ -82,7 +82,7 @@ describe("context-package helpers", () => {
         "blocked",
       ];
       for (const phase of phasesWithDefault) {
-        expect(resolveAgentType(phase)).toBe("fixer");
+        expect(resolveAgentType(phase)).toBe("tff-fixer");
       }
     });
   });
@@ -90,8 +90,8 @@ describe("context-package helpers", () => {
   describe("PHASE_AGENT_MAP", () => {
     it("only overrides reviewing and verifying", () => {
       expect(Object.keys(PHASE_AGENT_MAP)).toHaveLength(2);
-      expect(PHASE_AGENT_MAP.reviewing).toBe("code-reviewer");
-      expect(PHASE_AGENT_MAP.verifying).toBe("spec-reviewer");
+      expect(PHASE_AGENT_MAP.reviewing).toBe("tff-code-reviewer");
+      expect(PHASE_AGENT_MAP.verifying).toBe("tff-spec-reviewer");
     });
   });
 

@@ -21,7 +21,7 @@ const DEFAULT_SELF_REVIEW: SelfReviewChecklist = {
 
 export class AgentResultBuilder {
   private _taskId: string = faker.string.uuid();
-  private _agentType: AgentType = "fixer";
+  private _agentType: AgentType = "tff-fixer";
   private _status: AgentStatus = "DONE";
   private _output: string = faker.lorem.paragraph();
   private _filesChanged: string[] = [];

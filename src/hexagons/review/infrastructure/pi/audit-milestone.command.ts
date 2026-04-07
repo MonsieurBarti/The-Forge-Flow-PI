@@ -27,7 +27,7 @@ function formatAuditReport(
   lines.push("");
 
   for (const report of reports) {
-    const title = report.agentType === "spec-reviewer" ? "Intent Audit" : "Security Audit";
+    const title = report.agentType === "tff-spec-reviewer" ? "Intent Audit" : "Security Audit";
     lines.push(`### ${title}`);
     lines.push(`**Verdict:** ${report.verdict} | **Findings:** ${report.findings.length}`);
     lines.push("");

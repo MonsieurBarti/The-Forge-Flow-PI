@@ -38,14 +38,14 @@ const DEFAULT_INPUT: AuditMilestoneInput = {
 };
 
 const STUB_AUDIT_REPORT_PASS: AuditReportProps = {
-  agentType: "spec-reviewer",
+  agentType: "tff-spec-reviewer",
   verdict: "PASS",
   findings: [],
   summary: "All requirements met.",
 };
 
 const STUB_SECURITY_REPORT_PASS: AuditReportProps = {
-  agentType: "security-auditor",
+  agentType: "tff-security-auditor",
   verdict: "PASS",
   findings: [],
   summary: "No security issues found.",
@@ -60,7 +60,7 @@ const STUB_FINDING: FindingProps = {
 };
 
 const STUB_SECURITY_REPORT_FAIL: AuditReportProps = {
-  agentType: "security-auditor",
+  agentType: "tff-security-auditor",
   verdict: "FAIL",
   findings: [STUB_FINDING],
   summary: "Security issue found.",
@@ -123,7 +123,7 @@ class StubAuditPort extends AuditPort {
     milestoneLabel: string;
     requirementsContent: string;
     diffContent: string;
-    agentType: "spec-reviewer" | "security-auditor";
+    agentType: "tff-spec-reviewer" | "tff-security-auditor";
   }): Promise<Result<AuditReportProps, AuditError>> {
     this.auditCalls.push({
       milestoneLabel: params.milestoneLabel,
@@ -134,7 +134,7 @@ class StubAuditPort extends AuditPort {
     if (idx < this._results.length) {
       return this._results[idx];
     }
-    if (params.agentType === "spec-reviewer") {
+    if (params.agentType === "tff-spec-reviewer") {
       return ok(STUB_AUDIT_REPORT_PASS);
     }
     return ok(STUB_SECURITY_REPORT_PASS);
@@ -229,8 +229,8 @@ describe("AuditMilestoneUseCase", () => {
       await useCase.execute(DEFAULT_INPUT);
 
       expect(auditPort.auditCalls).toHaveLength(2);
-      expect(auditPort.auditCalls[0].agentType).toBe("spec-reviewer");
-      expect(auditPort.auditCalls[1].agentType).toBe("security-auditor");
+      expect(auditPort.auditCalls[0].agentType).toBe("tff-spec-reviewer");
+      expect(auditPort.auditCalls[1].agentType).toBe("tff-security-auditor");
     });
   });
 
@@ -330,7 +330,7 @@ describe("AuditMilestoneUseCase", () => {
   describe("audit dispatch failure", () => {
     it("returns error when spec-reviewer dispatch fails", async () => {
       const auditPort = new StubAuditPort().withResult(
-        err(AuditError.dispatchFailed("spec-reviewer", new Error("network timeout"))),
+        err(AuditError.dispatchFailed("tff-spec-reviewer", new Error("network timeout"))),
       );
 
       const { useCase } = buildUseCase({ auditPort });
@@ -347,7 +347,9 @@ describe("AuditMilestoneUseCase", () => {
     it("returns error when security-auditor dispatch fails", async () => {
       const auditPort = new StubAuditPort()
         .withResult(ok(STUB_AUDIT_REPORT_PASS))
-        .withResult(err(AuditError.dispatchFailed("security-auditor", new Error("agent crashed"))));
+        .withResult(
+          err(AuditError.dispatchFailed("tff-security-auditor", new Error("agent crashed"))),
+        );
 
       const { useCase } = buildUseCase({ auditPort });
 

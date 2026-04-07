@@ -35,7 +35,7 @@ export class PiDocWriterAdapter extends DocWriterPort {
     existingContent?: string;
     diffContent?: string;
   }): Promise<Result<string, DocWriterError>> {
-    const card = getAgentCard("doc-writer");
+    const card = getAgentCard("tff-doc-writer");
     const promptPath = PROMPT_MAP[params.docType];
     let taskPrompt = this.promptLoader(promptPath);
 
@@ -68,7 +68,7 @@ export class PiDocWriterAdapter extends DocWriterPort {
     const config: AgentDispatchConfig = {
       taskId: this.generateTaskId(),
       sliceId: `map-codebase-${params.docType}`,
-      agentType: "doc-writer",
+      agentType: "tff-doc-writer",
       workingDirectory: params.workingDirectory,
       systemPrompt: card.identity,
       taskPrompt,

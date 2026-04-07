@@ -39,7 +39,7 @@ describe("ReviewVerdictSchema", () => {
 
 describe("ReviewRoleSchema", () => {
   it("accepts valid roles", () => {
-    for (const r of ["code-reviewer", "spec-reviewer", "security-auditor"]) {
+    for (const r of ["tff-code-reviewer", "tff-spec-reviewer", "tff-security-auditor"]) {
       expect(ReviewRoleSchema.parse(r)).toBe(r);
     }
   });
@@ -87,7 +87,7 @@ describe("ReviewPropsSchema", () => {
     const result = ReviewPropsSchema.parse({
       id: faker.string.uuid(),
       sliceId: faker.string.uuid(),
-      role: "code-reviewer",
+      role: "tff-code-reviewer",
       agentIdentity: "agent-abc-123",
       verdict: "approved",
       findings: [],
@@ -133,7 +133,7 @@ describe("ConflictPropsSchema", () => {
         lineStart: 10,
         description: "Disagreement on severity",
         reviewerVerdicts: [
-          { reviewId: faker.string.uuid(), role: "code-reviewer", severity: "high" },
+          { reviewId: faker.string.uuid(), role: "tff-code-reviewer", severity: "high" },
         ],
       }),
     ).toThrow();

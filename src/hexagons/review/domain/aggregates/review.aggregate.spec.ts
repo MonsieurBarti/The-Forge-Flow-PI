@@ -13,7 +13,7 @@ describe("Review", () => {
       const review = Review.createNew({
         id: faker.string.uuid(),
         sliceId,
-        role: "code-reviewer",
+        role: "tff-code-reviewer",
         agentIdentity: "agent-1",
         now,
       });
@@ -25,7 +25,7 @@ describe("Review", () => {
       const review = Review.createNew({
         id: faker.string.uuid(),
         sliceId,
-        role: "code-reviewer",
+        role: "tff-code-reviewer",
         agentIdentity: "agent-1",
         now,
       });
@@ -40,7 +40,7 @@ describe("Review", () => {
       const review = Review.reconstitute({
         id: faker.string.uuid(),
         sliceId,
-        role: "code-reviewer",
+        role: "tff-code-reviewer",
         agentIdentity: "agent-1",
         verdict: "approved",
         findings: [],
@@ -56,7 +56,7 @@ describe("Review", () => {
       const review = Review.createNew({
         id: faker.string.uuid(),
         sliceId,
-        role: "code-reviewer",
+        role: "tff-code-reviewer",
         agentIdentity: "agent-1",
         now,
       });
@@ -81,7 +81,7 @@ describe("Review", () => {
       const review = Review.createNew({
         id: faker.string.uuid(),
         sliceId,
-        role: "code-reviewer",
+        role: "tff-code-reviewer",
         agentIdentity: "agent-1",
         now,
       });
@@ -105,7 +105,7 @@ describe("Review", () => {
       const review = Review.createNew({
         id: faker.string.uuid(),
         sliceId,
-        role: "code-reviewer",
+        role: "tff-code-reviewer",
         agentIdentity: "agent-1",
         now,
       });
@@ -136,7 +136,7 @@ describe("Review", () => {
       const review = Review.createNew({
         id: faker.string.uuid(),
         sliceId,
-        role: "code-reviewer",
+        role: "tff-code-reviewer",
         agentIdentity: "agent-1",
         now,
       });
@@ -167,7 +167,7 @@ describe("Review", () => {
       const review = Review.createNew({
         id: faker.string.uuid(),
         sliceId,
-        role: "code-reviewer",
+        role: "tff-code-reviewer",
         agentIdentity: "agent-1",
         now,
       });

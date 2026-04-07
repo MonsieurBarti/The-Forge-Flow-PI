@@ -17,17 +17,17 @@ describe("AgentValidationError", () => {
   });
 
   it("creates missingFreshReviewerRule error", () => {
-    const err = AgentValidationError.missingFreshReviewerRule("code-reviewer");
+    const err = AgentValidationError.missingFreshReviewerRule("tff-code-reviewer");
     expect(err.code).toBe("AGENT.MISSING_FRESH_REVIEWER_RULE");
   });
 
   it("creates invalidFreshReviewerRule error", () => {
-    const err = AgentValidationError.invalidFreshReviewerRule("fixer");
+    const err = AgentValidationError.invalidFreshReviewerRule("tff-fixer");
     expect(err.code).toBe("AGENT.INVALID_FRESH_REVIEWER_RULE");
   });
 
   it("creates noSkillsDeclared error", () => {
-    const err = AgentValidationError.noSkillsDeclared("executor");
+    const err = AgentValidationError.noSkillsDeclared("tff-executor");
     expect(err.code).toBe("AGENT.NO_SKILLS_DECLARED");
   });
 });
@@ -46,7 +46,7 @@ describe("AgentLoadError", () => {
   });
 
   it("creates duplicateType", () => {
-    const err = AgentLoadError.duplicateType("fixer", ["a.md", "b.md"]);
+    const err = AgentLoadError.duplicateType("tff-fixer", ["a.md", "b.md"]);
     expect(err.code).toBe("AGENT.DUPLICATE_TYPE");
   });
 

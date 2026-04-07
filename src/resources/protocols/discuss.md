@@ -32,7 +32,7 @@ Present design section-by-section. ∀ section: get user confirmation before nex
 
 ### Post-Design
 1. `tff_write_spec` — milestoneLabel="{{milestoneLabel}}", sliceLabel="{{sliceLabel}}", sliceId="{{sliceId}}", content=full spec markdown
-2. Dispatch spec reviewer (subagent_type="spec-reviewer"). Changes requested ⇒ revise ∧ resubmit (max 3 iterations)
+2. Dispatch spec reviewer (subagent_type="tff-spec-reviewer"). Changes requested ⇒ revise ∧ resubmit (max 3 iterations)
 3. User approves final spec
 4. `tff_classify_complexity` — sliceId="{{sliceId}}", tier ∈ {S, F-lite, F-full} (user-confirmed)
 5. `tff_workflow_transition` — milestoneId="{{milestoneId}}", trigger="next" (∨ "skip" to skip research), complexityTier

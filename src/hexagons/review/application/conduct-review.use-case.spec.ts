@@ -297,9 +297,9 @@ describe("ConductReviewUseCase", () => {
 
       expect(dispatch.dispatchedConfigs).toHaveLength(3);
       const agentTypes = dispatch.dispatchedConfigs.map((c) => c.agentType);
-      expect(agentTypes).toContain("code-reviewer");
-      expect(agentTypes).toContain("spec-reviewer");
-      expect(agentTypes).toContain("security-auditor");
+      expect(agentTypes).toContain("tff-code-reviewer");
+      expect(agentTypes).toContain("tff-spec-reviewer");
+      expect(agentTypes).toContain("tff-security-auditor");
     });
   });
 
@@ -370,7 +370,7 @@ describe("ConductReviewUseCase", () => {
 
   describe("retry (AC3)", () => {
     it("retries failed reviewer exactly once then returns reviewerRetryExhausted", async () => {
-      const partialFailDispatch = new PartialFailDispatchAdapter(["security-auditor"]);
+      const partialFailDispatch = new PartialFailDispatchAdapter(["tff-security-auditor"]);
       const useCase = buildUseCase({ agentDispatchPort: partialFailDispatch });
 
       const result = await useCase.execute(makeRequest());
@@ -381,7 +381,7 @@ describe("ConductReviewUseCase", () => {
       }
       // security-auditor dispatched twice (initial + 1 retry)
       const securityDispatches = partialFailDispatch.dispatchedConfigs.filter(
-        (c) => c.agentType === "security-auditor",
+        (c) => c.agentType === "tff-security-auditor",
       );
       expect(securityDispatches).toHaveLength(2);
     });
@@ -497,9 +497,9 @@ describe("ConductReviewUseCase", () => {
       const finding2 = makeFinding({ message: "CTR finding 2" });
 
       const dispatch = new OutputDispatchAdapter({
-        "code-reviewer": makeCtrOutput([finding1]),
-        "security-auditor": makeCtrOutput([finding2]),
-        "spec-reviewer": makeStandardOutput([]),
+        "tff-code-reviewer": makeCtrOutput([finding1]),
+        "tff-security-auditor": makeCtrOutput([finding2]),
+        "tff-spec-reviewer": makeStandardOutput([]),
       });
 
       const reviewRepository = new InMemoryReviewRepository();
@@ -513,9 +513,11 @@ describe("ConductReviewUseCase", () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        const codeReview = result.data.individualReviews.find((r) => r.role === "code-reviewer");
+        const codeReview = result.data.individualReviews.find(
+          (r) => r.role === "tff-code-reviewer",
+        );
         const securityReview = result.data.individualReviews.find(
-          (r) => r.role === "security-auditor",
+          (r) => r.role === "tff-security-auditor",
         );
         expect(codeReview?.findings).toHaveLength(1);
         expect(codeReview?.findings[0].message).toBe("CTR finding 1");
@@ -530,9 +532,9 @@ describe("ConductReviewUseCase", () => {
       const specFinding = makeFinding({ message: "Spec finding" });
 
       const dispatch = new OutputDispatchAdapter({
-        "code-reviewer": makeCtrOutput([]),
-        "security-auditor": makeCtrOutput([]),
-        "spec-reviewer": makeStandardOutput([specFinding]),
+        "tff-code-reviewer": makeCtrOutput([]),
+        "tff-security-auditor": makeCtrOutput([]),
+        "tff-spec-reviewer": makeStandardOutput([specFinding]),
       });
 
       const reviewRepository = new InMemoryReviewRepository();
@@ -546,7 +548,9 @@ describe("ConductReviewUseCase", () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        const specReview = result.data.individualReviews.find((r) => r.role === "spec-reviewer");
+        const specReview = result.data.individualReviews.find(
+          (r) => r.role === "tff-spec-reviewer",
+        );
         expect(specReview?.findings).toHaveLength(1);
         expect(specReview?.findings[0].message).toBe("Spec finding");
       }
@@ -556,9 +560,9 @@ describe("ConductReviewUseCase", () => {
   describe("3 Reviews created and saved (AC10)", () => {
     it("creates and persists 3 Review aggregates via reviewRepository.save()", async () => {
       const dispatch = new OutputDispatchAdapter({
-        "code-reviewer": makeCtrOutput([]),
-        "security-auditor": makeCtrOutput([]),
-        "spec-reviewer": makeStandardOutput([]),
+        "tff-code-reviewer": makeCtrOutput([]),
+        "tff-security-auditor": makeCtrOutput([]),
+        "tff-spec-reviewer": makeStandardOutput([]),
       });
 
       const reviewRepository = new InMemoryReviewRepository();
@@ -577,7 +581,7 @@ describe("ConductReviewUseCase", () => {
       if (savedResult.ok) {
         expect(savedResult.data).toHaveLength(3);
         const roles = savedResult.data.map((r) => r.role).sort();
-        expect(roles).toEqual(["code-reviewer", "security-auditor", "spec-reviewer"]);
+        expect(roles).toEqual(["tff-code-reviewer", "tff-security-auditor", "tff-spec-reviewer"]);
       }
     });
   });
@@ -585,9 +589,9 @@ describe("ConductReviewUseCase", () => {
   describe("MergedReview.merge() invoked (AC11)", () => {
     it("returns mergedReview with correct sourceReviewIds", async () => {
       const dispatch = new OutputDispatchAdapter({
-        "code-reviewer": makeCtrOutput([]),
-        "security-auditor": makeCtrOutput([]),
-        "spec-reviewer": makeStandardOutput([]),
+        "tff-code-reviewer": makeCtrOutput([]),
+        "tff-security-auditor": makeCtrOutput([]),
+        "tff-spec-reviewer": makeStandardOutput([]),
       });
 
       const reviewRepository = new InMemoryReviewRepository();
@@ -615,9 +619,9 @@ describe("ConductReviewUseCase", () => {
   describe("CTR parse error → degraded 0 findings (AC25)", () => {
     it("degrades to 0 findings when CTR output is invalid JSON", async () => {
       const dispatch = new OutputDispatchAdapter({
-        "code-reviewer": "not valid json at all",
-        "security-auditor": makeCtrOutput([]),
-        "spec-reviewer": makeStandardOutput([]),
+        "tff-code-reviewer": "not valid json at all",
+        "tff-security-auditor": makeCtrOutput([]),
+        "tff-spec-reviewer": makeStandardOutput([]),
       });
 
       const reviewRepository = new InMemoryReviewRepository();
@@ -631,7 +635,9 @@ describe("ConductReviewUseCase", () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        const codeReview = result.data.individualReviews.find((r) => r.role === "code-reviewer");
+        const codeReview = result.data.individualReviews.find(
+          (r) => r.role === "tff-code-reviewer",
+        );
         expect(codeReview?.findings).toHaveLength(0);
       }
     });
@@ -639,9 +645,9 @@ describe("ConductReviewUseCase", () => {
     it("degrades to 0 findings when CTR output fails schema validation", async () => {
       // Valid JSON but doesn't match CTR schema
       const dispatch = new OutputDispatchAdapter({
-        "code-reviewer": JSON.stringify({ bad: "structure" }),
-        "security-auditor": makeCtrOutput([]),
-        "spec-reviewer": makeStandardOutput([]),
+        "tff-code-reviewer": JSON.stringify({ bad: "structure" }),
+        "tff-security-auditor": makeCtrOutput([]),
+        "tff-spec-reviewer": makeStandardOutput([]),
       });
 
       const reviewRepository = new InMemoryReviewRepository();
@@ -655,7 +661,9 @@ describe("ConductReviewUseCase", () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        const codeReview = result.data.individualReviews.find((r) => r.role === "code-reviewer");
+        const codeReview = result.data.individualReviews.find(
+          (r) => r.role === "tff-code-reviewer",
+        );
         expect(codeReview?.findings).toHaveLength(0);
       }
     });
@@ -670,9 +678,9 @@ describe("ConductReviewUseCase", () => {
 
       // All reviewers return a critical finding → merged has blockers
       const dispatch = new OutputDispatchAdapter({
-        "code-reviewer": makeCtrOutput([blockerFinding]),
-        "security-auditor": makeCtrOutput([]),
-        "spec-reviewer": makeStandardOutput([]),
+        "tff-code-reviewer": makeCtrOutput([blockerFinding]),
+        "tff-security-auditor": makeCtrOutput([]),
+        "tff-spec-reviewer": makeStandardOutput([]),
       });
 
       const fixerPort = new DeferAllFixerPort();
@@ -698,21 +706,21 @@ describe("ConductReviewUseCase", () => {
       const dispatch = new CycleAwareDispatchAdapter([
         // Cycle 0 (initial): blockers
         {
-          "code-reviewer": makeCtrOutput([blockerFinding]),
-          "security-auditor": makeCtrOutput([]),
-          "spec-reviewer": makeStandardOutput([]),
+          "tff-code-reviewer": makeCtrOutput([blockerFinding]),
+          "tff-security-auditor": makeCtrOutput([]),
+          "tff-spec-reviewer": makeStandardOutput([]),
         },
         // Cycle 1 (re-review after fix 1): still blockers
         {
-          "code-reviewer": makeCtrOutput([blockerFinding]),
-          "security-auditor": makeCtrOutput([]),
-          "spec-reviewer": makeStandardOutput([]),
+          "tff-code-reviewer": makeCtrOutput([blockerFinding]),
+          "tff-security-auditor": makeCtrOutput([]),
+          "tff-spec-reviewer": makeStandardOutput([]),
         },
         // Cycle 2 (re-review after fix 2): still blockers
         {
-          "code-reviewer": makeCtrOutput([blockerFinding]),
-          "security-auditor": makeCtrOutput([]),
-          "spec-reviewer": makeStandardOutput([]),
+          "tff-code-reviewer": makeCtrOutput([blockerFinding]),
+          "tff-security-auditor": makeCtrOutput([]),
+          "tff-spec-reviewer": makeStandardOutput([]),
         },
       ]);
 
@@ -740,14 +748,14 @@ describe("ConductReviewUseCase", () => {
       // Cycle 0: blockers; Cycle 1: no blockers
       const dispatch = new CycleAwareDispatchAdapter([
         {
-          "code-reviewer": makeCtrOutput([blockerFinding]),
-          "security-auditor": makeCtrOutput([]),
-          "spec-reviewer": makeStandardOutput([]),
+          "tff-code-reviewer": makeCtrOutput([blockerFinding]),
+          "tff-security-auditor": makeCtrOutput([]),
+          "tff-spec-reviewer": makeStandardOutput([]),
         },
         {
-          "code-reviewer": makeCtrOutput([]),
-          "security-auditor": makeCtrOutput([]),
-          "spec-reviewer": makeStandardOutput([]),
+          "tff-code-reviewer": makeCtrOutput([]),
+          "tff-security-auditor": makeCtrOutput([]),
+          "tff-spec-reviewer": makeStandardOutput([]),
         },
       ]);
 
@@ -774,9 +782,9 @@ describe("ConductReviewUseCase", () => {
       const blockerFinding = makeFinding({ severity: "critical", message: "Critical bug" });
 
       const dispatch = new OutputDispatchAdapter({
-        "code-reviewer": makeCtrOutput([blockerFinding]),
-        "security-auditor": makeCtrOutput([]),
-        "spec-reviewer": makeStandardOutput([]),
+        "tff-code-reviewer": makeCtrOutput([blockerFinding]),
+        "tff-security-auditor": makeCtrOutput([]),
+        "tff-spec-reviewer": makeStandardOutput([]),
       });
 
       const failingFixer = new FailingFixerPort();
@@ -803,9 +811,9 @@ describe("ConductReviewUseCase", () => {
       const finding = makeFinding({ severity: "medium", message: "Advisory" });
 
       const dispatch = new OutputDispatchAdapter({
-        "code-reviewer": makeCtrOutput([finding]),
-        "security-auditor": makeCtrOutput([]),
-        "spec-reviewer": makeStandardOutput([]),
+        "tff-code-reviewer": makeCtrOutput([finding]),
+        "tff-security-auditor": makeCtrOutput([]),
+        "tff-spec-reviewer": makeStandardOutput([]),
       });
 
       const eventBus = new SpyEventBus(logger);

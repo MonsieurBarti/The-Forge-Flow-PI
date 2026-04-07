@@ -5,7 +5,7 @@ import { AgentValidationService } from "./agent-validation.service";
 
 describe("createAgentTemplate", () => {
   it("produces valid .agent.md content", () => {
-    const content = createAgentTemplate("fixer", {
+    const content = createAgentTemplate("tff-fixer", {
       displayName: "Fixer",
       purpose: "Fix things",
       scope: "task",
@@ -16,12 +16,12 @@ describe("createAgentTemplate", () => {
     });
 
     expect(content).toContain("---");
-    expect(content).toContain("type: fixer");
+    expect(content).toContain("type: tff-fixer");
     expect(content).toContain("displayName: Fixer");
   });
 
   it("output passes AgentValidationService", () => {
-    const content = createAgentTemplate("code-reviewer", {
+    const content = createAgentTemplate("tff-code-reviewer", {
       displayName: "Code Reviewer",
       purpose: "Review code",
       scope: "slice",
@@ -44,7 +44,7 @@ describe("createAgentTemplate", () => {
 
     const service = new AgentValidationService();
     const card = AgentCardSchema.parse({
-      type: "code-reviewer",
+      type: "tff-code-reviewer",
       displayName: "Code Reviewer",
       description: "Review code",
       identity: body,
@@ -62,7 +62,7 @@ describe("createAgentTemplate", () => {
   });
 
   it("uses placeholder identity when none provided", () => {
-    const content = createAgentTemplate("fixer", {
+    const content = createAgentTemplate("tff-fixer", {
       displayName: "Fixer",
       purpose: "Fix things",
       scope: "task",
@@ -75,7 +75,7 @@ describe("createAgentTemplate", () => {
   });
 
   it("uses custom identity when provided", () => {
-    const content = createAgentTemplate("fixer", {
+    const content = createAgentTemplate("tff-fixer", {
       displayName: "Fixer",
       purpose: "Fix things",
       scope: "task",

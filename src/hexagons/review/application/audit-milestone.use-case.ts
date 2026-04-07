@@ -120,13 +120,13 @@ export class AuditMilestoneUseCase {
         milestoneLabel: input.milestoneLabel,
         requirementsContent: reqResult.data,
         diffContent,
-        agentType: "spec-reviewer",
+        agentType: "tff-spec-reviewer",
       }),
       this.auditPort.auditMilestone({
         milestoneLabel: input.milestoneLabel,
         requirementsContent: reqResult.data,
         diffContent,
-        agentType: "security-auditor",
+        agentType: "tff-security-auditor",
       }),
     ]);
 

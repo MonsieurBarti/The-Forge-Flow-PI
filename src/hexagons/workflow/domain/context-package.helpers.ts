@@ -3,8 +3,8 @@ import { ACTIVE_PHASES } from "./transition-table";
 import type { WorkflowPhase } from "./workflow-session.schemas";
 
 export const PHASE_AGENT_MAP: Partial<Record<WorkflowPhase, AgentType>> = {
-  reviewing: "code-reviewer",
-  verifying: "spec-reviewer",
+  reviewing: "tff-code-reviewer",
+  verifying: "tff-spec-reviewer",
 };
 
 export function isActivePhase(phase: WorkflowPhase): boolean {
@@ -12,7 +12,7 @@ export function isActivePhase(phase: WorkflowPhase): boolean {
 }
 
 export function resolveAgentType(phase: WorkflowPhase): AgentType {
-  return PHASE_AGENT_MAP[phase] ?? "fixer";
+  return PHASE_AGENT_MAP[phase] ?? "tff-fixer";
 }
 
 export function buildTaskPrompt(description: string, criteria: string[]): string {

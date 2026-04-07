@@ -22,7 +22,7 @@ export function crossCheckAgentResult(
   const discrepancies: AgentConcern[] = [];
 
   // 1. Files claim: completeness passed but no files changed (fixer only)
-  if (agentType === "fixer") {
+  if (agentType === "tff-fixer") {
     const completeness = report.selfReview.dimensions.find((d) => d.dimension === "completeness");
     if (completeness?.passed && transport.filesChanged.length === 0) {
       discrepancies.push({

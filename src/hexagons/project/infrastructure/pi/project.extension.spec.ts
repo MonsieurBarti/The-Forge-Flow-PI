@@ -22,6 +22,7 @@ describe("registerProjectExtension", () => {
       mergeSettings: new MergeSettingsUseCase(),
       eventBus: new InProcessEventBus(new SilentLoggerAdapter()),
       dateProvider: new StubDateProvider(),
+      loadPrompt: () => "stub prompt",
     });
     expect(fns.registerCommand).toHaveBeenCalledWith(
       "tff:new",
@@ -38,6 +39,7 @@ describe("registerProjectExtension", () => {
       mergeSettings: new MergeSettingsUseCase(),
       eventBus: new InProcessEventBus(new SilentLoggerAdapter()),
       dateProvider: new StubDateProvider(),
+      loadPrompt: () => "stub prompt",
     });
     expect(fns.registerTool).toHaveBeenCalledWith(
       expect.objectContaining({ name: "tff_init_project" }),

@@ -11,7 +11,7 @@ export function createAddSliceTool(deps: AddSliceToolDeps) {
     name: "tff_add_slice",
     label: "TFF Add Slice",
     description:
-      "Add a new slice to the active The Forge Flow (TFF) milestone. Auto-assigns the next label (M01-S01, M01-S02, ...). Use a descriptive title — NOT the label. IMPORTANT: Call this tool ONE AT A TIME — wait for each call to complete before creating the next slice.",
+      "Add a new slice to the active The Forge Flow (TFF) milestone. Auto-assigns the next label (M01-S01, M01-S02, ...). Use a descriptive title — NOT the label. CRITICAL: You MUST call this tool sequentially — ONE slice at a time. Wait for each response before calling again. Do NOT batch multiple calls. Creating slices in parallel WILL cause errors.",
     schema: z.object({
       milestoneId: z.string().describe("Milestone ID (from tff_status output)"),
       title: z.string().describe("Slice title"),

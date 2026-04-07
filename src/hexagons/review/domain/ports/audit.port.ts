@@ -7,6 +7,6 @@ export abstract class AuditPort {
     milestoneLabel: string;
     requirementsContent: string;
     diffContent: string;
-    agentType: "spec-reviewer" | "security-auditor";
+    agentType: "tff-spec-reviewer" | "tff-security-auditor";
   }): Promise<Result<AuditReportProps, AuditError>>;
 }

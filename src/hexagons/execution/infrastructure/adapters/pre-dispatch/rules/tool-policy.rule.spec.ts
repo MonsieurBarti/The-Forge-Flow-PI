@@ -47,14 +47,14 @@ describe("ToolPolicyRule", () => {
       defaults: { blocked: ["Bash"] },
       byTier: {},
       byRole: {
-        "security-auditor": { blocked: ["Write"] },
+        "tff-security-auditor": { blocked: ["Write"] },
       },
     };
     const rule = new ToolPolicyRule(config);
 
     const violations = await rule.evaluate(
       makeContext({
-        agentRole: "security-auditor",
+        agentRole: "tff-security-auditor",
         agentTools: ["Read", "Bash", "Write"],
       }),
     );
@@ -118,14 +118,14 @@ describe("ToolPolicyRule", () => {
       defaults: {},
       byTier: {},
       byRole: {
-        "security-auditor": { allowed: ["Read", "Grep", "Glob"] },
+        "tff-security-auditor": { allowed: ["Read", "Grep", "Glob"] },
       },
     };
     const rule = new ToolPolicyRule(config);
 
     const violations = await rule.evaluate(
       makeContext({
-        agentRole: "security-auditor",
+        agentRole: "tff-security-auditor",
         agentTools: ["Read", "Grep", "Glob", "Bash", "Write"],
       }),
     );

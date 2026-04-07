@@ -228,9 +228,9 @@ describe("ConductReview Integration", () => {
     });
 
     const dispatch = new OutputDispatchAdapter({
-      "code-reviewer": makeCtrOutput([finding1]),
-      "spec-reviewer": makeStandardOutput([finding2]),
-      "security-auditor": makeCtrOutput([finding3]),
+      "tff-code-reviewer": makeCtrOutput([finding1]),
+      "tff-spec-reviewer": makeStandardOutput([finding2]),
+      "tff-security-auditor": makeCtrOutput([finding3]),
     });
 
     const eventBus = new SpyEventBus(logger);
@@ -251,7 +251,7 @@ describe("ConductReview Integration", () => {
     // Assert: 3 individual reviews
     expect(result.data.individualReviews).toHaveLength(3);
     const roles = result.data.individualReviews.map((r) => r.role).sort();
-    expect(roles).toEqual(["code-reviewer", "security-auditor", "spec-reviewer"]);
+    expect(roles).toEqual(["tff-code-reviewer", "tff-security-auditor", "tff-spec-reviewer"]);
 
     // Assert: merged review with 3 sourceReviewIds
     expect(result.data.mergedReview.sourceReviewIds).toHaveLength(3);
@@ -298,9 +298,9 @@ describe("ConductReview Integration", () => {
     expect(result.ok).toBe(true);
     expect(dispatch.dispatchedConfigs).toHaveLength(3);
     const agentTypes = dispatch.dispatchedConfigs.map((c) => c.agentType);
-    expect(agentTypes).toContain("code-reviewer");
-    expect(agentTypes).toContain("spec-reviewer");
-    expect(agentTypes).toContain("security-auditor");
+    expect(agentTypes).toContain("tff-code-reviewer");
+    expect(agentTypes).toContain("tff-spec-reviewer");
+    expect(agentTypes).toContain("tff-security-auditor");
   });
 
   it("each reviewer gets a distinct identity (unique taskId)", async () => {

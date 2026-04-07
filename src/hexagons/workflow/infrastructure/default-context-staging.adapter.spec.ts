@@ -48,7 +48,7 @@ describe("DefaultContextStagingAdapter", () => {
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.data.phase).toBe("executing");
-        expect(result.data.agentType).toBe("fixer");
+        expect(result.data.agentType).toBe("tff-fixer");
         expect(result.data.modelProfile).toBe("balanced");
         expect(result.data.skills.length).toBeGreaterThan(0);
       }
@@ -103,7 +103,7 @@ describe("DefaultContextStagingAdapter", () => {
       const result = await adapter.stage(validRequest({ phase: "reviewing" }));
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.data.agentType).toBe("code-reviewer");
+        expect(result.data.agentType).toBe("tff-code-reviewer");
       }
     });
   });

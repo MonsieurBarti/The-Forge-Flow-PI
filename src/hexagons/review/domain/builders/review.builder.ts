@@ -10,7 +10,7 @@ import type {
 export class ReviewBuilder {
   private _id: string = faker.string.uuid();
   private _sliceId: string = faker.string.uuid();
-  private _role: ReviewRole = "code-reviewer";
+  private _role: ReviewRole = "tff-code-reviewer";
   private _agentIdentity: string = `agent-${faker.string.alphanumeric(8)}`;
   private _verdict: ReviewVerdict = "approved";
   private _findings: FindingProps[] = [];

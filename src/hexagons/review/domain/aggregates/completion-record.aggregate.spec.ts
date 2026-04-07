@@ -8,13 +8,13 @@ const MILESTONE_ID = crypto.randomUUID();
 
 const AUDIT_REPORTS: AuditReportProps[] = [
   {
-    agentType: "spec-reviewer",
+    agentType: "tff-spec-reviewer",
     verdict: "PASS",
     findings: [],
     summary: "All specs satisfied",
   },
   {
-    agentType: "security-auditor",
+    agentType: "tff-security-auditor",
     verdict: "PASS",
     findings: [],
     summary: "No security issues found",

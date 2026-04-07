@@ -65,7 +65,7 @@ describe("ReviewBuilder", () => {
   });
 
   it("respects withRole", () => {
-    const review = new ReviewBuilder().withRole("security-auditor").build();
-    expect(review.role).toBe("security-auditor");
+    const review = new ReviewBuilder().withRole("tff-security-auditor").build();
+    expect(review.role).toBe("tff-security-auditor");
   });
 });

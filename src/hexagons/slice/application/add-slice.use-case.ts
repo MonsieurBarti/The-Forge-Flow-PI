@@ -27,7 +27,7 @@ export class AddSliceUseCase {
 
   async execute(input: AddSliceInput): Promise<Result<AddSliceOutput, PersistenceError>> {
     // Retry loop handles parallel calls that race on label assignment
-    const MAX_RETRIES = 5;
+    const MAX_RETRIES = 8;
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       const result = await this.tryCreate(input);
       if (result.ok) return result;

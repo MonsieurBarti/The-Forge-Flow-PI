@@ -106,7 +106,7 @@ export class VerifyAcceptanceCriteriaUseCase {
       const config: AgentDispatchConfig = {
         taskId,
         sliceId: parsed.sliceId,
-        agentType: "verifier",
+        agentType: "tff-verifier",
         workingDirectory: parsed.workingDirectory,
         systemPrompt: prompt,
         taskPrompt: "Verify each acceptance criterion and return structured verdicts as JSON",

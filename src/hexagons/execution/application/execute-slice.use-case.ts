@@ -310,7 +310,7 @@ export class ExecuteSliceUseCase {
       // 6c. Start tasks + record in checkpoint
       for (const task of waveTasks) {
         task.start(this.deps.dateProvider.now());
-        checkpoint.recordTaskStart(task.id, "executor", this.deps.dateProvider.now());
+        checkpoint.recordTaskStart(task.id, "tff-executor", this.deps.dateProvider.now());
       }
 
       // 6d. Build dispatch configs
