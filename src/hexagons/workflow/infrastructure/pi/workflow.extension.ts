@@ -55,7 +55,7 @@ export interface WorkflowExtensionDeps {
   withGuard?: () => Promise<void>;
   workflowJournal?: WorkflowJournalPort;
   failurePolicies?: FailurePoliciesConfig;
-  loadPrompt: (path: string) => string;
+  loadPrompt?: (path: string) => string;
 }
 
 function formatStatusReport(report: StatusReport): string {
@@ -98,6 +98,8 @@ function formatStatusReport(report: StatusReport): string {
 }
 
 export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExtensionDeps): void {
+  const tffDir = deps.tffDir ?? ".tff";
+
   // --- Status use case + tool ---
   const statusUseCase = new GetStatusUseCase(
     deps.projectRepo,
@@ -193,8 +195,8 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
     sliceRepo: deps.sliceRepo,
     milestoneRepo: deps.milestoneRepo,
     suggestNextStep,
+    tffDir,
     withGuard: deps.withGuard,
-    loadPrompt: deps.loadPrompt,
   });
 
   // --- Research use case + tool ---
@@ -235,7 +237,6 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
   });
 
   // --- Quick/Debug use case + commands + tool ---
-  const tffDir = deps.tffDir ?? ".tff";
   const quickStart = new QuickStartUseCase(
     deps.sliceRepo,
     deps.workflowSessionRepo,

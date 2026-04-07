@@ -34,6 +34,7 @@ Present design section-by-section. ∀ section: get user confirmation before nex
 1. `tff_write_spec` — milestoneLabel="{{milestoneLabel}}", sliceLabel="{{sliceLabel}}", sliceId="{{sliceId}}", content=full spec markdown
 2. Dispatch spec reviewer (subagent_type="tff-spec-reviewer"). Changes requested ⇒ revise ∧ resubmit (max 3 iterations)
 3. User approves final spec
-4. `tff_classify_complexity` — sliceId="{{sliceId}}", tier ∈ {S, F-lite, F-full} (user-confirmed)
-5. `tff_workflow_transition` — milestoneId="{{milestoneId}}", trigger="next" (∨ "skip" to skip research), complexityTier
-6. {{nextStep}}
+4. **Propose** complexity tier (S | F-lite | F-full) with reasoning. Explain what each tier means for the workflow (S = skip research, go straight to plan; F-lite/F-full = research phase first). **Wait for user confirmation before proceeding.**
+5. `tff_classify_complexity` — sliceId="{{sliceId}}", tier=<user-confirmed tier>
+6. `tff_workflow_transition` — milestoneId="{{milestoneId}}", trigger="next" (∨ "skip" to skip research), complexityTier=<tier>
+7. {{nextStep}}

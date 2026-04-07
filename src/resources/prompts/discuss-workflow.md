@@ -35,6 +35,8 @@ Call `tff_write_spec` with the complete content.
 Plannotator will open automatically for the user to review.
 
 **Phase 4 — Classify and transition**
-Call `tff_classify_complexity` to determine the tier.
+Propose a complexity tier (S | F-lite | F-full) with reasoning.
+Explain what each tier means: S = skip research, go straight to plan; F-lite/F-full = research phase first.
+**Wait for user confirmation** before calling `tff_classify_complexity`.
 Then call `tff_workflow_transition` to move to the next phase.
 Suggest `/tff:research` (F-lite/F-full) or `/tff:plan` (S-tier).
