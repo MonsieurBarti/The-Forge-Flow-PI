@@ -600,6 +600,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     sliceRepo,
     logger,
     stateBranchOps,
+    gitPort,
   );
   stateBranchCreationHandler.register(eventBus);
 

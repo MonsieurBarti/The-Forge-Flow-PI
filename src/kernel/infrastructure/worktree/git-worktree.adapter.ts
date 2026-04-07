@@ -1,4 +1,4 @@
-import { access, cp, mkdir, rm, writeFile } from "node:fs/promises";
+import { access, cp, mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { WorktreeError } from "@kernel/errors/worktree.error";
 import type { BranchMeta } from "@kernel/infrastructure/state-branch/state-snapshot.schemas";
@@ -160,13 +160,15 @@ export class GitWorktreeAdapter extends WorktreePort {
     const targetTffDir = this.resolveTffDir(sliceId);
     try {
       await mkdir(targetTffDir, { recursive: true });
-      await cp(sourceTffDir, targetTffDir, {
-        recursive: true,
-        filter: (src) => {
-          const name = src.split("/").pop() ?? "";
-          return GitWorktreeAdapter.shouldCopy(name);
-        },
-      });
+      // Copy entries individually to avoid EINVAL when target is inside source
+      // (worktrees live at .tff/worktrees/<id>/.tff, which is a subdirectory of .tff/)
+      const entries = await readdir(sourceTffDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!GitWorktreeAdapter.shouldCopy(entry.name)) continue;
+        const src = join(sourceTffDir, entry.name);
+        const dest = join(targetTffDir, entry.name);
+        await cp(src, dest, { recursive: true });
+      }
       await writeFile(
         join(targetTffDir, "branch-meta.json"),
         JSON.stringify(branchMeta, null, 2),
