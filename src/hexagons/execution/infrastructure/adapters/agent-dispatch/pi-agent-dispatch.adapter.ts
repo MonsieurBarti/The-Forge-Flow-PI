@@ -357,11 +357,22 @@ export class PiAgentDispatchAdapter extends AgentDispatchPort {
       if (unsubEvents) unsubEvents();
       if (this.deps.agentEventPort) this.deps.agentEventPort.clear(config.taskId);
       this.running.delete(config.taskId);
+      const modelTag = `${config.model.provider}/${config.model.modelId}`;
       if (session) {
         session.dispose();
-        return err(AgentDispatchError.unexpectedFailure(config.taskId, e));
+        return err(
+          AgentDispatchError.unexpectedFailure(
+            config.taskId,
+            `[${modelTag}] ${e instanceof Error ? e.message : String(e)}`,
+          ),
+        );
       }
-      return err(AgentDispatchError.sessionCreationFailed(config.taskId, e));
+      return err(
+        AgentDispatchError.sessionCreationFailed(
+          config.taskId,
+          `[${modelTag}] ${e instanceof Error ? e.message : String(e)}`,
+        ),
+      );
     }
   }
 

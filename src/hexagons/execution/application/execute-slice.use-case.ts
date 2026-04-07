@@ -280,6 +280,7 @@ export class ExecuteSliceUseCase {
     const completedTasks: string[] = [];
     const failedTasks: string[] = [];
     const skippedTasks: string[] = [];
+    const taskErrors = new Map<string, string>();
     let wavesCompleted = 0;
     let aborted = false;
 
@@ -383,6 +384,10 @@ export class ExecuteSliceUseCase {
             if (!report.passed) {
               // Blocker — skip dispatch
               preDispatchBlocked.add(task.id);
+              const blockerMessages = report.violations
+                .filter((v) => v.severity === "blocker")
+                .map((v) => v.message);
+              taskErrors.set(task.id, `Pre-dispatch blocked: ${blockerMessages.join("; ")}`);
               return err(AgentDispatchError.sessionAborted(task.id));
             }
           }
@@ -575,14 +580,22 @@ export class ExecuteSliceUseCase {
               }
 
               waveFailedTasks.push(task.id);
+              taskErrors.set(task.id, `Agent returned status: ${agentResult.status}`);
             }
           } else {
             // AgentDispatchError
             waveFailedTasks.push(task.id);
+            taskErrors.set(task.id, dispatchResult.error.message);
           }
         } else {
           // Rejected (thrown error)
           waveFailedTasks.push(task.id);
+          taskErrors.set(
+            task.id,
+            settlement.reason instanceof Error
+              ? settlement.reason.message
+              : String(settlement.reason),
+          );
         }
       }
 
@@ -631,6 +644,7 @@ export class ExecuteSliceUseCase {
           wavesCompleted,
           totalWaves: waves.length,
           aborted: true,
+          taskErrors: Object.fromEntries(taskErrors),
         });
       }
 
@@ -661,6 +675,7 @@ export class ExecuteSliceUseCase {
       wavesCompleted,
       totalWaves: waves.length,
       aborted,
+      taskErrors: Object.fromEntries(taskErrors),
     });
   }
 

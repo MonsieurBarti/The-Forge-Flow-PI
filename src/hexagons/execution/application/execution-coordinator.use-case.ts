@@ -288,6 +288,7 @@ export class ExecutionCoordinator {
         wavesCompleted: data.wavesCompleted,
         totalWaves: data.totalWaves,
         status: "paused",
+        taskErrors: data.taskErrors,
       });
     }
 
@@ -319,6 +320,7 @@ export class ExecutionCoordinator {
         totalWaves: data.totalWaves,
         status: "failed",
         failureReason: reason,
+        taskErrors: data.taskErrors,
       });
     }
 
@@ -343,6 +345,7 @@ export class ExecutionCoordinator {
       wavesCompleted: data.wavesCompleted,
       totalWaves: data.totalWaves,
       status: "completed",
+      taskErrors: data.taskErrors,
     });
   }
 }

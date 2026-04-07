@@ -1,5 +1,6 @@
 import type { SliceRepositoryPort } from "@hexagons/slice/domain/ports/slice-repository.port";
 import type { ExtensionAPI } from "@infrastructure/pi";
+import type { WorktreePort } from "@kernel/ports/worktree.port";
 import type { TffDispatcher } from "../../../../cli/tff-dispatcher";
 import {
   ExecutionCoordinator,
@@ -19,6 +20,7 @@ export interface ExecutionExtensionExtraDeps {
     checkpointRepo: CheckpointRepositoryPort;
     sliceRepo: SliceRepositoryPort;
   };
+  worktreeAdapter?: WorktreePort;
 }
 
 export function registerExecutionExtension(
@@ -29,7 +31,11 @@ export function registerExecutionExtension(
 ): void {
   const coordinator = new ExecutionCoordinator(deps);
 
-  api.registerTool(createExecuteSliceTool(coordinator));
+  if (extra?.worktreeAdapter) {
+    api.registerTool(
+      createExecuteSliceTool({ coordinator, worktreeAdapter: extra.worktreeAdapter }),
+    );
+  }
   api.registerTool(createPauseExecutionTool(coordinator));
   api.registerTool(createResumeExecutionTool(coordinator));
 
