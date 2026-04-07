@@ -105,7 +105,7 @@ import { registerSettingsCommand } from "@hexagons/workflow/infrastructure/pi/se
 import { createReadSettingsTool } from "@hexagons/workflow/infrastructure/pi/settings-read.tool";
 import { createUpdateSettingTool } from "@hexagons/workflow/infrastructure/pi/settings-update.tool";
 import { PiDocWriterAdapter } from "@hexagons/workflow/infrastructure/pi-doc-writer.adapter";
-import { SuggestNextStepUseCase } from "@hexagons/workflow/use-cases/suggest-next-step.use-case";
+// import { SuggestNextStepUseCase } from "@hexagons/workflow/use-cases/suggest-next-step.use-case";
 import type { ExtensionAPI, ExtensionCommandContext } from "@infrastructure/pi";
 import type { Result } from "@kernel";
 import {
@@ -145,7 +145,8 @@ import { StateGuard } from "@kernel/services/state-guard";
 import { StateImporter } from "@kernel/services/state-importer";
 import type { KnownProvider } from "@mariozechner/pi-ai";
 import { getModels, getProviders } from "@mariozechner/pi-ai";
-import { registerAutoMode } from "./auto-mode";
+// Auto-mode disabled — will be reimplemented in a future milestone
+// import { registerAutoMode } from "./auto-mode";
 import { OverlayDataAdapter } from "./infrastructure/overlay-data.adapter";
 import { createLazyDatabase } from "./lazy-database";
 import { registerOverlayExtension } from "./overlay.extension";
@@ -842,14 +843,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     stateSyncPort: gitStateSyncAdapter,
   });
 
-  // --- Auto-mode command ---
-  registerAutoMode(dispatcher, api, {
-    projectRepo,
-    milestoneRepo,
-    sliceRepo,
-    sessionRepo: workflowSessionRepo,
-    suggestNextStep: new SuggestNextStepUseCase(workflowSessionRepo, sliceRepo),
-  });
+  // --- Auto-mode disabled — will be reimplemented in a future milestone ---
 
   // --- Health command + tool ---
   registerHealthCommand(dispatcher, api, { healthCheck: healthCheckService, tffDir: rootTffDir });
