@@ -22,6 +22,10 @@ export class WriteResearchUseCase {
   async execute(
     input: WriteResearchInput,
   ): Promise<Result<{ path: string }, FileIOError | SliceNotFoundError | PersistenceError>> {
+    const sliceResult = await this.sliceRepo.findById(input.sliceId);
+    if (isErr(sliceResult)) return sliceResult;
+    if (!sliceResult.data) return err(new SliceNotFoundError(input.sliceId));
+
     const writeResult = await this.artifactFilePort.write(
       input.milestoneLabel,
       input.sliceLabel,
@@ -29,10 +33,6 @@ export class WriteResearchUseCase {
       input.content,
     );
     if (isErr(writeResult)) return writeResult;
-
-    const sliceResult = await this.sliceRepo.findById(input.sliceId);
-    if (isErr(sliceResult)) return sliceResult;
-    if (!sliceResult.data) return err(new SliceNotFoundError(input.sliceId));
 
     sliceResult.data.setResearchPath(writeResult.data, this.dateProvider.now());
 

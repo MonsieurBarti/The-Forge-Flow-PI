@@ -8,7 +8,7 @@ import { WorkflowTriggerSchema } from "../../domain/workflow-session.schemas";
 import type { OrchestratePhaseTransitionUseCase } from "../../use-cases/orchestrate-phase-transition.use-case";
 
 const WorkflowTransitionSchema = z.object({
-  milestoneId: z.string().describe("Milestone UUID"),
+  milestoneId: z.string().describe("Milestone ID (from tff_status output)"),
   trigger: WorkflowTriggerSchema.describe("Workflow trigger"),
   complexityTier: ComplexityTierSchema.optional().describe("Slice complexity tier if known"),
 });

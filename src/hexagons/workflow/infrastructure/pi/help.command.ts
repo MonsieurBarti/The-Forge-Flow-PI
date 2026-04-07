@@ -9,7 +9,7 @@ export function registerHelpCommand(api: ExtensionAPI): void {
         .filter((cmd) => cmd.name.startsWith("tff:"))
         .sort((a, b) => a.name.localeCompare(b.name));
 
-      let md = "# TFF Command Reference\n\n";
+      let md = "# The Forge Flow (TFF) — Command Reference\n\n";
       md += "| Command | Description |\n";
       md += "|---|---|\n";
 

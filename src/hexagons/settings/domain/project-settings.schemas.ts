@@ -22,7 +22,7 @@ export type FailurePolicyMode = z.infer<typeof FailurePolicyModeSchema>;
 // ---------------------------------------------------------------------------
 
 export const ModelProfileSchema = z.object({
-  model: ModelNameSchema.default("sonnet"),
+  model: ModelNameSchema.default("default"),
   fallbackChain: z.array(ModelNameSchema).default([]),
 });
 export type ModelProfile = z.infer<typeof ModelProfileSchema>;
@@ -36,14 +36,14 @@ export type BudgetConfig = z.infer<typeof BudgetConfigSchema>;
 const BaseModelRoutingConfigSchema = z.object({
   profiles: z
     .object({
-      quality: ModelProfileSchema.default({ model: "opus", fallbackChain: [] }),
-      balanced: ModelProfileSchema.default({ model: "sonnet", fallbackChain: [] }),
-      budget: ModelProfileSchema.default({ model: "sonnet", fallbackChain: [] }),
+      quality: ModelProfileSchema.default({ model: "default", fallbackChain: [] }),
+      balanced: ModelProfileSchema.default({ model: "default", fallbackChain: [] }),
+      budget: ModelProfileSchema.default({ model: "default", fallbackChain: [] }),
     })
     .default({
-      quality: { model: "opus", fallbackChain: [] },
-      balanced: { model: "sonnet", fallbackChain: [] },
-      budget: { model: "sonnet", fallbackChain: [] },
+      quality: { model: "default", fallbackChain: [] },
+      balanced: { model: "default", fallbackChain: [] },
+      budget: { model: "default", fallbackChain: [] },
     }),
   complexityMapping: z
     .object({
@@ -223,9 +223,9 @@ export type StackConfig = z.infer<typeof BaseStackConfigSchema>;
 
 export const MODEL_ROUTING_DEFAULTS: ModelRoutingConfig = {
   profiles: {
-    quality: { model: "opus", fallbackChain: [] },
-    balanced: { model: "sonnet", fallbackChain: [] },
-    budget: { model: "sonnet", fallbackChain: [] },
+    quality: { model: "default", fallbackChain: [] },
+    balanced: { model: "default", fallbackChain: [] },
+    budget: { model: "default", fallbackChain: [] },
   },
   complexityMapping: {
     S: "budget",

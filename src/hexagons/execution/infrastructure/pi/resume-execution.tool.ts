@@ -10,8 +10,8 @@ import { z } from "zod";
 import type { ExecutionCoordinator } from "../../application/execution-coordinator.use-case";
 
 const ResumeExecutionSchema = z.object({
-  sliceId: IdSchema.describe("Slice ID to resume"),
-  milestoneId: IdSchema.describe("Milestone ID"),
+  sliceId: IdSchema.describe("Slice ID to resume (from tff_status output)"),
+  milestoneId: IdSchema.describe("Milestone ID (from tff_status output)"),
   sliceLabel: z.string().min(1).describe("Slice label"),
   sliceTitle: z.string().min(1).describe("Slice title"),
   complexity: ComplexityTierSchema.describe("Complexity tier"),

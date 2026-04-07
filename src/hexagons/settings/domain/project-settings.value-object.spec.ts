@@ -22,9 +22,9 @@ describe("ProjectSettings", () => {
       expect(settings.beads).toEqual(BEADS_DEFAULTS);
     });
 
-    it("resolves quality profile model to opus", () => {
+    it("resolves quality profile model to default", () => {
       const settings = ProjectSettings.create({});
-      expect(settings.modelRouting.profiles.quality.model).toBe("opus");
+      expect(settings.modelRouting.profiles.quality.model).toBe("default");
     });
 
     it("falls back autonomy to defaults when corrupted, modelRouting unaffected", () => {
@@ -45,9 +45,9 @@ describe("ProjectSettings", () => {
   describe("getters", () => {
     it("returns correct modelRouting section", () => {
       const settings = ProjectSettings.create({});
-      expect(settings.modelRouting.profiles.quality.model).toBe("opus");
-      expect(settings.modelRouting.profiles.balanced.model).toBe("sonnet");
-      expect(settings.modelRouting.profiles.budget.model).toBe("sonnet");
+      expect(settings.modelRouting.profiles.quality.model).toBe("default");
+      expect(settings.modelRouting.profiles.balanced.model).toBe("default");
+      expect(settings.modelRouting.profiles.budget.model).toBe("default");
     });
 
     it("returns correct autonomy section", () => {

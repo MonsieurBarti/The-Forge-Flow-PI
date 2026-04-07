@@ -1,6 +1,6 @@
 import { Milestone } from "@hexagons/milestone/domain/milestone.aggregate";
 import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/in-memory-milestone.repository";
-import { isErr, isOk } from "@kernel";
+import { InProcessEventBus, isErr, isOk, SilentLoggerAdapter } from "@kernel";
 import { describe, expect, it } from "vitest";
 import { Slice } from "../domain/slice.aggregate";
 import { SliceBuilder } from "../domain/slice.builder";
@@ -31,8 +31,9 @@ function createInProgressMilestone(id = MS_ID, label = "M07"): Milestone {
 function setup() {
   const sliceRepo = new InMemorySliceRepository();
   const milestoneRepo = new InMemoryMilestoneRepository();
-  const useCase = new AddSliceUseCase(sliceRepo, milestoneRepo, dateProvider);
-  return { sliceRepo, milestoneRepo, useCase };
+  const eventBus = new InProcessEventBus(new SilentLoggerAdapter());
+  const useCase = new AddSliceUseCase(sliceRepo, milestoneRepo, dateProvider, eventBus);
+  return { sliceRepo, milestoneRepo, eventBus, useCase };
 }
 
 describe("AddSliceUseCase", () => {

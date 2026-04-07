@@ -19,7 +19,8 @@ export function createQuickStartTool(deps: QuickStartToolDeps) {
   return createZodTool({
     name: "tff_quick_start",
     label: "TFF Quick Start",
-    description: "Create an ad-hoc quick slice, skipping discuss and research phases",
+    description:
+      "The Forge Flow (TFF) — create an ad-hoc quick slice, skipping discuss and research phases",
     schema: QuickStartToolSchema,
     execute: async (params) => {
       const result = await deps.quickStart.execute({

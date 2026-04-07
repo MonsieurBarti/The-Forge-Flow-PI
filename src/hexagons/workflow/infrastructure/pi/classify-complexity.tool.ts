@@ -5,7 +5,7 @@ import { z } from "zod";
 import type { ClassifyComplexityUseCase } from "../../use-cases/classify-complexity.use-case";
 
 const ClassifyComplexitySchema = z.object({
-  sliceId: z.string().describe("Slice UUID"),
+  sliceId: z.string().describe("Slice ID (from tff_status output)"),
   tier: ComplexityTierSchema.describe("Complexity tier: S, F-lite, or F-full"),
 });
 

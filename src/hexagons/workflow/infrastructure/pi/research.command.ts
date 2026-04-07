@@ -19,7 +19,7 @@ export interface ResearchCommandDeps {
 export function registerResearchCommand(api: ExtensionAPI, deps: ResearchCommandDeps): void {
   api.registerCommand("tff:research", {
     description:
-      "Start the research phase for a slice — dispatch an Explore agent and produce RESEARCH.md",
+      "Start the research phase for a slice — explore the codebase and produce RESEARCH.md",
     handler: async (args: string, ctx) => {
       if (ctx?.newSession) await ctx.newSession();
       await deps.withGuard?.();

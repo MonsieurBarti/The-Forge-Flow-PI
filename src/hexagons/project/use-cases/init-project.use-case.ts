@@ -35,6 +35,7 @@ export class InitProjectUseCase {
     private readonly dateProvider: DateProviderPort,
     private readonly gitHookPort?: GitHookPort,
     private readonly discoverStack?: DiscoverStackUseCase,
+    private readonly onBeforeProjectSave?: () => void,
   ) {}
 
   async execute(params: InitProjectParams): Promise<Result<ProjectDTO, InitProjectError>> {
@@ -53,6 +54,23 @@ export class InitProjectUseCase {
         recursive: true,
       });
       if (isErr(mkdirResult)) return mkdirResult;
+    }
+
+    // 2b. Ensure .tff/ is in .gitignore
+    const gitignorePath = `${params.projectRoot}/.gitignore`;
+    const gitignoreExists = await this.projectFs.exists(gitignorePath);
+    if (isErr(gitignoreExists)) return gitignoreExists;
+
+    if (!gitignoreExists.data) {
+      // Create .gitignore with .tff/ entry
+      const writeGitignoreResult = await this.projectFs.writeFile(
+        gitignorePath,
+        ".tff/\n.tff.backup.*\n",
+      );
+      if (isErr(writeGitignoreResult)) return writeGitignoreResult;
+    } else {
+      // We can't append with the current port, but the health check will handle it on first run
+      // The important case is when .gitignore doesn't exist at all
     }
 
     // 3. Write PROJECT.md
@@ -83,7 +101,10 @@ export class InitProjectUseCase {
     );
     if (isErr(writeSettingsResult)) return writeSettingsResult;
 
-    // 5. Create + save Project aggregate
+    // 5. Activate database now that .tff/ exists
+    this.onBeforeProjectSave?.();
+
+    // 6. Create + save Project aggregate
     const now = this.dateProvider.now();
     const project = Project.init({
       id: crypto.randomUUID(),

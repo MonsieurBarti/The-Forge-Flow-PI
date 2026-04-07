@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { ExecuteSliceUseCase } from "@hexagons/execution/application/execute-slice.use-case";
 import { GetSliceExecutorsUseCase } from "@hexagons/execution/application/get-slice-executors.use-case";
 import { ReplayJournalUseCase } from "@hexagons/execution/application/replay-journal.use-case";
@@ -31,7 +31,9 @@ import { TimeoutStrategy } from "@hexagons/execution/infrastructure/policies/tim
 import { MarkdownCheckpointRepository } from "@hexagons/execution/infrastructure/repositories/checkpoint/markdown-checkpoint.repository";
 import { JsonlJournalRepository } from "@hexagons/execution/infrastructure/repositories/journal/jsonl-journal.repository";
 import { JsonlMetricsRepository } from "@hexagons/execution/infrastructure/repositories/metrics/jsonl-metrics.repository";
+import { registerMilestoneExtension } from "@hexagons/milestone/infrastructure/pi/milestone.extension";
 import { SqliteMilestoneRepository } from "@hexagons/milestone/infrastructure/sqlite-milestone.repository";
+import { CreateMilestoneUseCase } from "@hexagons/milestone/use-cases/create-milestone.use-case";
 import { registerProjectExtension } from "@hexagons/project";
 import { NodeProjectFileSystemAdapter } from "@hexagons/project/infrastructure/node-project-filesystem.adapter";
 import { SqliteProjectRepository } from "@hexagons/project/infrastructure/sqlite-project.repository";
@@ -142,8 +144,8 @@ import { StateGuard } from "@kernel/services/state-guard";
 import { StateImporter } from "@kernel/services/state-importer";
 import type { KnownProvider } from "@mariozechner/pi-ai";
 import { getModels, getProviders } from "@mariozechner/pi-ai";
-import Database from "better-sqlite3";
 import { OverlayDataAdapter } from "./infrastructure/overlay-data.adapter";
+import { createLazyDatabase } from "./lazy-database";
 import { registerOverlayExtension } from "./overlay.extension";
 
 /**
@@ -181,10 +183,21 @@ function detectPlannotator(): string | undefined {
   }
 }
 
-function resolveResourceRoot(projectRoot: string): string {
-  const distResources = join(projectRoot, "dist", "resources");
+function resolveResourceRoot(packageRoot: string): string {
+  const distResources = join(packageRoot, "dist", "resources");
   if (existsSync(distResources)) return distResources;
-  return join(projectRoot, "src", "resources");
+  return join(packageRoot, "src", "resources");
+}
+
+function resolvePackageRoot(): string {
+  // Walk up from this file (dist/cli/ or src/cli/) to find the package root
+  const thisDir = new URL(".", import.meta.url).pathname;
+  let dir = thisDir;
+  while (dir !== dirname(dir)) {
+    if (existsSync(join(dir, "package.json"))) return dir;
+    dir = dirname(dir);
+  }
+  return thisDir;
 }
 
 export interface TffExtensionOptions {
@@ -193,7 +206,8 @@ export interface TffExtensionOptions {
 
 export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptions): void {
   // --- Resource resolution (dist/resources/ for production, src/resources/ for dev) ---
-  const resourceRoot = resolveResourceRoot(options.projectRoot);
+  const packageRoot = resolvePackageRoot();
+  const resourceRoot = resolveResourceRoot(packageRoot);
 
   // --- Shared infrastructure ---
   const logger = new ConsoleLoggerAdapter();
@@ -217,7 +231,8 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
 
   // --- tffDir resolution ---
   const rootTffDir = join(options.projectRoot, ".tff");
-  mkdirSync(rootTffDir, { recursive: true });
+  // Note: .tff/ is NOT created eagerly — tff_init_project creates it.
+  // The lazy database defers DB creation until .tff/ exists.
   const worktreeAdapter = new GitWorktreeAdapter(gitPort, options.projectRoot);
   const resolveActiveTffDir = async (sliceId?: string): Promise<string> => {
     if (sliceId && (await worktreeAdapter.exists(sliceId))) {
@@ -226,8 +241,8 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     return rootTffDir;
   };
 
-  // --- Shared SQLite database for core entities ---
-  const stateDb = new Database(join(rootTffDir, "state.db"));
+  // --- Shared SQLite database for core entities (lazy — created on first use) ---
+  const stateDb = createLazyDatabase(join(rootTffDir, "state.db"));
 
   // --- Repositories (SQLite-backed) ---
   const projectRepo = new SqliteProjectRepository(stateDb);
@@ -544,6 +559,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     milestoneRepo,
     sliceRepo,
     logger,
+    stateBranchOps,
   );
   stateBranchCreationHandler.register(eventBus);
 
@@ -732,6 +748,18 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     gitHookPort: gitHookAdapter,
     discoverStack: new DiscoverStackUseCase(settingsFileAdapter),
     withGuard,
+    onBeforeProjectSave: () => (stateDb as ReturnType<typeof createLazyDatabase>).ensureReady(),
+  });
+
+  registerMilestoneExtension(api, {
+    createMilestone: new CreateMilestoneUseCase(
+      projectRepo,
+      milestoneRepo,
+      eventBus,
+      dateProvider,
+      options.projectRoot,
+    ),
+    reviewUI,
   });
 
   const settingsResolver = new SettingsModelProfileResolver(new MergeSettingsUseCase());
@@ -835,7 +863,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   });
 
   // --- S09: Slice management commands ---
-  const addSliceUseCase = new AddSliceUseCase(sliceRepo, milestoneRepo, dateProvider);
+  const addSliceUseCase = new AddSliceUseCase(sliceRepo, milestoneRepo, dateProvider, eventBus);
   const removeSliceUseCase = new RemoveSliceUseCase(
     sliceRepo,
     worktreeAdapter,

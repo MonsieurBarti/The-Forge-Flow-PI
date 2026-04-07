@@ -9,7 +9,7 @@ import type { WritePlanUseCase } from "../../use-cases/write-plan.use-case";
 const WritePlanSchema = z.object({
   milestoneLabel: MilestoneLabelSchema.describe("Milestone label, e.g. M03"),
   sliceLabel: SliceLabelSchema.describe("Slice label, e.g. M03-S07"),
-  sliceId: IdSchema.describe("Slice UUID"),
+  sliceId: IdSchema.describe("Slice ID (from tff_status output)"),
   content: z.string().describe("Markdown plan content"),
   tasks: z
     .array(
@@ -29,7 +29,8 @@ export function createWritePlanTool(useCase: WritePlanUseCase, reviewUI: ReviewU
   return createZodTool({
     name: "tff_write_plan",
     label: "TFF Write Plan",
-    description: "Write PLAN.md, create task entities with wave detection, update slice.",
+    description:
+      "Write PLAN.md, create task entities with wave detection, update slice. Output path: .tff/milestones/{milestoneLabel}/slices/{sliceLabel}/PLAN.md",
     schema: WritePlanSchema,
     execute: async (params) => {
       const result = await useCase.execute(params);

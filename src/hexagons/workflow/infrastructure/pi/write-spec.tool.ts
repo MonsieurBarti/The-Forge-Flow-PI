@@ -9,7 +9,7 @@ import type { WriteSpecUseCase } from "../../use-cases/write-spec.use-case";
 const WriteSpecSchema = z.object({
   milestoneLabel: MilestoneLabelSchema.describe("Milestone label, e.g. M03"),
   sliceLabel: SliceLabelSchema.describe("Slice label, e.g. M03-S05"),
-  sliceId: IdSchema.describe("Slice UUID"),
+  sliceId: IdSchema.describe("Slice ID (from tff_status output)"),
   content: z.string().describe("Markdown spec content"),
 });
 
@@ -17,7 +17,8 @@ export function createWriteSpecTool(useCase: WriteSpecUseCase, reviewUI: ReviewU
   return createZodTool({
     name: "tff_write_spec",
     label: "TFF Write Spec",
-    description: "Write SPEC.md for a slice and update the slice aggregate.",
+    description:
+      "Write SPEC.md for a slice and update the slice aggregate. Output path: .tff/milestones/{milestoneLabel}/slices/{sliceLabel}/SPEC.md",
     schema: WriteSpecSchema,
     execute: async (params) => {
       const result = await useCase.execute(params);

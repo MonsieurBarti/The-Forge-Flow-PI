@@ -4,6 +4,7 @@ import type { DomainEvent } from "@kernel/domain-event.base";
 import { EVENT_NAMES } from "@kernel/event-names";
 import type { EventBusPort } from "@kernel/ports/event-bus.port";
 import type { LoggerPort } from "@kernel/ports/logger.port";
+import type { StateBranchOpsPort } from "@kernel/ports/state-branch-ops.port";
 import type { StateSyncPort } from "@kernel/ports/state-sync.port";
 
 export class StateBranchCreationHandler {
@@ -12,11 +13,40 @@ export class StateBranchCreationHandler {
     private readonly milestoneRepo: MilestoneRepositoryPort,
     private readonly sliceRepo: SliceRepositoryPort,
     private readonly logger: LoggerPort,
+    private readonly stateBranchOps?: StateBranchOpsPort,
   ) {}
 
   register(eventBus: EventBusPort): void {
+    eventBus.subscribe(EVENT_NAMES.PROJECT_INITIALIZED, (event) =>
+      this.onProjectInitialized(event),
+    );
     eventBus.subscribe(EVENT_NAMES.MILESTONE_CREATED, (event) => this.onMilestoneCreated(event));
     eventBus.subscribe(EVENT_NAMES.SLICE_CREATED, (event) => this.onSliceCreated(event));
+  }
+
+  private async onProjectInitialized(_event: DomainEvent): Promise<void> {
+    if (!this.stateBranchOps) {
+      this.logger.warn(
+        "StateBranchCreationHandler: no stateBranchOps — cannot create tff-state/main",
+      );
+      return;
+    }
+
+    try {
+      const existsResult = await this.stateBranchOps.branchExists("tff-state/main");
+      if (existsResult.ok && existsResult.data) return; // Already exists
+
+      const result = await this.stateBranchOps.createOrphan("tff-state/main");
+      if (!result.ok) {
+        this.logger.warn(
+          `StateBranchCreationHandler: failed to create tff-state/main: ${result.error.message}`,
+        );
+      }
+    } catch (e) {
+      this.logger.warn(
+        `StateBranchCreationHandler: error handling PROJECT_INITIALIZED: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
   }
 
   private async onMilestoneCreated(event: DomainEvent): Promise<void> {

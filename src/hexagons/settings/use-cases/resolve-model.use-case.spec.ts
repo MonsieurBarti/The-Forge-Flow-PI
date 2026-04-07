@@ -20,39 +20,39 @@ describe("ResolveModelUseCase", () => {
   describe("complexity tier mapping (AC4)", () => {
     const useCase = new ResolveModelUseCase(new FixedBudgetAdapter(0));
 
-    it("S complexity → budget profile → sonnet", async () => {
+    it("S complexity → budget profile → default", async () => {
       const result = await useCase.execute({
         phase: "execute",
         complexity: "S",
         settings: defaultSettings,
       });
       expect(isOk(result)).toBe(true);
-      if (isOk(result)) expect(result.data).toBe("sonnet");
+      if (isOk(result)) expect(result.data).toBe("default");
     });
 
-    it("F-lite complexity → balanced profile → sonnet", async () => {
+    it("F-lite complexity → balanced profile → default", async () => {
       const result = await useCase.execute({
         phase: "execute",
         complexity: "F-lite",
         settings: defaultSettings,
       });
       expect(isOk(result)).toBe(true);
-      if (isOk(result)) expect(result.data).toBe("sonnet");
+      if (isOk(result)) expect(result.data).toBe("default");
     });
 
-    it("F-full complexity → quality profile → opus", async () => {
+    it("F-full complexity → quality profile → default", async () => {
       const result = await useCase.execute({
         phase: "execute",
         complexity: "F-full",
         settings: defaultSettings,
       });
       expect(isOk(result)).toBe(true);
-      if (isOk(result)) expect(result.data).toBe("opus");
+      if (isOk(result)) expect(result.data).toBe("default");
     });
   });
 
   describe("budget enforcement (AC5)", () => {
-    it("at 50% budget, F-full downshifts to balanced → sonnet", async () => {
+    it("at 50% budget, F-full downshifts to balanced → default", async () => {
       const useCase = new ResolveModelUseCase(new FixedBudgetAdapter(50));
       const result = await useCase.execute({
         phase: "execute",
@@ -60,10 +60,10 @@ describe("ResolveModelUseCase", () => {
         settings: defaultSettings,
       });
       expect(isOk(result)).toBe(true);
-      if (isOk(result)) expect(result.data).toBe("sonnet");
+      if (isOk(result)) expect(result.data).toBe("default");
     });
 
-    it("at 75% budget, F-full downshifts to budget → sonnet", async () => {
+    it("at 75% budget, F-full downshifts to budget → default", async () => {
       const useCase = new ResolveModelUseCase(new FixedBudgetAdapter(75));
       const result = await useCase.execute({
         phase: "execute",
@@ -71,7 +71,7 @@ describe("ResolveModelUseCase", () => {
         settings: defaultSettings,
       });
       expect(isOk(result)).toBe(true);
-      if (isOk(result)) expect(result.data).toBe("sonnet");
+      if (isOk(result)) expect(result.data).toBe("default");
     });
 
     it("at 75% budget, S (already budget) → no further downshift", async () => {
@@ -82,7 +82,7 @@ describe("ResolveModelUseCase", () => {
         settings: defaultSettings,
       });
       expect(isOk(result)).toBe(true);
-      if (isOk(result)) expect(result.data).toBe("sonnet");
+      if (isOk(result)) expect(result.data).toBe("default");
     });
   });
 

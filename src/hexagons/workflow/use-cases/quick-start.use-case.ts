@@ -91,6 +91,11 @@ export class QuickStartUseCase {
     const sliceSaveResult = await this.sliceRepo.save(slice);
     if (isErr(sliceSaveResult)) return sliceSaveResult;
 
+    // 3b. Publish slice domain events
+    for (const event of slice.pullEvents()) {
+      await this.eventBus.publish(event);
+    }
+
     // 4. Create workspace (if ports available)
     if (this.worktreePort && this.stateSyncPort) {
       const codeBranch = `${kind}/${label}`;

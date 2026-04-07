@@ -1,5 +1,7 @@
 PLANNING — {{sliceLabel}}: {{sliceTitle}}.
 
+> You are operating within **The Forge Flow (TFF)** development workflow.
+
 ## Context
 - Slice: {{sliceId}} ({{sliceLabel}})
 - Milestone: {{milestoneLabel}} ({{milestoneId}})

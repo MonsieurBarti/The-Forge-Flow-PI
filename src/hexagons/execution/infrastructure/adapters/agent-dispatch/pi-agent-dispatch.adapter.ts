@@ -294,7 +294,7 @@ export class PiAgentDispatchAdapter extends AgentDispatchPort {
       const durationMs = Date.now() - startTime;
       const stats = session.getSessionStats();
       const output = session.getLastAssistantText() ?? "";
-      const stateError = session.state.error;
+      const stateError = session.state.errorMessage;
 
       this.running.delete(config.taskId);
       session.dispose();

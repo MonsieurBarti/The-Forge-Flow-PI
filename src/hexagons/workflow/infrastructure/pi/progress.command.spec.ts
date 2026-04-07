@@ -49,6 +49,7 @@ describe("formatDashboard", () => {
       activeMilestone: { label: "M01", title: "First", status: "open" as const },
       slices: [
         {
+          id: "slice-1",
           label: "M01-S01",
           title: "Slice One",
           status: "closed" as const,
@@ -71,6 +72,7 @@ describe("formatDashboard", () => {
       activeMilestone: { label: "M01", title: "First", status: "open" as const },
       slices: [
         {
+          id: "slice-empty",
           label: "M01-S01",
           title: "Empty Slice",
           status: "discussing" as const,
@@ -91,6 +93,7 @@ describe("formatDashboard", () => {
       activeMilestone: { label: "M02", title: "Second", status: "open" as const },
       slices: [
         {
+          id: "slice-alpha",
           label: "M02-S01",
           title: "Alpha",
           status: "closed" as const,
@@ -99,6 +102,7 @@ describe("formatDashboard", () => {
           completedTaskCount: 3,
         },
         {
+          id: "slice-beta",
           label: "M02-S02",
           title: "Beta",
           status: "discussing" as const,

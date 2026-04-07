@@ -31,7 +31,12 @@ export class WritePlanUseCase {
       FileIOError | SliceNotFoundError | PersistenceError | CyclicDependencyError
     >
   > {
-    // 1. Write PLAN.md
+    // 1. Validate slice exists
+    const sliceResult = await this.sliceRepo.findById(input.sliceId);
+    if (isErr(sliceResult)) return sliceResult;
+    if (!sliceResult.data) return err(new SliceNotFoundError(input.sliceId));
+
+    // 2. Write PLAN.md
     const writeResult = await this.artifactFilePort.write(
       input.milestoneLabel,
       input.sliceLabel,
@@ -39,11 +44,6 @@ export class WritePlanUseCase {
       input.content,
     );
     if (isErr(writeResult)) return writeResult;
-
-    // 2. Load slice
-    const sliceResult = await this.sliceRepo.findById(input.sliceId);
-    if (isErr(sliceResult)) return sliceResult;
-    if (!sliceResult.data) return err(new SliceNotFoundError(input.sliceId));
 
     // 3. Create tasks via cross-hexagon port
     const tasksResult = await this.createTasksPort.createTasks({

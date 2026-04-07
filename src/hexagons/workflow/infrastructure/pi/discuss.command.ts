@@ -1,10 +1,8 @@
 import type { MilestoneRepositoryPort } from "@hexagons/milestone";
 import type { SliceRepositoryPort } from "@hexagons/slice";
 import type { ExtensionAPI } from "@infrastructure/pi";
-import { isErr, isOk } from "@kernel";
 import type { StartDiscussUseCase } from "../../use-cases/start-discuss.use-case";
 import type { SuggestNextStepUseCase } from "../../use-cases/suggest-next-step.use-case";
-import { buildDiscussProtocolMessage } from "./discuss-protocol";
 
 export interface DiscussCommandDeps {
   startDiscuss: StartDiscussUseCase;
@@ -17,82 +15,51 @@ export interface DiscussCommandDeps {
 export function registerDiscussCommand(api: ExtensionAPI, deps: DiscussCommandDeps): void {
   api.registerCommand("tff:discuss", {
     description: "Start the discuss phase for a slice -- multi-turn Q&A producing SPEC.md",
-    handler: async (args: string, ctx) => {
-      if (ctx?.newSession) await ctx.newSession();
+    handler: async (args, _ctx) => {
       await deps.withGuard?.();
-      // 1. Resolve target slice from args (label or ID)
-      const identifier = args.trim();
-      if (!identifier) {
-        api.sendUserMessage("Usage: /tff:discuss <slice-label-or-id>");
-        return;
-      }
-
-      // Try findByLabel first (e.g., "M03-S05"), fall back to findById (UUID)
-      let sliceResult = await deps.sliceRepo.findByLabel(identifier);
-      if (isErr(sliceResult)) {
-        api.sendUserMessage(`Error loading slice: ${sliceResult.error.message}`);
-        return;
-      }
-      if (!sliceResult.data) {
-        sliceResult = await deps.sliceRepo.findById(identifier);
-        if (isErr(sliceResult)) {
-          api.sendUserMessage(`Error loading slice: ${sliceResult.error.message}`);
-          return;
-        }
-      }
-      const slice = sliceResult.data;
-      if (!slice) {
-        api.sendUserMessage(`Slice not found: ${identifier}`);
-        return;
-      }
-      if (!slice.milestoneId) {
-        api.sendUserMessage("Error: ad-hoc slices don't use this command");
-        return;
-      }
-
-      // 2. Load milestone
-      const msResult = await deps.milestoneRepo.findById(slice.milestoneId);
-      if (isErr(msResult)) {
-        api.sendUserMessage(`Error loading milestone: ${msResult.error.message}`);
-        return;
-      }
-      if (!msResult.data) {
-        api.sendUserMessage(`Milestone not found for slice ${slice.label}`);
-        return;
-      }
-      const milestone = msResult.data;
-
-      // 3. Call StartDiscussUseCase
-      const result = await deps.startDiscuss.execute({
-        sliceId: slice.id,
-        milestoneId: milestone.id,
-        tffDir: "", // Resolved by extension wiring
-      });
-
-      if (isErr(result)) {
-        api.sendUserMessage(`Error starting discuss: ${result.error.message}`);
-        return;
-      }
-
-      // 4. Get next-step suggestion
-      const nextStepResult = await deps.suggestNextStep.execute({
-        milestoneId: milestone.id,
-      });
-      const nextStep =
-        isOk(nextStepResult) && nextStepResult.data ? nextStepResult.data.displayText : "";
-
-      // 5. Send protocol message
       api.sendUserMessage(
-        buildDiscussProtocolMessage({
-          sliceId: slice.id,
-          sliceLabel: slice.label,
-          sliceTitle: slice.title,
-          sliceDescription: slice.description,
-          milestoneLabel: milestone.label,
-          milestoneId: milestone.id,
-          autonomyMode: result.data.autonomyMode,
-          nextStep,
-        }),
+        [
+          "## Discuss & Design Workflow",
+          "",
+          "Follow these phases IN ORDER. The key principle: YOU do the thinking, the user confirms.",
+          "",
+          "**Phase 1 — Scope (propose, don't ask)**",
+          "First read REQUIREMENTS.md to understand the context.",
+          "Then for each topic, PROPOSE a concrete answer and ask the user to confirm.",
+          "Ask ONE topic per message. Wait for the user before proceeding.",
+          "",
+          "Example of a GOOD question:",
+          '> "Based on REQUIREMENTS.md, this slice solves multi-tenant event isolation.',
+          "> I propose these acceptance criteria:",
+          "> - AC1: Events are scoped to organization via tenant ID",
+          "> - AC2: Cross-tenant queries return empty results",
+          "> - AC3: Tenant context is validated at the API boundary",
+          '> Does this cover it, or should I adjust?"',
+          "",
+          "Example of a BAD question:",
+          '> "What are the acceptance criteria for this slice?"',
+          "",
+          "Topics to cover (one per message):",
+          "1. Problem & scope → propose what this slice solves based on requirements",
+          "2. Acceptance criteria → propose concrete, testable ACs",
+          "3. Constraints & dependencies → propose known constraints",
+          "4. Unknowns → propose areas that need investigation",
+          "",
+          "**Phase 2 — Approach**",
+          "Propose 2-3 implementation approaches with trade-offs.",
+          "Recommend one and explain why. Ask the user to pick.",
+          "",
+          "**Phase 3 — Write spec**",
+          "Write the COMPLETE spec based on the discussion.",
+          "Do NOT ask for section-by-section approval — write the full spec at once.",
+          "Call `tff_write_spec` with the complete content.",
+          "Plannotator will open automatically for the user to review.",
+          "",
+          "**Phase 4 — Classify and transition**",
+          "Call `tff_classify_complexity` to determine the tier.",
+          "Then call `tff_workflow_transition` to move to the next phase.",
+          "Suggest `/tff:research` (F-lite/F-full) or `/tff:plan` (S-tier).",
+        ].join("\n"),
       );
     },
   });

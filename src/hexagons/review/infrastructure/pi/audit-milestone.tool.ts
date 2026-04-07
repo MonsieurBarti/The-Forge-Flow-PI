@@ -12,7 +12,7 @@ export function createAuditMilestoneTool(deps: AuditMilestoneToolDeps) {
     label: "TFF Audit Milestone",
     description: "Run spec-reviewer and security-auditor audit on a milestone",
     schema: z.object({
-      milestoneId: z.string().describe("Milestone ID"),
+      milestoneId: z.string().describe("Milestone ID (from tff_status output)"),
       milestoneLabel: z.string().describe("Milestone label"),
       headBranch: z.string().describe("Head branch for diff"),
       baseBranch: z.string().describe("Base branch for diff"),

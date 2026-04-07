@@ -1,5 +1,7 @@
 EXECUTING — {{sliceLabel}}: {{sliceTitle}}.
 
+> You are operating within **The Forge Flow (TFF)** development workflow.
+
 ## Context
 - Task: {{taskLabel}} — {{taskTitle}}
 - Slice: {{sliceId}} ({{complexity}})

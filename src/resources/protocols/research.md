@@ -1,5 +1,7 @@
 RESEARCHING — {{sliceLabel}}: {{sliceTitle}}.
 
+> You are operating within **The Forge Flow (TFF)** development workflow.
+
 ## Context
 - Slice: {{sliceId}} ({{sliceLabel}})
 - Milestone: {{milestoneLabel}} ({{milestoneId}})
@@ -21,10 +23,10 @@ Codebase research ⇒ RESEARCH.md for planning phase.
    - Files ∧ modules affected
    - Component dependencies
    - Technical risks needing investigation
-3. Dispatch single Explore agent w/ research questions
+3. Use Read, Glob, and Grep tools to explore the codebase and answer research questions directly
 
 ### Phase 2 — Synthesis
-4. Agent findings ⇒ structured RESEARCH.md:
+4. Findings ⇒ structured RESEARCH.md:
    - **Questions Investigated** — questions ∧ why they matter
    - **Codebase Findings** — Existing Patterns, Relevant Files, Dependencies
    - **Technical Risks** — complications for planning ∨ execution
@@ -34,6 +36,6 @@ Codebase research ⇒ RESEARCH.md for planning phase.
 ### Phase 3 — User Gate
 6. Present key findings summary
 7. Ask: "Research complete. Approve ⇒ planning, ∨ request deeper investigation?"
-8. Deeper investigation requested ⇒ dispatch another Explore agent (max 2 rounds), update via `tff_write_research`, ask again
+8. Deeper investigation requested ⇒ explore further with filesystem tools (max 2 rounds), update via `tff_write_research`, ask again
 9. Approved ⇒ `tff_workflow_transition` milestoneId="{{milestoneId}}", trigger="next"
 10. {{nextStep}}

@@ -8,7 +8,7 @@ import type { WriteResearchUseCase } from "../../use-cases/write-research.use-ca
 const WriteResearchSchema = z.object({
   milestoneLabel: MilestoneLabelSchema.describe("Milestone label, e.g. M03"),
   sliceLabel: SliceLabelSchema.describe("Slice label, e.g. M03-S06"),
-  sliceId: IdSchema.describe("Slice UUID"),
+  sliceId: IdSchema.describe("Slice ID (from tff_status output)"),
   content: z.string().describe("Markdown research content"),
 });
 
@@ -16,7 +16,8 @@ export function createWriteResearchTool(useCase: WriteResearchUseCase) {
   return createZodTool({
     name: "tff_write_research",
     label: "TFF Write Research",
-    description: "Write RESEARCH.md for a slice and update the slice aggregate.",
+    description:
+      "Write RESEARCH.md for a slice and update the slice aggregate. Output path: .tff/milestones/{milestoneLabel}/slices/{sliceLabel}/RESEARCH.md",
     schema: WriteResearchSchema,
     execute: async (params) => {
       const result = await useCase.execute(params);

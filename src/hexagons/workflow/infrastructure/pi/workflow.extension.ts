@@ -79,11 +79,11 @@ function formatStatusReport(report: StatusReport): string {
   lines.push("");
 
   if (report.slices.length > 0) {
-    lines.push("| Slice | Status | Tasks |");
-    lines.push("|---|---|---|");
+    lines.push("| Slice | Status | Tasks | ID |");
+    lines.push("|---|---|---|---|");
     for (const s of report.slices) {
       lines.push(
-        `| ${s.label}: ${s.title} | ${s.status} | ${s.completedTaskCount}/${s.taskCount} |`,
+        `| ${s.label}: ${s.title} | ${s.status} | ${s.completedTaskCount}/${s.taskCount} | ${s.id} |`,
       );
     }
     lines.push("");
@@ -120,7 +120,7 @@ export function registerWorkflowExtension(api: ExtensionAPI, deps: WorkflowExten
       name: "tff_status",
       label: "TFF Project Status",
       description:
-        "Show project status including milestone progress, slice states, and task counts",
+        "The Forge Flow (TFF) — show project status including milestone progress, slice states, and task counts",
       schema: z.object({}),
       execute: async () => {
         const result = await statusUseCase.execute();
