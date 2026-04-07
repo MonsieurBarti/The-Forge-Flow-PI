@@ -58,6 +58,8 @@ export function createWritePlanTool(useCase: WritePlanUseCase, reviewUI: ReviewU
                 formattedOutput: approval.formattedOutput,
               }
             : undefined,
+          nextSteps:
+            "IMPORTANT: After user approves the plan, you MUST call tff_workflow_transition with trigger='approve' to advance to the execution phase.",
         }),
       );
     },

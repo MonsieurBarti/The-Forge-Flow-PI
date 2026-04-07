@@ -22,7 +22,14 @@ export function createWriteResearchTool(useCase: WriteResearchUseCase) {
     execute: async (params) => {
       const result = await useCase.execute(params);
       if (isErr(result)) return textResult(`Error: ${result.error.message}`);
-      return textResult(JSON.stringify({ ok: true, path: result.data.path }));
+      return textResult(
+        JSON.stringify({
+          ok: true,
+          path: result.data.path,
+          nextSteps:
+            "IMPORTANT: After user approves the research, you MUST call tff_workflow_transition with trigger='next' to advance to the planning phase.",
+        }),
+      );
     },
   });
 }

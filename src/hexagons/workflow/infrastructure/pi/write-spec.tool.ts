@@ -44,6 +44,8 @@ export function createWriteSpecTool(useCase: WriteSpecUseCase, reviewUI: ReviewU
                 formattedOutput: approval.formattedOutput,
               }
             : undefined,
+          nextSteps:
+            "IMPORTANT: After user approves the spec, you MUST: 1) Propose complexity tier (S/F-lite/F-full) and get user confirmation, 2) Call tff_classify_complexity, 3) Call tff_workflow_transition with trigger='next' (or 'skip' for S-tier)",
         }),
       );
     },

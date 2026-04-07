@@ -1014,6 +1014,30 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     logger,
   });
 
+  // --- Global merge guardrail — block git merge/push in ALL bash calls ---
+  const BLOCKED_GIT_PATTERNS = [
+    {
+      regex: /\bgit\s+merge\b/,
+      reason: "git merge is blocked — use /tff ship to create a PR instead",
+    },
+    { regex: /\bgit\s+push\b/, reason: "git push is blocked — use /tff ship to push via PR" },
+    {
+      regex: /\bgit\s+checkout\s+(main|master)\b/,
+      reason: "git checkout main/master is blocked — stay on the slice branch",
+    },
+  ];
+
+  api.on("tool_call", (event) => {
+    if (event.toolName !== "bash") return;
+    const command = (event as { input?: { command?: string } }).input?.command ?? "";
+    for (const { regex, reason } of BLOCKED_GIT_PATTERNS) {
+      if (regex.test(command)) {
+        return { block: true, reason };
+      }
+    }
+    return undefined;
+  });
+
   // --- Mount the single /tff dispatcher command ---
   dispatcher.mount(api);
 }
