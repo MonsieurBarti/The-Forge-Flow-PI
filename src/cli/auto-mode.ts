@@ -3,7 +3,7 @@ import type { ProjectRepositoryPort } from "@hexagons/project";
 import type { SliceRepositoryPort } from "@hexagons/slice";
 import type { WorkflowSessionRepositoryPort } from "@hexagons/workflow/domain/ports/workflow-session.repository.port";
 import type { SuggestNextStepUseCase } from "@hexagons/workflow/use-cases/suggest-next-step.use-case";
-import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@infrastructure/pi";
+import type { ExtensionAPI, ExtensionCommandContext } from "@infrastructure/pi";
 import { isErr, isOk } from "@kernel";
 import type { TffDispatcher } from "./tff-dispatcher";
 
@@ -145,7 +145,7 @@ export function registerAutoMode(
   deps: AutoModeDeps,
 ): void {
   // Register agent_end handler to continue the loop
-  api.on("agent_end", async (_event, ctx) => {
+  api.on("agent_end", async (_event, _ctx) => {
     if (!autoModeActive) return;
 
     // Budget guard
@@ -164,23 +164,11 @@ export function registerAutoMode(
       return;
     }
 
-    // Dispatch next command — cast ctx since agent_end provides ExtensionContext
-    // but the runtime object is actually an ExtensionCommandContext
+    // Dispatch via sendUserMessage which always triggers a new turn safely
     autoDispatchCount++;
-    const cmdCtx = ctx as unknown as ExtensionCommandContext;
-    if (cmdCtx?.newSession) await cmdCtx.newSession();
-
-    const entry = dispatcher.getSubcommands().find((s) => s.name === result.subcommand);
-    if (!entry) {
-      api.sendUserMessage(`Auto-mode error: subcommand "${result.subcommand}" not found.`);
-      autoModeActive = false;
-      return;
-    }
-
     api.sendUserMessage(
-      `**Auto-mode [${autoDispatchCount}]:** /tff ${result.subcommand}${result.args ? ` ${result.args}` : ""}`,
+      `**Auto-mode [${autoDispatchCount}]:** running /tff ${result.subcommand}${result.args ? ` ${result.args}` : ""}`,
     );
-    await entry.handler(result.args, cmdCtx);
   });
 
   // Register the /tff auto command

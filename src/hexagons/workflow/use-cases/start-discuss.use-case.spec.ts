@@ -167,7 +167,7 @@ describe("StartDiscussUseCase", () => {
     if (isErr(result)) expect(result.error.code).toBe("WORKFLOW.SLICE_ALREADY_ASSIGNED");
   });
 
-  it("should return NoMatchingTransitionError if session not idle", async () => {
+  it("should succeed idempotently if session already discussing", async () => {
     const { useCase, sliceRepo, sessionRepo } = setup();
     const slice = new SliceBuilder().withId("a0000000-0000-1000-a000-000000000005").build();
     sliceRepo.seed(slice);
@@ -185,7 +185,7 @@ describe("StartDiscussUseCase", () => {
       milestoneId: "b0000000-0000-1000-a000-000000000003",
       tffDir: "/tmp/.tff",
     });
-    expect(isErr(result)).toBe(true);
+    expect(isOk(result)).toBe(true);
   });
 
   describe("workspace creation", () => {
