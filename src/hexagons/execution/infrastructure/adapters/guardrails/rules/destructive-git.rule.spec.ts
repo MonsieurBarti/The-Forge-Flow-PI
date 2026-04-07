@@ -40,14 +40,16 @@ describe("DestructiveGitRule", () => {
     expect(violations.length).toBeGreaterThan(0);
   });
 
-  it("ignores git checkout main", () => {
+  it("detects git checkout main as destructive", () => {
     const violations = rule.evaluate(makeContext({ "src/a.ts": "git checkout main" }));
-    expect(violations).toEqual([]);
+    expect(violations.length).toBeGreaterThan(0);
+    expect(violations[0].ruleId).toBe("destructive-git");
   });
 
-  it("ignores git push origin main (no --force)", () => {
+  it("detects git push origin main as destructive", () => {
     const violations = rule.evaluate(makeContext({ "src/a.ts": "git push origin main" }));
-    expect(violations).toEqual([]);
+    expect(violations.length).toBeGreaterThan(0);
+    expect(violations[0].ruleId).toBe("destructive-git");
   });
 
   it("skips .md files", () => {

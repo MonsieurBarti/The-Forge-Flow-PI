@@ -86,7 +86,6 @@ export function registerQuickCommand(
         return;
       }
 
-      if (ctx?.newSession) await ctx.newSession();
       api.sendUserMessage(buildQuickProtocolMessage(result.data));
     },
   });

@@ -57,12 +57,18 @@ export class StartDiscussUseCase {
     if (isErr(sliceResult)) return sliceResult;
     if (!sliceResult.data) return err(new SliceNotFoundError(input.sliceId));
 
-    // 2. Workspace creation (if ports available)
+    // 2. Workspace creation (if ports available) — non-fatal, degrades gracefully
     if (this.worktreePort && this.stateSyncPort && this.milestoneRepo) {
       const sliceMilestoneId = sliceResult.data.milestoneId;
       if (sliceMilestoneId) {
         const wsResult = await this.createWorkspace(input, sliceMilestoneId);
-        if (isErr(wsResult)) return wsResult;
+        if (isErr(wsResult)) {
+          // Worktree creation failed — continue without isolation (graceful degradation)
+          // The slice will execute in the project root instead of a worktree
+          console.warn(
+            `[TFF] Worktree creation failed for slice ${input.sliceId}: ${wsResult.error.message}. Continuing without worktree isolation.`,
+          );
+        }
       }
     }
 

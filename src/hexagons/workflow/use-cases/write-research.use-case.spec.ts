@@ -1,4 +1,5 @@
 import { SliceRepositoryPort } from "@hexagons/slice/domain/ports/slice-repository.port";
+import { Slice } from "@hexagons/slice/domain/slice.aggregate";
 import { SliceBuilder } from "@hexagons/slice/domain/slice.builder";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
 import { err, isErr, isOk, ok, PersistenceError } from "@kernel";
@@ -22,7 +23,9 @@ describe("WriteResearchUseCase", () => {
   it("should write RESEARCH.md and update slice researchPath", async () => {
     const { useCase, sliceRepo, artifactFile } = setup();
     const sliceId = crypto.randomUUID();
-    const slice = new SliceBuilder().withId(sliceId).build();
+    const slice = Slice.reconstitute(
+      new SliceBuilder().withId(sliceId).withStatus("researching").buildProps(),
+    );
     sliceRepo.seed(slice);
 
     const result = await useCase.execute({
@@ -47,7 +50,9 @@ describe("WriteResearchUseCase", () => {
   it("should return FileIOError when write fails", async () => {
     const { sliceRepo, dateProvider } = setup();
     const sliceId = crypto.randomUUID();
-    const slice = new SliceBuilder().withId(sliceId).build();
+    const slice = Slice.reconstitute(
+      new SliceBuilder().withId(sliceId).withStatus("researching").buildProps(),
+    );
     sliceRepo.seed(slice);
 
     // Create a failing adapter using Object.assign on the prototype (mirrors write-spec pattern)
@@ -81,7 +86,9 @@ describe("WriteResearchUseCase", () => {
   it("should return PersistenceError when repo save fails", async () => {
     const { artifactFile, dateProvider } = setup();
     const sliceId = crypto.randomUUID();
-    const slice = new SliceBuilder().withId(sliceId).build();
+    const slice = Slice.reconstitute(
+      new SliceBuilder().withId(sliceId).withStatus("researching").buildProps(),
+    );
 
     const failingRepo = Object.assign(Object.create(SliceRepositoryPort.prototype), {
       findById: async () => ok(slice),

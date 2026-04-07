@@ -30,6 +30,8 @@ export function registerResearchCommand(
     description:
       "Start the research phase for a slice — explore the codebase and produce RESEARCH.md",
     handler: async (args: string, ctx) => {
+      // Clear context — research gets a fresh session
+      if (ctx?.newSession) await ctx.newSession();
       await deps.withGuard?.();
       // 1. Resolve target slice from args (label or ID), auto-detect if empty
       let identifier = args.trim();
@@ -116,8 +118,7 @@ export function registerResearchCommand(
       const nextStep =
         isOk(nextStepResult) && nextStepResult.data ? nextStepResult.data.displayText : "";
 
-      // 7. Clear session and send research protocol message
-      if (ctx?.newSession) await ctx.newSession();
+      // 7. Send research protocol message
       api.sendUserMessage(
         buildResearchProtocolMessage({
           sliceId: slice.id,

@@ -215,8 +215,8 @@ describe("StartDiscussUseCase", () => {
       expect(stateSyncPort.createCalls).toHaveLength(1);
     });
 
-    it("rolls back worktree if state branch creation fails", async () => {
-      const { useCase, sliceRepo, worktreeAdapter, stateSyncPort, milestoneRepo } = setup({
+    it("succeeds with graceful degradation if state branch creation fails", async () => {
+      const { useCase, sliceRepo, stateSyncPort, milestoneRepo } = setup({
         withWorkspace: true,
       });
       const slice = new SliceBuilder()
@@ -237,9 +237,8 @@ describe("StartDiscussUseCase", () => {
         tffDir: "/tmp/.tff",
       });
 
-      expect(isErr(result)).toBe(true);
-      // Worktree should be cleaned up
-      expect(await worktreeAdapter.exists("a0000000-0000-1000-a000-000000000011")).toBe(false);
+      // Worktree failures are non-fatal — use case succeeds via graceful degradation
+      expect(isOk(result)).toBe(true);
     });
   });
 });

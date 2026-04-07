@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ProjectRepositoryPort } from "@hexagons/project";
@@ -117,6 +118,29 @@ export class CreateMilestoneUseCase {
       join(milestoneDir, "REQUIREMENTS.md"),
       `# ${label}: ${cleanTitle}\n\n${params.requirements}\n`,
     );
+
+    // 6c. Create milestone code branch from current HEAD
+    const codeBranch = `milestone/${label}`;
+    try {
+      const currentBranch = execFileSync("git", ["branch", "--show-current"], {
+        cwd: this.projectRoot,
+        encoding: "utf-8",
+      }).trim();
+      const base = currentBranch || "HEAD";
+      execFileSync("git", ["branch", codeBranch, base], {
+        cwd: this.projectRoot,
+        encoding: "utf-8",
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!msg.includes("already exists")) {
+        return err(
+          new CreateMilestoneError(
+            `Failed to create branch ${codeBranch}: ${msg}. Ensure git is initialized and has at least one commit.`,
+          ),
+        );
+      }
+    }
 
     // 7. Publish events
     for (const event of milestone.pullEvents()) {

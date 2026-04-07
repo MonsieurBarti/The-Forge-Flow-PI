@@ -1,3 +1,4 @@
+import type { SliceRepositoryPort } from "@hexagons/slice";
 import type { TaskRepositoryPort } from "@hexagons/task/domain/ports/task-repository.port";
 import type { WaveDetectionPort } from "@hexagons/task/domain/ports/wave-detection.port";
 import type { Task } from "@hexagons/task/domain/task.aggregate";
@@ -61,6 +62,7 @@ function toAgentConcern(v: GuardrailViolation): AgentConcern {
 const STALE_CLAIM_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
 
 interface ExecuteSliceUseCaseDeps {
+  readonly sliceRepo: SliceRepositoryPort;
   readonly taskRepository: TaskRepositoryPort;
   readonly waveDetection: WaveDetectionPort;
   readonly checkpointRepository: CheckpointRepositoryPort;
@@ -193,6 +195,17 @@ export class ExecuteSliceUseCase {
     input: ExecuteSliceInput,
     signal?: AbortSignal,
   ): Promise<Result<ExecuteSliceResult, ExecutionError>> {
+    // 0. Validate slice is in executing phase
+    const sliceResult = await this.deps.sliceRepo.findById(input.sliceId);
+    if (sliceResult.ok && sliceResult.data && sliceResult.data.status !== "executing") {
+      return err(
+        ExecutionError.invalidState(
+          input.sliceId,
+          `Cannot execute slice: slice is not in executing phase. Current phase: ${sliceResult.data.status}. Run the appropriate /tff command first.`,
+        ),
+      );
+    }
+
     // 1. Load tasks
     const tasksResult = await this.deps.taskRepository.findBySliceId(input.sliceId);
     if (!tasksResult.ok) {

@@ -101,6 +101,7 @@ import { registerMapCodebaseCommand } from "@hexagons/workflow/infrastructure/pi
 import { createMapCodebaseTool } from "@hexagons/workflow/infrastructure/pi/map-codebase.tool";
 import { registerProgressCommand } from "@hexagons/workflow/infrastructure/pi/progress.command";
 import { createProgressTool } from "@hexagons/workflow/infrastructure/pi/progress.tool";
+import { registerRepairBranchesCommand } from "@hexagons/workflow/infrastructure/pi/repair-branches.command";
 import { registerSettingsCommand } from "@hexagons/workflow/infrastructure/pi/settings.command";
 import { createReadSettingsTool } from "@hexagons/workflow/infrastructure/pi/settings-read.tool";
 import { createUpdateSettingTool } from "@hexagons/workflow/infrastructure/pi/settings-update.tool";
@@ -356,6 +357,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const executeProtocol = readFileSync(join(resourceRoot, "protocols/execute.md"), "utf-8");
 
   const executeSlice = new ExecuteSliceUseCase({
+    sliceRepo,
     taskRepository: taskRepo,
     waveDetection: new DetectWavesUseCase(),
     checkpointRepository: checkpointRepo,
@@ -882,8 +884,13 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   );
   api.registerTool(createUpdateSettingTool({ projectRoot: options.projectRoot }));
 
-  // --- Help command ---
+  // --- Help + repair commands ---
   registerHelpCommand(dispatcher, api);
+  registerRepairBranchesCommand(dispatcher, api, {
+    projectRepo,
+    milestoneRepo,
+    projectRoot: options.projectRoot,
+  });
 
   // --- /tff sync command ---
   dispatcher.register({

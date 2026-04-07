@@ -29,6 +29,8 @@ export function registerPlanCommand(
     name: "plan",
     description: "Start the planning phase — decompose spec into tasks with wave detection",
     handler: async (args: string, ctx) => {
+      // Clear context — plan gets a fresh session
+      if (ctx?.newSession) await ctx.newSession();
       await deps.withGuard?.();
       // 1. Resolve target slice from args (label or ID), auto-detect if empty
       let identifier = args.trim();
@@ -122,8 +124,7 @@ export function registerPlanCommand(
       const nextStep =
         isOk(nextStepResult) && nextStepResult.data ? nextStepResult.data.displayText : "";
 
-      // 8. Clear session and send plan protocol message
-      if (ctx?.newSession) await ctx.newSession();
+      // 8. Send plan protocol message
       api.sendUserMessage(
         buildPlanProtocolMessage({
           sliceId: slice.id,

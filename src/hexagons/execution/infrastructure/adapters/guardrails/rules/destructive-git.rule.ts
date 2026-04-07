@@ -4,10 +4,16 @@ import type { GuardrailRule } from "../../../../domain/guardrail-rule";
 import { shouldSkipFile } from "./skip-filter";
 
 const PATTERNS: readonly { regex: RegExp; label: string }[] = [
+  { regex: /git\s+merge\b/, label: "git merge (use /tff ship instead)" },
+  { regex: /git\s+push\b/, label: "git push (use /tff ship instead)" },
   { regex: /git\s+push\s+--force/, label: "git push --force" },
   { regex: /git\s+reset\s+--hard/, label: "git reset --hard" },
   { regex: /git\s+clean\s+-[a-z]*f/, label: "git clean -f" },
   { regex: /git\s+checkout\s+\./, label: "git checkout ." },
+  {
+    regex: /git\s+checkout\s+(main|master)\b/,
+    label: "git checkout main/master (stay on slice branch)",
+  },
 ];
 
 export class DestructiveGitRule implements GuardrailRule {

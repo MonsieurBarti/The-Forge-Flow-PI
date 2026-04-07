@@ -1,3 +1,4 @@
+import { Slice } from "@hexagons/slice/domain/slice.aggregate";
 import { SliceBuilder } from "@hexagons/slice/domain/slice.builder";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
 import { createMockExtensionContext } from "@infrastructure/pi/testing";
@@ -28,7 +29,9 @@ describe("tff_write_research tool", () => {
   it("should write research and return ok result", async () => {
     const { tool, sliceRepo } = setup();
     const sliceId = crypto.randomUUID();
-    const slice = new SliceBuilder().withId(sliceId).build();
+    const slice = Slice.reconstitute(
+      new SliceBuilder().withId(sliceId).withStatus("researching").buildProps(),
+    );
     sliceRepo.seed(slice);
 
     const result = await tool.execute(

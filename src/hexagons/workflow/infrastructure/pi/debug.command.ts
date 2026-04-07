@@ -90,7 +90,6 @@ export function registerDebugCommand(
         return;
       }
 
-      if (ctx?.newSession) await ctx.newSession();
       api.sendUserMessage(buildDebugProtocolMessage(result.data, title));
     },
   });

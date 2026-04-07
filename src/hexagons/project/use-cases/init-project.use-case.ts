@@ -1,3 +1,6 @@
+import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import type { DiscoverStackUseCase, MergeSettingsUseCase } from "@hexagons/settings";
 import {
   type DateProviderPort,
@@ -71,6 +74,31 @@ export class InitProjectUseCase {
     } else {
       // We can't append with the current port, but the health check will handle it on first run
       // The important case is when .gitignore doesn't exist at all
+    }
+
+    // 2c. Ensure git repo exists + initial commit
+    const gitDir = join(params.projectRoot, ".git");
+    if (!existsSync(gitDir)) {
+      try {
+        execFileSync("git", ["init"], { cwd: params.projectRoot, encoding: "utf-8" });
+      } catch {
+        // Non-fatal — git may not be available
+      }
+    }
+    // Create initial commit with .gitignore so branches can be forked
+    if (existsSync(gitDir)) {
+      try {
+        execFileSync("git", ["add", ".gitignore"], {
+          cwd: params.projectRoot,
+          encoding: "utf-8",
+        });
+        execFileSync("git", ["commit", "-m", "chore: initial commit for TFF project"], {
+          cwd: params.projectRoot,
+          encoding: "utf-8",
+        });
+      } catch {
+        // Commit may fail if .gitignore is already tracked — non-fatal
+      }
     }
 
     // 3. Write PROJECT.md

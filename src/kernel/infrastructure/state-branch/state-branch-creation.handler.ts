@@ -35,22 +35,7 @@ export class StateBranchCreationHandler {
     }
 
     try {
-      // Ensure at least one commit exists so branches can be forked
-      if (this.gitPort) {
-        const logResult = await this.gitPort.log("HEAD", 1);
-        if (!logResult.ok || logResult.data.length === 0) {
-          // No commits — create initial commit with .gitignore
-          const commitResult = await this.gitPort.commit("chore: initial commit for TFF project", [
-            ".gitignore",
-          ]);
-          if (!commitResult.ok) {
-            this.logger.warn(
-              `StateBranchCreationHandler: failed to create initial commit: ${commitResult.error.message}`,
-            );
-          }
-        }
-      }
-
+      // Initial commit is now handled by InitProjectUseCase directly
       const existsResult = await this.stateBranchOps.branchExists("tff-state/main");
       if (existsResult.ok && existsResult.data) return; // Already exists
 
