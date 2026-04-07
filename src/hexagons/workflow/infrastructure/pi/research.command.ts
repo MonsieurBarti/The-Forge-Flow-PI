@@ -30,8 +30,6 @@ export function registerResearchCommand(
     description:
       "Start the research phase for a slice — explore the codebase and produce RESEARCH.md",
     handler: async (args: string, ctx) => {
-      // Clear context — research gets a fresh session
-      if (ctx?.newSession) await ctx.newSession();
       await deps.withGuard?.();
       // 1. Resolve target slice from args (label or ID), auto-detect if empty
       let identifier = args.trim();
@@ -96,7 +94,13 @@ export function registerResearchCommand(
 
       // 4. Validate phase
       if (session.currentPhase !== "researching") {
-        api.sendUserMessage("not researching, run /tff discuss first");
+        api.sendUserMessage(
+          `Cannot start research: slice is in "${session.currentPhase}" phase, not "researching".\n\n` +
+            `Current workflow phase: **${session.currentPhase}**\n` +
+            `To advance to research, complete the discuss phase first:\n` +
+            `- Classify complexity with \`tff_classify_complexity\`\n` +
+            `- Then call \`tff_workflow_transition\` with trigger "next"`,
+        );
         return;
       }
 
@@ -118,7 +122,8 @@ export function registerResearchCommand(
       const nextStep =
         isOk(nextStepResult) && nextStepResult.data ? nextStepResult.data.displayText : "";
 
-      // 7. Send research protocol message
+      // 7. Clear session and send research protocol message
+      if (ctx?.newSession) await ctx.newSession();
       api.sendUserMessage(
         buildResearchProtocolMessage({
           sliceId: slice.id,

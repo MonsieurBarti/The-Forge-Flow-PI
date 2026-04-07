@@ -101,7 +101,9 @@ describe("registerPlanCommand", () => {
       deps.sessionRepo.seed(session);
 
       const { fns } = await invokeHandler(deps, "M03-S07");
-      expect(fns.sendUserMessage).toHaveBeenCalledWith("not planning");
+      expect(fns.sendUserMessage).toHaveBeenCalledWith(
+        expect.stringContaining("Cannot start plan"),
+      );
     });
 
     it("returns error if SPEC.md not found", async () => {

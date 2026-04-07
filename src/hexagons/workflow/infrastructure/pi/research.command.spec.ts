@@ -101,7 +101,9 @@ describe("registerResearchCommand", () => {
       deps.sessionRepo.seed(session);
 
       const { fns } = await invokeHandler(deps, "M03-S06");
-      expect(fns.sendUserMessage).toHaveBeenCalledWith("not researching, run /tff discuss first");
+      expect(fns.sendUserMessage).toHaveBeenCalledWith(
+        expect.stringContaining("Cannot start research"),
+      );
     });
 
     it("returns error if SPEC.md not found", async () => {
