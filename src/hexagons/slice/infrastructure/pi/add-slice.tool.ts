@@ -1,9 +1,12 @@
+import { mkdirSync } from "node:fs";
+import { join } from "node:path";
 import { createZodTool, textResult } from "@infrastructure/pi";
 import { z } from "zod";
 import type { AddSliceUseCase } from "../../application/add-slice.use-case";
 
 export interface AddSliceToolDeps {
   addSlice: AddSliceUseCase;
+  tffDir?: string;
 }
 
 export function createAddSliceTool(deps: AddSliceToolDeps) {
@@ -21,6 +24,18 @@ export function createAddSliceTool(deps: AddSliceToolDeps) {
     execute: async (params) => {
       const result = await deps.addSlice.execute(params);
       if (!result.ok) return textResult(JSON.stringify({ error: result.error.message }));
+
+      // Create physical slice directory on disk
+      if (deps.tffDir) {
+        const msLabel = result.data.sliceLabel.replace(/-S\d+$/, "");
+        const sliceDir = join(deps.tffDir, "milestones", msLabel, "slices", result.data.sliceLabel);
+        try {
+          mkdirSync(sliceDir, { recursive: true });
+        } catch {
+          // Non-fatal — directory will be created when first artifact is written
+        }
+      }
+
       return textResult(
         `Added slice **${result.data.sliceLabel}**: "${params.title}" at position ${result.data.position}`,
       );

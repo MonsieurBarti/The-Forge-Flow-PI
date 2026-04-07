@@ -8,7 +8,7 @@ import type { ArtifactFilePort } from "../../domain/ports/artifact-file.port";
 import type { WorkflowSessionRepositoryPort } from "../../domain/ports/workflow-session.repository.port";
 import type { SuggestNextStepUseCase } from "../../use-cases/suggest-next-step.use-case";
 import { buildResearchProtocolMessage } from "./research-protocol";
-import { resolveNextSlice } from "./resolve-next-slice";
+import { findSliceFuzzy, resolveNextSlice } from "./resolve-next-slice";
 
 export interface ResearchCommandDeps {
   sliceRepo: SliceRepositoryPort;
@@ -47,18 +47,16 @@ export function registerResearchCommand(
         identifier = next.sliceLabel;
       }
 
-      // Try findByLabel first (e.g., "M03-S05"), fall back to findById (UUID)
-      let sliceResult = await deps.sliceRepo.findByLabel(identifier);
+      // Find slice with fuzzy matching (exact label -> ID -> suffix match)
+      const sliceResult = await findSliceFuzzy(
+        identifier,
+        deps.sliceRepo,
+        deps.milestoneRepo,
+        deps.projectRepo,
+      );
       if (isErr(sliceResult)) {
         api.sendUserMessage(`Error loading slice: ${sliceResult.error.message}`);
         return;
-      }
-      if (!sliceResult.data) {
-        sliceResult = await deps.sliceRepo.findById(identifier);
-        if (isErr(sliceResult)) {
-          api.sendUserMessage(`Error loading slice: ${sliceResult.error.message}`);
-          return;
-        }
       }
       const slice = sliceResult.data;
       if (!slice) {

@@ -9,7 +9,7 @@ import type { TffDispatcher } from "../../../../cli/tff-dispatcher";
 import type { StartDiscussUseCase } from "../../use-cases/start-discuss.use-case";
 import type { SuggestNextStepUseCase } from "../../use-cases/suggest-next-step.use-case";
 import { buildDiscussProtocolMessage } from "./discuss-protocol";
-import { resolveNextSlice } from "./resolve-next-slice";
+import { findSliceFuzzy, resolveNextSlice } from "./resolve-next-slice";
 
 export interface DiscussCommandDeps {
   startDiscuss: StartDiscussUseCase;
@@ -48,18 +48,16 @@ export function registerDiscussCommand(
         identifier = next.sliceLabel;
       }
 
-      // Try findByLabel first (e.g., "M01-S01"), fall back to findById (UUID)
-      let sliceResult = await deps.sliceRepo.findByLabel(identifier);
+      // Find slice with fuzzy matching (exact label -> ID -> suffix match)
+      const sliceResult = await findSliceFuzzy(
+        identifier,
+        deps.sliceRepo,
+        deps.milestoneRepo,
+        deps.projectRepo,
+      );
       if (isErr(sliceResult)) {
         api.sendUserMessage(`Error loading slice: ${sliceResult.error.message}`);
         return;
-      }
-      if (!sliceResult.data) {
-        sliceResult = await deps.sliceRepo.findById(identifier);
-        if (isErr(sliceResult)) {
-          api.sendUserMessage(`Error loading slice: ${sliceResult.error.message}`);
-          return;
-        }
       }
       const slice = sliceResult.data;
       if (!slice) {

@@ -7,6 +7,8 @@ import type { CreateTasksPort, TaskRepositoryPort } from "@hexagons/task";
 import type { ExtensionAPI } from "@infrastructure/pi";
 import { createZodTool } from "@infrastructure/pi";
 import type { DateProviderPort, EventBusPort, SliceTransitionPort } from "@kernel";
+import type { StateSyncPort } from "@kernel/ports/state-sync.port";
+import type { WorktreePort } from "@kernel/ports/worktree.port";
 import { z } from "zod";
 import type { TffDispatcher } from "../../../../cli/tff-dispatcher";
 import type { NextStepSuggestionProps } from "../../domain/next-step-suggestion.vo";
@@ -57,6 +59,8 @@ export interface WorkflowExtensionDeps {
   workflowJournal?: WorkflowJournalPort;
   failurePolicies?: FailurePoliciesConfig;
   loadPrompt?: (path: string) => string;
+  worktreePort?: WorktreePort;
+  stateSyncPort?: StateSyncPort;
 }
 
 function formatStatusReport(report: StatusReport): string {
@@ -171,6 +175,9 @@ export function registerWorkflowExtension(
     deps.eventBus,
     deps.dateProvider,
     deps.autonomyModeProvider,
+    deps.worktreePort,
+    deps.stateSyncPort,
+    deps.milestoneRepo,
   );
   const writeSpec = new WriteSpecUseCase(deps.artifactFile, deps.sliceRepo, deps.dateProvider);
   const classifyComplexity = new ClassifyComplexityUseCase(deps.sliceRepo, deps.dateProvider);

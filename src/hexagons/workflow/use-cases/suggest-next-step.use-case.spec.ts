@@ -85,12 +85,12 @@ describe("SuggestNextStepUseCase", () => {
     expect(result.data?.command).toBe("/tff complete-milestone");
   });
 
-  it("returns error when session not found", async () => {
+  it("returns null when no session and no slices", async () => {
     const { useCase } = setup();
     const result = await useCase.execute({ milestoneId: MS_ID });
-    expect(isErr(result)).toBe(true);
-    if (!isErr(result)) return;
-    expect(result.error.code).toBe("WORKFLOW.SESSION_NOT_FOUND");
+    expect(isOk(result)).toBe(true);
+    if (!isOk(result)) return;
+    expect(result.data).toBeNull();
   });
 
   it("returns error when sliceId present but slice not found", async () => {

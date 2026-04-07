@@ -7,7 +7,7 @@ import {
   type NextStepSuggestionProps,
 } from "../domain/next-step-suggestion.vo";
 import type { WorkflowSessionRepositoryPort } from "../domain/ports/workflow-session.repository.port";
-import { WorkflowSessionNotFoundError } from "./orchestrate-phase-transition.use-case";
+import type { WorkflowSessionNotFoundError } from "./orchestrate-phase-transition.use-case";
 
 export interface SuggestNextStepInput {
   milestoneId: string;
@@ -31,8 +31,22 @@ export class SuggestNextStepUseCase {
     // 1. Load session
     const sessionResult = await this.sessionRepo.findByMilestoneId(input.milestoneId);
     if (isErr(sessionResult)) return sessionResult;
+
+    // No session yet — suggest /tff discuss for first undiscussed slice
     if (!sessionResult.data) {
-      return err(new WorkflowSessionNotFoundError(input.milestoneId));
+      const slicesResult = await this.sliceRepo.findByMilestoneId(input.milestoneId);
+      if (isErr(slicesResult)) return slicesResult;
+      const firstDiscussing = slicesResult.data.find((s) => s.status === "discussing");
+      if (firstDiscussing) {
+        const suggestion = NextStepSuggestion.build({
+          phase: "idle",
+          autonomyMode: "guided",
+          sliceLabel: firstDiscussing.label,
+          allSlicesClosed: false,
+        });
+        return ok(suggestion?.toProps ?? null);
+      }
+      return ok(null);
     }
     const session = sessionResult.data;
 

@@ -145,7 +145,7 @@ import { StateGuard } from "@kernel/services/state-guard";
 import { StateImporter } from "@kernel/services/state-importer";
 import type { KnownProvider } from "@mariozechner/pi-ai";
 import { getModels, getProviders } from "@mariozechner/pi-ai";
-import { registerAutoCommand } from "./auto-mode";
+import { registerAutoMode } from "./auto-mode";
 import { OverlayDataAdapter } from "./infrastructure/overlay-data.adapter";
 import { createLazyDatabase } from "./lazy-database";
 import { registerOverlayExtension } from "./overlay.extension";
@@ -837,10 +837,12 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
       ? settingsForModel.data.workflow.failurePolicies
       : undefined,
     loadPrompt: templateLoader,
+    worktreePort: worktreeAdapter,
+    stateSyncPort: gitStateSyncAdapter,
   });
 
   // --- Auto-mode command ---
-  registerAutoCommand(dispatcher, api, {
+  registerAutoMode(dispatcher, api, {
     projectRepo,
     milestoneRepo,
     sliceRepo,
@@ -939,7 +941,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
       return active?.id ?? null;
     },
   });
-  api.registerTool(createAddSliceTool({ addSlice: addSliceUseCase }));
+  api.registerTool(createAddSliceTool({ addSlice: addSliceUseCase, tffDir: rootTffDir }));
 
   registerRemoveSliceCommand(dispatcher, api, { removeSlice: removeSliceUseCase });
   api.registerTool(createRemoveSliceTool({ removeSlice: removeSliceUseCase }));

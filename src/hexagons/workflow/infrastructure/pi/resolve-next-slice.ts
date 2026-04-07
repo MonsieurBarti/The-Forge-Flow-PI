@@ -1,8 +1,9 @@
 import type { MilestoneRepositoryPort } from "@hexagons/milestone";
 import type { ProjectRepositoryPort } from "@hexagons/project";
 import type { SliceRepositoryPort } from "@hexagons/slice";
+import type { Slice } from "@hexagons/slice/domain/slice.aggregate";
 import type { SliceStatus } from "@hexagons/slice/domain/slice.schemas";
-import { isErr } from "@kernel";
+import { isErr, isOk, type Result } from "@kernel";
 
 export interface ResolveNextSliceResult {
   sliceLabel: string;
@@ -44,4 +45,51 @@ export async function resolveNextSlice(
   }
 
   return { sliceLabel: match.label };
+}
+
+/**
+ * Find a slice by identifier with fuzzy matching.
+ * Tries: exact label -> exact ID -> suffix match (e.g., "S01" matches "M01-S01")
+ */
+export async function findSliceFuzzy(
+  identifier: string,
+  sliceRepo: SliceRepositoryPort,
+  milestoneRepo?: MilestoneRepositoryPort,
+  projectRepo?: ProjectRepositoryPort,
+): Promise<Result<Slice | null, Error>> {
+  // 1. Exact label match
+  const byLabel = await sliceRepo.findByLabel(identifier);
+  if (isErr(byLabel)) return byLabel;
+  if (byLabel.data) return byLabel;
+
+  // 2. Exact ID match
+  const byId = await sliceRepo.findById(identifier);
+  if (isErr(byId)) return byId;
+  if (byId.data) return byId;
+
+  // 3. Suffix match (e.g., "S01" -> "M01-S01")
+  if (projectRepo && milestoneRepo) {
+    const projectResult = await projectRepo.findSingleton();
+    if (isOk(projectResult) && projectResult.data) {
+      const msResult = await milestoneRepo.findByProjectId(projectResult.data.id);
+      if (isOk(msResult)) {
+        const active = msResult.data.find((m) => m.status === "in_progress");
+        if (active) {
+          const slicesResult = await sliceRepo.findByMilestoneId(active.id);
+          if (isOk(slicesResult)) {
+            const suffixMatch = slicesResult.data.find(
+              (s) =>
+                s.label.endsWith(`-${identifier}`) ||
+                s.label.toLowerCase() === identifier.toLowerCase(),
+            );
+            if (suffixMatch) {
+              return { ok: true as const, data: suffixMatch };
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return { ok: true as const, data: null };
 }
