@@ -73,9 +73,9 @@ describe("NextStepSuggestion", () => {
       expect(s?.autoInvoke).toBe(false);
     });
 
-    it("verifying suggests /tff:ship <label>", () => {
+    it("verifying suggests /tff:review <label>", () => {
       const s = NextStepSuggestion.build({ ...base, phase: "verifying" });
-      expect(s?.displayText).toBe(`Next: /tff:ship ${label}`);
+      expect(s?.displayText).toBe(`Next: /tff:review ${label}`);
       expect(s?.autoInvoke).toBe(false);
     });
 

@@ -53,8 +53,7 @@ const PHASE_SUGGESTIONS: Record<string, SuggestionFactory> = {
 
   executing: (ctx) => cmd("/tff:verify", ctx.sliceLabel, ctx.autonomyMode === "plan-to-pr"),
 
-  // verifying → /tff:ship (which handles the reviewing and shipping phases — no separate /tff:review command exists)
-  verifying: (ctx) => cmd("/tff:ship", ctx.sliceLabel, ctx.autonomyMode === "plan-to-pr"),
+  verifying: (ctx) => cmd("/tff:review", ctx.sliceLabel, ctx.autonomyMode === "plan-to-pr"),
 
   reviewing: () => gate("Awaiting review approval"),
 

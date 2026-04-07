@@ -517,6 +517,38 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     },
   });
 
+  api.registerCommand("tff:review", {
+    description:
+      "Run code review pipeline on the current slice (spec-reviewer + code-reviewer + security-auditor)",
+    handler: async (args: string, _ctx: ExtensionCommandContext) => {
+      const sliceLabel = args.trim();
+      if (!sliceLabel) {
+        api.sendUserMessage("Usage: /tff:review <slice-label>");
+        return;
+      }
+      const sliceResult = await sliceRepo.findByLabel(sliceLabel);
+      if (!sliceResult.ok || !sliceResult.data) {
+        api.sendUserMessage(`Slice not found: ${sliceLabel}`);
+        return;
+      }
+      const result = await conductReviewUseCase.execute({
+        sliceId: sliceResult.data.id,
+        workingDirectory: options.projectRoot,
+        maxFixCycles: 2,
+        timeoutMs: 300_000,
+      });
+      if (!result.ok) {
+        api.sendUserMessage(`Review failed: ${result.error.message}`);
+        return;
+      }
+      const verdict = result.data.mergedReview.verdict;
+      const findingCount = result.data.mergedReview.findings.length;
+      api.sendUserMessage(
+        `Review complete: ${verdict} (${findingCount} findings). ${verdict === "approved" ? "Run /tff:ship to create the PR." : "Address findings and re-run /tff:review."}`,
+      );
+    },
+  });
+
   // --- State sync wiring (moved before ship/complete for dependency injection) ---
   const ghCliAdapter = new GhCliAdapter(options.projectRoot);
   const mergeGateAdapter = new PiMergeGateAdapter();
