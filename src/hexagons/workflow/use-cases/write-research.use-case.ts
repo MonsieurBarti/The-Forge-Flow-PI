@@ -43,6 +43,8 @@ export class WriteResearchUseCase {
       input.sliceLabel,
       "research",
       input.content,
+      undefined,
+      input.sliceId,
     );
     if (isErr(writeResult)) return writeResult;
 

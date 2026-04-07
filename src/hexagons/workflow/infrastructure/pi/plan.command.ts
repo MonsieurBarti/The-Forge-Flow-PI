@@ -104,7 +104,13 @@ export function registerPlanCommand(
       }
 
       // 5. Read SPEC.md
-      const specResult = await deps.artifactFile.read(milestone.label, slice.label, "spec");
+      const specResult = await deps.artifactFile.read(
+        milestone.label,
+        slice.label,
+        "spec",
+        undefined,
+        slice.id,
+      );
       if (isErr(specResult)) {
         api.sendUserMessage("Failed to read SPEC.md");
         return;
@@ -116,7 +122,13 @@ export function registerPlanCommand(
 
       // 6. Read RESEARCH.md (optional)
       let researchContent: string | null = null;
-      const researchResult = await deps.artifactFile.read(milestone.label, slice.label, "research");
+      const researchResult = await deps.artifactFile.read(
+        milestone.label,
+        slice.label,
+        "research",
+        undefined,
+        slice.id,
+      );
       if (isOk(researchResult) && researchResult.data) {
         researchContent = researchResult.data;
       }

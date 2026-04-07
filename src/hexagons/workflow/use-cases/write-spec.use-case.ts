@@ -41,6 +41,8 @@ export class WriteSpecUseCase {
       input.sliceLabel,
       "spec",
       input.content,
+      undefined,
+      input.sliceId,
     );
     if (isErr(writeResult)) return writeResult;
 

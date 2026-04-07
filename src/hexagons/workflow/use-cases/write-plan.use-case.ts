@@ -52,6 +52,8 @@ export class WritePlanUseCase {
       input.sliceLabel,
       "plan",
       input.content,
+      undefined,
+      input.sliceId,
     );
     if (isErr(writeResult)) return writeResult;
 

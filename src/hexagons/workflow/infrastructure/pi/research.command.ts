@@ -105,7 +105,13 @@ export function registerResearchCommand(
       }
 
       // 5. Read SPEC.md
-      const specResult = await deps.artifactFile.read(milestone.label, slice.label, "spec");
+      const specResult = await deps.artifactFile.read(
+        milestone.label,
+        slice.label,
+        "spec",
+        undefined,
+        slice.id,
+      );
       if (isErr(specResult)) {
         api.sendUserMessage("Failed to read SPEC.md");
         return;

@@ -40,6 +40,7 @@ export class InMemoryArtifactFileAdapter extends ArtifactFilePort {
     artifactType: ArtifactType,
     content: string,
     kind?: SliceKind,
+    _sliceId?: string,
   ): Promise<Result<string, FileIOError>> {
     this.store.set(this.key(milestoneLabel, sliceLabel, artifactType, kind), content);
     return ok(this.resolvePath(milestoneLabel, sliceLabel, artifactType, kind));
@@ -50,6 +51,7 @@ export class InMemoryArtifactFileAdapter extends ArtifactFilePort {
     sliceLabel: string,
     artifactType: ArtifactType,
     kind?: SliceKind,
+    _sliceId?: string,
   ): Promise<Result<string | null, FileIOError>> {
     return ok(this.store.get(this.key(milestoneLabel, sliceLabel, artifactType, kind)) ?? null);
   }
