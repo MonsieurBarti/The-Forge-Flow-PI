@@ -118,7 +118,10 @@ export function registerDiscussCommand(
       const nextStep =
         isOk(nextStepResult) && nextStepResult.data ? nextStepResult.data.displayText : "";
 
-      // 7. Send discuss protocol message (no newSession — discuss is conversational)
+      // 7. Clear session and send discuss protocol message
+      // Discuss gets a fresh context — the protocol embeds all needed context
+      // (requirements, sibling slices, next step suggestion)
+      if (ctx?.newSession) await ctx.newSession();
       api.sendUserMessage(
         buildDiscussProtocolMessage({
           sliceId: slice.id,
