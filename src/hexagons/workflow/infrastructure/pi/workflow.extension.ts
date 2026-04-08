@@ -222,7 +222,7 @@ export function registerWorkflowExtension(
     deps.sliceRepo,
     deps.dateProvider,
   );
-  api.registerTool(createWriteResearchTool(writeResearch));
+  api.registerTool(createWriteResearchTool(writeResearch, deps.reviewUI));
 
   // --- Research command ---
   registerResearchCommand(dispatcher, api, {

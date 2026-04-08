@@ -309,18 +309,15 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
 
   // --- Execution extension ---
   const journalRepo = new JsonlJournalRepository(join(rootTffDir, "journal"));
-  const checkpointRepo = new MarkdownCheckpointRepository(options.projectRoot, async (sliceId) => {
-    if (await worktreeAdapter.exists(sliceId)) {
-      return { ok: true as const, data: join(".tff", "worktrees", sliceId) };
-    }
-    return err(new PersistenceError(`No worktree for slice: ${sliceId}`));
-  });
+  // Resolve checkpoint/session path inside the worktree's .tff/ dir (gitignored)
+  // so CHECKPOINT.md doesn't appear as an untracked file in the worktree
   const resolveSlicePath = async (sliceId: string): Promise<Result<string, PersistenceError>> => {
     if (await worktreeAdapter.exists(sliceId)) {
-      return { ok: true as const, data: join(".tff", "worktrees", sliceId) };
+      return { ok: true as const, data: join(".tff", "worktrees", sliceId, ".tff") };
     }
     return err(new PersistenceError(`No worktree for slice: ${sliceId}`));
   };
+  const checkpointRepo = new MarkdownCheckpointRepository(options.projectRoot, resolveSlicePath);
   const sessionRepo = new MarkdownExecutionSessionAdapter(options.projectRoot, resolveSlicePath);
   const replayJournal = new ReplayJournalUseCase(journalRepo);
 
@@ -421,9 +418,17 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const freshReviewerService = new FreshReviewerService(executorQueryAdapter);
   const critiqueReflectionService = new CritiqueReflectionService();
   const reviewPromptBuilder = new ReviewPromptBuilder(templateLoader);
+  // Cache for resolving UUIDs to labels — populated by verify/review/ship commands
+  const sliceLabelCache = new Map<
+    string,
+    { milestoneLabel: string; sliceLabel: string; sliceTitle: string }
+  >();
   const beadSliceSpecAdapter = new BeadSliceSpecAdapter(
     (milestoneLabel, sliceLabel) => artifactFile.read(milestoneLabel, sliceLabel, "spec"),
     (sliceId) => {
+      // Check UUID cache first (populated by verify/review/ship commands)
+      const cached = sliceLabelCache.get(sliceId);
+      if (cached) return cached;
       // Bead IDs: "The-Forge-Flow-PI-4t7.X.Y" where X=milestone, Y=slice
       const match = sliceId.match(/\.(\d+)\.(\d+)$/);
       if (!match) {
@@ -454,11 +459,13 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     },
   );
   const gitChangedFilesAdapter = new GitChangedFilesAdapter(gitPort, (sliceId) => {
+    const cached = sliceLabelCache.get(sliceId);
+    if (cached) return `milestone/${cached.milestoneLabel}`;
     const match = sliceId.match(/\.(\d+)\.\d+$/);
     if (match) return `milestone/M${match[1].padStart(2, "0")}`;
     const labelMatch = sliceId.match(/M(\d+)/);
     if (labelMatch) return `milestone/M${labelMatch[1].padStart(2, "0")}`;
-    return "milestone/M05";
+    throw new Error(`Cannot resolve milestone branch for sliceId: ${sliceId}`);
   });
   const piFixerAdapter = new PiFixerAdapter(
     sharedAgentDispatch,
@@ -512,6 +519,12 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
         api.sendUserMessage(`Slice not found: ${sliceLabel}`);
         return;
       }
+      const mLabel = sliceResult.data.label.replace(/-S\d+$/, "");
+      sliceLabelCache.set(sliceResult.data.id, {
+        milestoneLabel: mLabel,
+        sliceLabel: sliceResult.data.label,
+        sliceTitle: sliceResult.data.title,
+      });
       const result = await verifyUseCase.execute({
         sliceId: sliceResult.data.id,
         workingDirectory: options.projectRoot,
@@ -543,6 +556,12 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
         api.sendUserMessage(`Slice not found: ${sliceLabel}`);
         return;
       }
+      const mLabel = sliceResult.data.label.replace(/-S\d+$/, "");
+      sliceLabelCache.set(sliceResult.data.id, {
+        milestoneLabel: mLabel,
+        sliceLabel: sliceResult.data.label,
+        sliceTitle: sliceResult.data.title,
+      });
       const result = await conductReviewUseCase.execute({
         sliceId: sliceResult.data.id,
         workingDirectory: options.projectRoot,
@@ -641,6 +660,11 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
         return;
       }
       const milestoneLabel = sliceLabel.replace(/-S\d+$/, "");
+      sliceLabelCache.set(sliceResult.data.id, {
+        milestoneLabel,
+        sliceLabel: sliceResult.data.label,
+        sliceTitle: sliceResult.data.title,
+      });
       const result = await shipSliceUseCase.execute({
         sliceId: sliceResult.data.id,
         workingDirectory: options.projectRoot,

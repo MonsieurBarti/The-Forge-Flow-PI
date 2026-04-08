@@ -45,6 +45,7 @@ export function createWritePlanTool(useCase: WritePlanUseCase, reviewUI: ReviewU
       });
 
       const approval = approvalResult.ok ? approvalResult.data : undefined;
+      const approved = approval?.decision === "approved";
       return textResult(
         JSON.stringify({
           ok: true,
@@ -58,8 +59,9 @@ export function createWritePlanTool(useCase: WritePlanUseCase, reviewUI: ReviewU
                 formattedOutput: approval.formattedOutput,
               }
             : undefined,
-          nextSteps:
-            "IMPORTANT: After user approves the plan, you MUST call tff_workflow_transition with trigger='approve' to advance to the execution phase.",
+          nextSteps: approved
+            ? "Plannotator APPROVED the plan. If the feedback contains minor comments or suggestions, address them briefly inline but do NOT re-ask the user for approval. Call tff_workflow_transition with trigger='approve' immediately to advance to the execution phase."
+            : "Plannotator REQUESTED CHANGES. Show the feedback to the user, revise the plan accordingly, then call tff_write_plan again with the revised content.",
         }),
       );
     },

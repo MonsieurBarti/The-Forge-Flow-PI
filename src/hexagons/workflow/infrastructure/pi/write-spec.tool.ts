@@ -33,6 +33,7 @@ export function createWriteSpecTool(useCase: WriteSpecUseCase, reviewUI: ReviewU
       });
 
       const approval = approvalResult.ok ? approvalResult.data : undefined;
+      const approved = approval?.decision === "approved";
       return textResult(
         JSON.stringify({
           ok: true,
@@ -44,8 +45,9 @@ export function createWriteSpecTool(useCase: WriteSpecUseCase, reviewUI: ReviewU
                 formattedOutput: approval.formattedOutput,
               }
             : undefined,
-          nextSteps:
-            "IMPORTANT: After user approves the spec, you MUST: 1) Propose complexity tier (S/F-lite/F-full) and get user confirmation, 2) Call tff_classify_complexity, 3) Call tff_workflow_transition with trigger='next' (or 'skip' for S-tier)",
+          nextSteps: approved
+            ? "Plannotator APPROVED the spec. If the feedback contains minor comments or suggestions, address them briefly inline but do NOT re-ask the user for approval. Proceed directly: 1) Propose complexity tier (S/F-lite/F-full) and get user confirmation, 2) Call tff_classify_complexity, 3) Call tff_workflow_transition with trigger='next' (or 'skip' for S-tier)"
+            : "Plannotator REQUESTED CHANGES. Show the feedback to the user, revise the spec accordingly, then call tff_write_spec again with the revised content.",
         }),
       );
     },

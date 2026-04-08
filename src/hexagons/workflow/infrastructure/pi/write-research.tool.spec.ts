@@ -1,9 +1,9 @@
+import { InMemoryReviewUIAdapter } from "@hexagons/review";
 import { Slice } from "@hexagons/slice/domain/slice.aggregate";
 import { SliceBuilder } from "@hexagons/slice/domain/slice.builder";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
 import { createMockExtensionContext } from "@infrastructure/pi/testing";
 import { describe, expect, it } from "vitest";
-
 import { InMemoryArtifactFileAdapter } from "../../infrastructure/in-memory-artifact-file.adapter";
 import { WriteResearchUseCase } from "../../use-cases/write-research.use-case";
 import { createWriteResearchTool } from "./write-research.tool";
@@ -13,10 +13,11 @@ const mockCtx = createMockExtensionContext();
 function setup() {
   const sliceRepo = new InMemorySliceRepository();
   const artifactFile = new InMemoryArtifactFileAdapter();
+  const reviewUI = new InMemoryReviewUIAdapter();
   const fixedNow = new Date("2026-03-27T12:00:00Z");
   const dateProvider = { now: () => fixedNow };
   const useCase = new WriteResearchUseCase(artifactFile, sliceRepo, dateProvider);
-  const tool = createWriteResearchTool(useCase);
+  const tool = createWriteResearchTool(useCase, reviewUI);
   return { tool, sliceRepo, artifactFile };
 }
 
