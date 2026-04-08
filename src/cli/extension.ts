@@ -296,15 +296,19 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     const modelName = profile?.model;
 
     if (!modelName || modelName === "default") {
-      // Use PI's actual default model (first available with valid API key)
       return { provider: defaultProvider, modelId: defaultModelId };
     }
 
-    // Try to resolve a named model from the registry for the active provider
+    // Search available models (have valid API keys) by exact then substring match
+    const exact = availableModels.find((m) => m.id === modelName);
+    if (exact) return { provider: exact.provider as string, modelId: exact.id };
+    const partial = availableModels.find((m) => m.id.includes(modelName));
+    if (partial) return { provider: partial.provider as string, modelId: partial.id };
+
+    // Fall back to static registry search on default provider
     const resolved = resolveModelFromRegistry(defaultProvider as KnownProvider, modelName);
     if (resolved) return { provider: defaultProvider, modelId: resolved };
 
-    // Fallback to default
     return { provider: defaultProvider, modelId: defaultModelId };
   };
 
