@@ -263,7 +263,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const sliceTransitionPort = new WorkflowSliceTransitionAdapter(sliceRepo, dateProvider);
   const artifactFile = new NodeArtifactFileAdapter(options.projectRoot, resolveActiveTffDir);
   const workflowSessionRepo = new SqliteWorkflowSessionRepository(stateDb);
-  const autonomyModeProvider = { getAutonomyMode: () => "plan-to-pr" as const };
+  const autonomyModeProvider = { getAutonomyMode: () => "guided" as const };
 
   const plannotatorPath = detectPlannotator();
   const reviewUI = plannotatorPath

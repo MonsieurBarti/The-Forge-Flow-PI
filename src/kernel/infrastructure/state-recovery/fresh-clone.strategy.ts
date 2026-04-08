@@ -119,7 +119,7 @@ export class FreshCloneStrategy implements RecoveryStrategy {
         "  budget:",
         "    model: sonnet",
         "autonomy:",
-        "  mode: plan-to-pr",
+        "  mode: guided",
         "  max-retries: 2",
       ].join("\n")}\n`,
       "utf-8",

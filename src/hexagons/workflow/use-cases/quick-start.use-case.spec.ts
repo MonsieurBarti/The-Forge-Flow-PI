@@ -56,7 +56,7 @@ function setup(overrides?: { autonomyMode?: "guided" | "plan-to-pr"; withWorkspa
   const eventBus = new InProcessEventBus(new SilentLoggerAdapter());
   const dateProvider = new StubDateProvider();
   const autonomyModeProvider = {
-    getAutonomyMode: () => overrides?.autonomyMode ?? ("plan-to-pr" as const),
+    getAutonomyMode: () => overrides?.autonomyMode ?? ("guided" as const),
   };
   const sliceTransitionPort = new WorkflowSliceTransitionAdapter(sliceRepo, dateProvider);
   const orchestratePhaseTransition = new OrchestratePhaseTransitionUseCase(

@@ -45,7 +45,7 @@ export class ReplayWorkflowJournalUseCase {
         currentPhase,
         previousPhase,
         retryCount: 0,
-        autonomyMode: "plan-to-pr",
+        autonomyMode: "guided",
         createdAt: new Date(created.timestamp),
         updatedAt: new Date(),
         lastEscalation: null,

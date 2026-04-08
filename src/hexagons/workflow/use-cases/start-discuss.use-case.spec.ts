@@ -55,7 +55,7 @@ function setup(overrides?: { autonomyMode?: "guided" | "plan-to-pr"; withWorkspa
   const fixedNow = new Date("2026-03-27T12:00:00Z");
   const dateProvider = { now: () => fixedNow };
   const autonomyModeProvider = {
-    getAutonomyMode: () => overrides?.autonomyMode ?? ("plan-to-pr" as const),
+    getAutonomyMode: () => overrides?.autonomyMode ?? ("guided" as const),
   };
 
   const worktreeAdapter = new InMemoryWorktreeAdapter();
@@ -103,7 +103,7 @@ describe("StartDiscussUseCase", () => {
     if (isOk(result)) {
       expect(result.data.fromPhase).toBe("idle");
       expect(result.data.toPhase).toBe("discussing");
-      expect(result.data.autonomyMode).toBe("plan-to-pr");
+      expect(result.data.autonomyMode).toBe("guided");
     }
   });
 
