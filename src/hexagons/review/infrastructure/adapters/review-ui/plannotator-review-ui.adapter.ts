@@ -19,7 +19,6 @@ import type {
 const PLANNOTATOR_REQUEST_CHANNEL = "plannotator:request";
 const PLANNOTATOR_REVIEW_RESULT_CHANNEL = "plannotator:review-result";
 const ACK_TIMEOUT_MS = 10_000;
-const REVIEW_TIMEOUT_MS = 600_000; // 10 minutes
 
 /** Narrow interface for the PI event bus — avoids importing PI types into infrastructure */
 export interface PlannotatorEventEmitter {
@@ -41,7 +40,6 @@ export class PlannotatorReviewUIAdapter extends ReviewUIPort {
   constructor(
     private readonly plannotatorPath: string,
     private readonly events: PlannotatorEventEmitter,
-    private readonly reviewTimeoutMs: number = REVIEW_TIMEOUT_MS,
   ) {
     super();
   }
@@ -161,17 +159,10 @@ export class PlannotatorReviewUIAdapter extends ReviewUIPort {
   private awaitReviewCompletion(
     reviewId: string,
   ): Promise<{ approved: boolean; feedback?: string }> {
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        unsubscribe();
-        reject(new Error(`Review timeout for ${reviewId}`));
-      }, this.reviewTimeoutMs);
-
-      // Register listener BEFORE emit to avoid race condition
+    return new Promise((resolve) => {
       const unsubscribe = this.events.on(PLANNOTATOR_REVIEW_RESULT_CHANNEL, (data: unknown) => {
         const result = data as { reviewId: string; approved: boolean; feedback?: string };
         if (result.reviewId !== reviewId) return;
-        clearTimeout(timeout);
         unsubscribe();
         resolve({ approved: result.approved, feedback: result.feedback });
       });

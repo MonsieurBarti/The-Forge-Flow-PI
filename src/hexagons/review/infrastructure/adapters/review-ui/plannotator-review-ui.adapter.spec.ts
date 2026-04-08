@@ -154,7 +154,7 @@ describe("PlannotatorReviewUIAdapter", () => {
         ackResponse: { status: "handled", result: { status: "pending", reviewId } },
         reviewResult: { reviewId, approved: true },
       });
-      const adapter = new PlannotatorReviewUIAdapter("/usr/bin/plannotator", events, 5_000);
+      const adapter = new PlannotatorReviewUIAdapter("/usr/bin/plannotator", events);
       const result = await adapter.presentForApproval(APPROVAL_CTX);
       expect(isOk(result)).toBe(true);
       if (result.ok) {
@@ -168,7 +168,7 @@ describe("PlannotatorReviewUIAdapter", () => {
         ackResponse: { status: "handled", result: { status: "pending", reviewId } },
         reviewResult: { reviewId, approved: false, feedback: "Missing error handling" },
       });
-      const adapter = new PlannotatorReviewUIAdapter("/usr/bin/plannotator", events, 5_000);
+      const adapter = new PlannotatorReviewUIAdapter("/usr/bin/plannotator", events);
       const result = await adapter.presentForApproval(APPROVAL_CTX);
       expect(isOk(result)).toBe(true);
       if (result.ok) {
@@ -181,7 +181,7 @@ describe("PlannotatorReviewUIAdapter", () => {
       const events = createMockEvents({
         ackResponse: { status: "unavailable", error: "Plannotator not ready" },
       });
-      const adapter = new PlannotatorReviewUIAdapter("/usr/bin/plannotator", events, 5_000);
+      const adapter = new PlannotatorReviewUIAdapter("/usr/bin/plannotator", events);
       mockExecFile("LGTM — no changes needed");
       const result = await adapter.presentForApproval(APPROVAL_CTX);
       expect(isOk(result)).toBe(true);
@@ -193,7 +193,7 @@ describe("PlannotatorReviewUIAdapter", () => {
     it("falls back to annotate on ack timeout", async () => {
       // No ackResponse → respond callback never called → timeout
       const events = createMockEvents();
-      const adapter = new PlannotatorReviewUIAdapter("/usr/bin/plannotator", events, 1_000);
+      const adapter = new PlannotatorReviewUIAdapter("/usr/bin/plannotator", events);
       mockExecFile("LGTM");
       const result = await adapter.presentForApproval(APPROVAL_CTX);
       expect(isOk(result)).toBe(true);
@@ -205,7 +205,7 @@ describe("PlannotatorReviewUIAdapter", () => {
 
     it("returns changes_requested when both event and annotate fail", async () => {
       const events = createMockEvents();
-      const adapter = new PlannotatorReviewUIAdapter("/usr/bin/plannotator", events, 1_000);
+      const adapter = new PlannotatorReviewUIAdapter("/usr/bin/plannotator", events);
       mockExecFileError("plannotator not found");
       const result = await adapter.presentForApproval(APPROVAL_CTX);
       expect(isOk(result)).toBe(true);
