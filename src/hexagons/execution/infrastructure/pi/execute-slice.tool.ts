@@ -43,17 +43,24 @@ export function createExecuteSliceTool(deps: ExecuteSliceToolDeps) {
       });
       if (isErr(result)) return textResult(`Error: ${result.error.message}`);
 
-      // Include per-task failure details if any tasks failed
       const data = result.data;
+      const nextSteps =
+        data.status === "completed"
+          ? "Execution complete. Run /tff verify to validate acceptance criteria against the implementation."
+          : data.status === "paused"
+            ? "Execution paused. Call tff_resume_execution to continue, or /tff rollback to revert."
+            : "Execution failed. Review the errors above, then retry with tff_execute_slice or /tff rollback.";
+
+      // Include per-task failure details if any tasks failed
       if (data.failedTasks.length > 0 && data.taskErrors) {
         const failureDetails = data.failedTasks.map((id) => ({
           taskId: id,
           reason: data.taskErrors?.[id] ?? "unknown",
         }));
-        return textResult(JSON.stringify({ ...data, failureDetails }));
+        return textResult(JSON.stringify({ ...data, failureDetails, nextSteps }));
       }
 
-      return textResult(JSON.stringify(data));
+      return textResult(JSON.stringify({ ...data, nextSteps }));
     },
   });
 }

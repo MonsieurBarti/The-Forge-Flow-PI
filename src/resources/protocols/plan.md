@@ -36,10 +36,12 @@ Spec ⇒ concrete tasks w/ TDD steps ∧ dependency waves.
 ### P3 — Write
 9. `tff_write_plan` — milestoneLabel="{{milestoneLabel}}", sliceLabel="{{sliceLabel}}", sliceId="{{sliceId}}", content=full PLAN.md, tasks=[{label, title, description, acceptanceCriteria, filePaths, blockedBy}]
 10. Report: wave count, task count
+**NEVER write PLAN.md directly — ALWAYS use `tff_write_plan` tool.**
 
 ### P4 — Human Gate
 11. Present plan summary: waves, tasks, files affected
 12. Ask: "Plan written. Approve ⇒ execution, ∨ reject ⇒ revise?"
 13. Reject ⇒ revise per feedback, rewrite via `tff_write_plan` (max 2 iterations), ask again
 14. Approve ⇒ `tff_workflow_transition` milestoneId="{{milestoneId}}", trigger="approve"
-15. {{nextStep}}
+15. After transition to executing: you MUST call `tff_execute_slice` — NEVER implement code manually. The tool auto-resolves the worktree.
+16. {{nextStep}}

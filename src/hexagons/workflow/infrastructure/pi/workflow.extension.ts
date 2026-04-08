@@ -202,6 +202,7 @@ export function registerWorkflowExtension(
       sliceRepo: deps.sliceRepo,
       maxRetries: deps.maxRetries,
       failurePolicies: deps.failurePolicies,
+      suggestNextStep,
     }),
   );
 

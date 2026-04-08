@@ -1,11 +1,12 @@
 import type { FailurePoliciesConfig } from "@hexagons/settings";
 import { ComplexityTierSchema, type SliceRepositoryPort } from "@hexagons/slice";
 import { createZodTool, textResult } from "@infrastructure/pi";
-import { isErr } from "@kernel";
+import { isErr, isOk } from "@kernel";
 import { z } from "zod";
 import type { WorkflowSessionRepositoryPort } from "../../domain/ports/workflow-session.repository.port";
 import { WorkflowTriggerSchema } from "../../domain/workflow-session.schemas";
 import type { OrchestratePhaseTransitionUseCase } from "../../use-cases/orchestrate-phase-transition.use-case";
+import type { SuggestNextStepUseCase } from "../../use-cases/suggest-next-step.use-case";
 
 const WorkflowTransitionSchema = z.object({
   milestoneId: z.string().describe("Milestone ID (from tff_status output)"),
@@ -19,7 +20,23 @@ export interface WorkflowTransitionToolDeps {
   sliceRepo: SliceRepositoryPort;
   maxRetries: number;
   failurePolicies?: FailurePoliciesConfig;
+  suggestNextStep: SuggestNextStepUseCase;
 }
+
+const PHASE_GUIDANCE: Record<string, string> = {
+  executing:
+    "CRITICAL: You MUST call tff_execute_slice to begin execution. " +
+    "NEVER implement code manually — the tool auto-resolves the worktree path from sliceId. " +
+    "Required params: sliceId, milestoneId, sliceLabel, sliceTitle, complexity, model, modelProfile.",
+  researching:
+    "Run /tff research to begin the research phase. Use tff_write_research to save findings.",
+  planning:
+    "Run /tff plan to begin planning. Use tff_write_plan to write PLAN.md — NEVER write files directly.",
+  verifying: "Run /tff verify to validate acceptance criteria against the implementation.",
+  reviewing: "Run /tff review to run code review.",
+  shipping: "Run /tff ship to create a PR. NEVER merge or push directly.",
+  idle: "Slice complete. Call tff_status for the next slice to work on, or /tff complete-milestone if all slices are closed.",
+};
 
 export function createWorkflowTransitionTool(deps: WorkflowTransitionToolDeps) {
   return createZodTool({
@@ -67,7 +84,17 @@ export function createWorkflowTransitionTool(deps: WorkflowTransitionToolDeps) {
       });
 
       if (isErr(result)) return textResult(`Error: ${result.error.message}`);
-      return textResult(JSON.stringify(result.data));
+
+      const transitionData = result.data;
+      const nsResult = await deps.suggestNextStep.execute({
+        milestoneId: params.milestoneId,
+      });
+      const suggestion = isOk(nsResult) ? nsResult.data : null;
+      const guidance = PHASE_GUIDANCE[transitionData.toPhase] ?? "";
+      const suggestionText = suggestion ? ` ${suggestion.displayText}` : "";
+      const nextSteps = guidance + suggestionText;
+
+      return textResult(JSON.stringify({ ...transitionData, nextSteps }));
     },
   });
 }
