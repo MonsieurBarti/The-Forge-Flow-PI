@@ -187,6 +187,9 @@ export function registerWorkflowExtension(
     deps.eventBus,
     deps.dateProvider,
     deps.workflowJournal,
+    undefined,
+    deps.stateSyncPort,
+    tffDir,
   );
 
   // --- Discuss tools ---
