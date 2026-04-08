@@ -267,7 +267,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
 
   const plannotatorPath = detectPlannotator();
   const reviewUI = plannotatorPath
-    ? new PlannotatorReviewUIAdapter(plannotatorPath)
+    ? new PlannotatorReviewUIAdapter(plannotatorPath, api.events)
     : new TerminalReviewUIAdapter();
 
   // --- Shared: modelResolver + templateLoader (needed by execution & review) ---
