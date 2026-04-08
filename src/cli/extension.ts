@@ -145,7 +145,8 @@ import { StateExporter } from "@kernel/services/state-exporter";
 import { StateGuard } from "@kernel/services/state-guard";
 import { StateImporter } from "@kernel/services/state-importer";
 import type { KnownProvider } from "@mariozechner/pi-ai";
-import { getModels, getProviders } from "@mariozechner/pi-ai";
+import { getModels } from "@mariozechner/pi-ai";
+import { AuthStorage, ModelRegistry } from "@mariozechner/pi-coding-agent";
 // Auto-mode disabled — will be reimplemented in a future milestone
 // import { registerAutoMode } from "./auto-mode";
 import { OverlayDataAdapter } from "./infrastructure/overlay-data.adapter";
@@ -169,15 +170,6 @@ function resolveModelFromRegistry(provider: KnownProvider, name: string): string
   // Prefer non-dated alias over dated snapshot
   const alias = partials.find((m) => !/-\d{8}$/.test(m.id));
   return alias?.id ?? partials[partials.length - 1].id;
-}
-
-/**
- * Return PI's default model ID for the given provider.
- * Uses the first model in PI's registry for that provider.
- */
-function piDefaultModelId(provider: KnownProvider): string {
-  const models = getModels(provider);
-  return models[0]?.id ?? "unknown";
 }
 
 function detectPlannotator(): string | undefined {
@@ -285,26 +277,35 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   });
   const modelProfiles = settingsForModel.ok ? settingsForModel.data.modelRouting.profiles : null;
 
-  const providers = getProviders();
-  const defaultProvider = providers[0];
-  if (!defaultProvider) {
-    throw new Error("No PI providers available. Ensure at least one provider is configured.");
+  // Resolve the default model from PI's model registry (respects configured API keys)
+  const authStorage = AuthStorage.create();
+  const modelRegistry = ModelRegistry.create(authStorage);
+  const availableModels = modelRegistry.getAvailable();
+  const piDefaultModel = availableModels[0];
+  if (!piDefaultModel) {
+    throw new Error("No PI models available. Ensure at least one provider has a valid API key.");
   }
+  const defaultProvider = piDefaultModel.provider as string;
+  const defaultModelId = piDefaultModel.id;
+
   const modelResolver = (profileName: string): ResolvedModel => {
-    const provider = defaultProvider;
     const profile =
       profileName === "quality" || profileName === "balanced" || profileName === "budget"
         ? modelProfiles?.[profileName]
         : undefined;
     const modelName = profile?.model;
 
-    if (!modelName) {
-      // No profile configured — use PI's default model for the provider
-      return { provider, modelId: piDefaultModelId(provider) };
+    if (!modelName || modelName === "default") {
+      // Use PI's actual default model (first available with valid API key)
+      return { provider: defaultProvider, modelId: defaultModelId };
     }
 
-    const resolved = resolveModelFromRegistry(provider, modelName);
-    return { provider, modelId: resolved ?? piDefaultModelId(provider) };
+    // Try to resolve a named model from the registry for the active provider
+    const resolved = resolveModelFromRegistry(defaultProvider as KnownProvider, modelName);
+    if (resolved) return { provider: defaultProvider, modelId: resolved };
+
+    // Fallback to default
+    return { provider: defaultProvider, modelId: defaultModelId };
   };
 
   // --- Execution extension ---
