@@ -12,6 +12,7 @@ import type { KeyId, OverlayHandle } from "@mariozechner/pi-tui";
 import { DashboardComponent } from "./components/dashboard.component";
 import { ExecutionMonitorComponent } from "./components/execution-monitor.component";
 import { WorkflowComponent } from "./components/workflow.component";
+import type { TffDispatcher } from "./tff-dispatcher";
 
 export interface OverlayExtensionDeps {
   overlayDataPort: OverlayDataPort;
@@ -22,7 +23,11 @@ export interface OverlayExtensionDeps {
   logger: LoggerPort;
 }
 
-export function registerOverlayExtension(api: ExtensionAPI, deps: OverlayExtensionDeps): void {
+export function registerOverlayExtension(
+  dispatcher: TffDispatcher,
+  api: ExtensionAPI,
+  deps: OverlayExtensionDeps,
+): void {
   let dashboardHandle: OverlayHandle | undefined;
   let workflowHandle: OverlayHandle | undefined;
   let executionMonitorHandle: OverlayHandle | undefined;
@@ -73,7 +78,8 @@ export function registerOverlayExtension(api: ExtensionAPI, deps: OverlayExtensi
   };
 
   registerSafe(deps.hotkeys.dashboard, "Toggle TFF Status Dashboard", toggleDashboard);
-  api.registerCommand("tff:dashboard", {
+  dispatcher.register({
+    name: "dashboard",
     description: "Toggle TFF Status Dashboard",
     handler: async (_args: string, ctx: ExtensionCommandContext) => {
       await toggleDashboard(ctx);
@@ -111,7 +117,8 @@ export function registerOverlayExtension(api: ExtensionAPI, deps: OverlayExtensi
   };
 
   registerSafe(deps.hotkeys.workflow, "Toggle TFF Workflow Visualizer", toggleWorkflow);
-  api.registerCommand("tff:workflow-view", {
+  dispatcher.register({
+    name: "workflow-view",
     description: "Toggle TFF Workflow Visualizer",
     handler: async (_args: string, ctx: ExtensionCommandContext) => {
       await toggleWorkflow(ctx);
@@ -149,7 +156,8 @@ export function registerOverlayExtension(api: ExtensionAPI, deps: OverlayExtensi
   };
 
   registerSafe(deps.hotkeys.executionMonitor, "Toggle TFF Execution Monitor", toggleExecMonitor);
-  api.registerCommand("tff:execution-monitor", {
+  dispatcher.register({
+    name: "execution-monitor",
     description: "Toggle TFF Execution Monitor",
     handler: async (_args: string, ctx: ExtensionCommandContext) => {
       await toggleExecMonitor(ctx);

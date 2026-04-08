@@ -1,14 +1,15 @@
 import type { FailurePoliciesConfig } from "@hexagons/settings";
 import { ComplexityTierSchema, type SliceRepositoryPort } from "@hexagons/slice";
 import { createZodTool, textResult } from "@infrastructure/pi";
-import { isErr } from "@kernel";
+import { isErr, isOk } from "@kernel";
 import { z } from "zod";
 import type { WorkflowSessionRepositoryPort } from "../../domain/ports/workflow-session.repository.port";
 import { WorkflowTriggerSchema } from "../../domain/workflow-session.schemas";
 import type { OrchestratePhaseTransitionUseCase } from "../../use-cases/orchestrate-phase-transition.use-case";
+import type { SuggestNextStepUseCase } from "../../use-cases/suggest-next-step.use-case";
 
 const WorkflowTransitionSchema = z.object({
-  milestoneId: z.string().describe("Milestone UUID"),
+  milestoneId: z.string().describe("Milestone ID (from tff_status output)"),
   trigger: WorkflowTriggerSchema.describe("Workflow trigger"),
   complexityTier: ComplexityTierSchema.optional().describe("Slice complexity tier if known"),
 });
@@ -19,7 +20,25 @@ export interface WorkflowTransitionToolDeps {
   sliceRepo: SliceRepositoryPort;
   maxRetries: number;
   failurePolicies?: FailurePoliciesConfig;
+  suggestNextStep: SuggestNextStepUseCase;
 }
+
+const PHASE_GUIDANCE: Record<string, string> = {
+  executing:
+    "Transitioned to executing. Present this to the user and suggest /tff execute as the next step. " +
+    "Do NOT call tff_execute_slice yourself — the user decides when to start execution.",
+  researching:
+    "Transitioned to researching. Present this to the user and suggest /tff research as the next step.",
+  planning:
+    "Transitioned to planning. Present this to the user and suggest /tff plan as the next step.",
+  verifying:
+    "Transitioned to verifying. Present this to the user and suggest /tff verify as the next step.",
+  reviewing:
+    "Transitioned to reviewing. Present this to the user and suggest /tff review as the next step.",
+  shipping:
+    "Transitioned to shipping. Present this to the user and suggest /tff ship as the next step.",
+  idle: "Slice complete. Present this to the user and suggest checking tff_status for the next slice.",
+};
 
 export function createWorkflowTransitionTool(deps: WorkflowTransitionToolDeps) {
   return createZodTool({
@@ -67,7 +86,17 @@ export function createWorkflowTransitionTool(deps: WorkflowTransitionToolDeps) {
       });
 
       if (isErr(result)) return textResult(`Error: ${result.error.message}`);
-      return textResult(JSON.stringify(result.data));
+
+      const transitionData = result.data;
+      const nsResult = await deps.suggestNextStep.execute({
+        milestoneId: params.milestoneId,
+      });
+      const suggestion = isOk(nsResult) ? nsResult.data : null;
+      const guidance = PHASE_GUIDANCE[transitionData.toPhase] ?? "";
+      const suggestionText = suggestion ? ` ${suggestion.displayText}` : "";
+      const nextSteps = guidance + suggestionText;
+
+      return textResult(JSON.stringify({ ...transitionData, nextSteps }));
     },
   });
 }

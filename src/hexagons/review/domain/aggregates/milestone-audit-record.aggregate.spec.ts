@@ -14,8 +14,8 @@ describe("MilestoneAuditRecord", () => {
       const record = MilestoneAuditRecord.createNew({
         ...baseParams,
         auditReports: [
-          { agentType: "spec-reviewer", verdict: "PASS", findings: [], summary: "OK" },
-          { agentType: "security-auditor", verdict: "PASS", findings: [], summary: "OK" },
+          { agentType: "tff-spec-reviewer", verdict: "PASS", findings: [], summary: "OK" },
+          { agentType: "tff-security-auditor", verdict: "PASS", findings: [], summary: "OK" },
         ],
       });
       expect(record.allPassed).toBe(true);
@@ -27,7 +27,7 @@ describe("MilestoneAuditRecord", () => {
         ...baseParams,
         auditReports: [
           {
-            agentType: "spec-reviewer",
+            agentType: "tff-spec-reviewer",
             verdict: "FAIL",
             findings: [
               {
@@ -40,7 +40,7 @@ describe("MilestoneAuditRecord", () => {
             ],
             summary: "Issues found",
           },
-          { agentType: "security-auditor", verdict: "PASS", findings: [], summary: "OK" },
+          { agentType: "tff-security-auditor", verdict: "PASS", findings: [], summary: "OK" },
         ],
       });
       expect(record.allPassed).toBe(false);
@@ -52,7 +52,7 @@ describe("MilestoneAuditRecord", () => {
         ...baseParams,
         auditReports: [
           {
-            agentType: "spec-reviewer",
+            agentType: "tff-spec-reviewer",
             verdict: "FAIL",
             findings: [
               {
@@ -73,7 +73,7 @@ describe("MilestoneAuditRecord", () => {
             summary: "Issues",
           },
           {
-            agentType: "security-auditor",
+            agentType: "tff-security-auditor",
             verdict: "FAIL",
             findings: [
               {
@@ -97,8 +97,8 @@ describe("MilestoneAuditRecord", () => {
       const original = MilestoneAuditRecord.createNew({
         ...baseParams,
         auditReports: [
-          { agentType: "spec-reviewer", verdict: "PASS", findings: [], summary: "OK" },
-          { agentType: "security-auditor", verdict: "PASS", findings: [], summary: "OK" },
+          { agentType: "tff-spec-reviewer", verdict: "PASS", findings: [], summary: "OK" },
+          { agentType: "tff-security-auditor", verdict: "PASS", findings: [], summary: "OK" },
         ],
       });
       const reconstituted = MilestoneAuditRecord.reconstitute(original.toJSON());

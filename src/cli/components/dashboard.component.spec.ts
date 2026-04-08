@@ -124,14 +124,14 @@ describe("progressBar", () => {
 
 describe("NEXT_ACTION", () => {
   it.each<[SliceStatus, string]>([
-    ["discussing", "/tff:research"],
-    ["researching", "/tff:plan"],
-    ["planning", "/tff:execute"],
-    ["executing", "/tff:verify"],
-    ["verifying", "/tff:ship"],
-    ["reviewing", "/tff:ship"],
-    ["completing", "/tff:complete-milestone"],
-    ["closed", "/tff:status"],
+    ["discussing", "/tff research"],
+    ["researching", "/tff plan"],
+    ["planning", "/tff execute"],
+    ["executing", "/tff verify"],
+    ["verifying", "/tff ship"],
+    ["reviewing", "/tff ship"],
+    ["completing", "/tff complete-milestone"],
+    ["closed", "/tff status"],
   ])("maps %s to %s", (status, expectedCmd) => {
     expect(NEXT_ACTION[status].cmd).toBe(expectedCmd);
   });
@@ -159,7 +159,7 @@ describe("buildMarkdown", () => {
     expect(md).toContain("Budget");
     expect(md).toContain("42%");
     // Next action — first non-closed slice is executing
-    expect(md).toContain("/tff:verify");
+    expect(md).toContain("/tff verify");
   });
 
   it("renders empty state for null snapshot", () => {
@@ -174,11 +174,11 @@ describe("buildMarkdown", () => {
     expect(md).toContain("No project data");
   });
 
-  it("suggests /tff:complete-milestone when all slices closed", () => {
+  it("suggests /tff complete-milestone when all slices closed", () => {
     const snapshot = allClosedSnapshot();
     const md = buildMarkdown(snapshot, 10);
 
-    expect(md).toContain("/tff:complete-milestone");
+    expect(md).toContain("/tff complete-milestone");
   });
 });
 

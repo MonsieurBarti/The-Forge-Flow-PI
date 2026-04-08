@@ -2,13 +2,13 @@ import { ModelProfileNameSchema } from "@kernel/schemas";
 import { z } from "zod";
 
 export const AgentTypeSchema = z.enum([
-  "spec-reviewer",
-  "code-reviewer",
-  "security-auditor",
-  "fixer",
-  "executor",
-  "verifier",
-  "doc-writer",
+  "tff-spec-reviewer",
+  "tff-code-reviewer",
+  "tff-security-auditor",
+  "tff-fixer",
+  "tff-executor",
+  "tff-verifier",
+  "tff-doc-writer",
 ]);
 export type AgentType = z.infer<typeof AgentTypeSchema>;
 

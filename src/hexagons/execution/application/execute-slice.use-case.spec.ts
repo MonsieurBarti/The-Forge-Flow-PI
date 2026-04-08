@@ -1,3 +1,6 @@
+import { Slice } from "@hexagons/slice/domain/slice.aggregate";
+import { SliceBuilder } from "@hexagons/slice/domain/slice.builder";
+import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
 import { DetectWavesUseCase } from "@hexagons/task/domain/detect-waves.use-case";
 import { Task } from "@hexagons/task/domain/task.aggregate";
 import { TaskBuilder } from "@hexagons/task/domain/task.builder";
@@ -96,6 +99,7 @@ function makeTask(id: string, label: string, blockedBy: string[] = []) {
 // ---------------------------------------------------------------------------
 describe("ExecuteSliceUseCase", () => {
   let taskRepo: InMemoryTaskRepository;
+  let sliceRepo: InMemorySliceRepository;
   let waveDetection: DetectWavesUseCase;
   let checkpointRepo: InMemoryCheckpointRepository;
   let agentDispatch: InMemoryAgentDispatchAdapter;
@@ -119,6 +123,10 @@ describe("ExecuteSliceUseCase", () => {
 
   beforeEach(() => {
     taskRepo = new InMemoryTaskRepository();
+    sliceRepo = new InMemorySliceRepository();
+    sliceRepo.seed(
+      Slice.reconstitute(new SliceBuilder().withId(SLICE_ID).withStatus("executing").buildProps()),
+    );
     waveDetection = new DetectWavesUseCase();
     checkpointRepo = new InMemoryCheckpointRepository();
     agentDispatch = new InMemoryAgentDispatchAdapter();
@@ -144,6 +152,7 @@ describe("ExecuteSliceUseCase", () => {
 
     useCase = new ExecuteSliceUseCase({
       taskRepository: taskRepo,
+      sliceRepo,
       waveDetection,
       checkpointRepository: checkpointRepo,
       agentDispatch,
@@ -249,7 +258,7 @@ describe("ExecuteSliceUseCase", () => {
       executorLog: [
         {
           taskId: T1_ID,
-          agentIdentity: "executor",
+          agentIdentity: "tff-executor",
           startedAt: new Date("2026-03-30T11:00:00Z"),
           completedAt: new Date("2026-03-30T11:30:00Z"),
         },
@@ -296,7 +305,7 @@ describe("ExecuteSliceUseCase", () => {
       executorLog: [
         {
           taskId: T1_ID,
-          agentIdentity: "executor",
+          agentIdentity: "tff-executor",
           startedAt: new Date("2026-03-30T11:00:00Z"),
           completedAt: new Date("2026-03-30T11:30:00Z"),
         },
@@ -825,6 +834,7 @@ describe("ExecuteSliceUseCase", () => {
       const disabledConfig: OverseerConfig = { ...OVERSEER_CONFIG, enabled: false };
       useCase = new ExecuteSliceUseCase({
         taskRepository: taskRepo,
+        sliceRepo,
         waveDetection,
         checkpointRepository: checkpointRepo,
         agentDispatch,
@@ -1002,6 +1012,7 @@ describe("ExecuteSliceUseCase", () => {
       const noRetryPolicy = new DefaultRetryPolicy(0, 3, [], -1);
       useCase = new ExecuteSliceUseCase({
         taskRepository: taskRepo,
+        sliceRepo,
         waveDetection,
         checkpointRepository: checkpointRepo,
         agentDispatch,
@@ -1519,6 +1530,7 @@ describe("ExecuteSliceUseCase", () => {
       const downshiftPolicy = new DefaultRetryPolicy(5, 3, ["quality", "balanced", "budget"], 0);
       useCase = new ExecuteSliceUseCase({
         taskRepository: taskRepo,
+        sliceRepo,
         waveDetection,
         checkpointRepository: checkpointRepo,
         agentDispatch,
@@ -1585,6 +1597,7 @@ describe("ExecuteSliceUseCase", () => {
       const escalatePolicy = new DefaultRetryPolicy(0, 3, [], -1);
       useCase = new ExecuteSliceUseCase({
         taskRepository: taskRepo,
+        sliceRepo,
         waveDetection,
         checkpointRepository: checkpointRepo,
         agentDispatch,

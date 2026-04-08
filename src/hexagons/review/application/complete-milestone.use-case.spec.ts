@@ -116,8 +116,8 @@ function makePassingAuditRecord(milestoneId: string): MilestoneAuditRecord {
     milestoneId,
     milestoneLabel: MILESTONE_LABEL,
     auditReports: [
-      { agentType: "spec-reviewer", verdict: "PASS", findings: [], summary: "OK" },
-      { agentType: "security-auditor", verdict: "PASS", findings: [], summary: "OK" },
+      { agentType: "tff-spec-reviewer", verdict: "PASS", findings: [], summary: "OK" },
+      { agentType: "tff-security-auditor", verdict: "PASS", findings: [], summary: "OK" },
     ],
     now: FIXED_DATE,
   });

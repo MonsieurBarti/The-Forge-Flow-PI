@@ -8,6 +8,8 @@ export interface DiscussProtocolParams {
   milestoneLabel: string;
   milestoneId: string;
   autonomyMode: string;
+  requirementsContent: string;
+  slicesContext: string;
   nextStep: string;
 }
 
@@ -18,8 +20,18 @@ function render(tmpl: string, vars: Record<string, string>): string {
 }
 
 export function buildDiscussProtocolMessage(params: DiscussProtocolParams): string {
+  const requirementsSection = params.requirementsContent
+    ? `## REQUIREMENTS.md\n\n${params.requirementsContent}`
+    : "";
+
+  const slicesSection = params.slicesContext
+    ? `## Milestone Slices\n\n${params.slicesContext}`
+    : "";
+
   return render(template, {
     ...params,
+    requirementsSection,
+    slicesSection,
     nextStep: params.nextStep,
   });
 }

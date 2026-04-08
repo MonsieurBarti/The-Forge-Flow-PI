@@ -8,6 +8,7 @@ import type { LoggerPort } from "@kernel/ports/logger.port";
 import type { OverlayDataPort } from "@kernel/ports/overlay-data.port";
 import { describe, expect, it, vi } from "vitest";
 import { registerOverlayExtension } from "./overlay.extension";
+import { TffDispatcher } from "./tff-dispatcher";
 
 type HandlerFn = (...args: unknown[]) => unknown;
 
@@ -80,7 +81,7 @@ const DEFAULT_HOTKEYS: HotkeysConfig = {
 describe("registerOverlayExtension", () => {
   it("registers 3 keyboard shortcuts", () => {
     const api = mockApi();
-    registerOverlayExtension(api, {
+    registerOverlayExtension(new TffDispatcher(), api, {
       overlayDataPort: mockOverlayDataPort(),
       budgetTrackingPort: { getUsagePercent: vi.fn() } as unknown as BudgetTrackingPort,
       eventBus: { publish: vi.fn(), subscribe: vi.fn() } as unknown as EventBusPort,
@@ -95,9 +96,10 @@ describe("registerOverlayExtension", () => {
     expect(api.shortcuts.has("ctrl+alt+e")).toBe(true);
   });
 
-  it("registers 3 slash commands", () => {
+  it("registers 3 subcommands via dispatcher", () => {
     const api = mockApi();
-    registerOverlayExtension(api, {
+    const dispatcher = new TffDispatcher();
+    registerOverlayExtension(dispatcher, api, {
       overlayDataPort: mockOverlayDataPort(),
       budgetTrackingPort: { getUsagePercent: vi.fn() } as unknown as BudgetTrackingPort,
       eventBus: { publish: vi.fn(), subscribe: vi.fn() } as unknown as EventBusPort,
@@ -106,15 +108,16 @@ describe("registerOverlayExtension", () => {
       logger: mockLogger(),
     });
 
-    expect(api.registerCommand).toHaveBeenCalledTimes(3);
-    expect(api.commands.has("tff:dashboard")).toBe(true);
-    expect(api.commands.has("tff:workflow-view")).toBe(true);
-    expect(api.commands.has("tff:execution-monitor")).toBe(true);
+    const names = dispatcher.getSubcommands().map((s) => s.name);
+    expect(names).toContain("dashboard");
+    expect(names).toContain("workflow-view");
+    expect(names).toContain("execution-monitor");
   });
 
   it("shortcut and command for same overlay share toggle logic", async () => {
     const api = mockApi();
-    registerOverlayExtension(api, {
+    const dispatcher = new TffDispatcher();
+    registerOverlayExtension(dispatcher, api, {
       overlayDataPort: mockOverlayDataPort(),
       budgetTrackingPort: { getUsagePercent: vi.fn() } as unknown as BudgetTrackingPort,
       eventBus: { publish: vi.fn(), subscribe: vi.fn() } as unknown as EventBusPort,
@@ -123,16 +126,16 @@ describe("registerOverlayExtension", () => {
       logger: mockLogger(),
     });
 
-    // Both the shortcut and the command for dashboard should exist
+    // Both the shortcut and the dispatcher subcommand for dashboard should exist
     const shortcutHandler = api.shortcuts.get("ctrl+alt+d")?.handler;
-    const commandHandler = api.commands.get("tff:dashboard")?.handler;
+    const commandEntry = dispatcher.getSubcommands().find((s) => s.name === "dashboard");
     expect(shortcutHandler).toBeDefined();
-    expect(commandHandler).toBeDefined();
+    expect(commandEntry).toBeDefined();
   });
 
   it("toggle is no-op when ctx.hasUI is false", async () => {
     const api = mockApi();
-    registerOverlayExtension(api, {
+    registerOverlayExtension(new TffDispatcher(), api, {
       overlayDataPort: mockOverlayDataPort(),
       budgetTrackingPort: { getUsagePercent: vi.fn() } as unknown as BudgetTrackingPort,
       eventBus: { publish: vi.fn(), subscribe: vi.fn() } as unknown as EventBusPort,
@@ -163,7 +166,8 @@ describe("registerOverlayExtension", () => {
       },
     );
 
-    registerOverlayExtension(api, {
+    const dispatcher = new TffDispatcher();
+    registerOverlayExtension(dispatcher, api, {
       overlayDataPort: mockOverlayDataPort(),
       budgetTrackingPort: { getUsagePercent: vi.fn() } as unknown as BudgetTrackingPort,
       eventBus: { publish: vi.fn(), subscribe: vi.fn() } as unknown as EventBusPort,
@@ -174,8 +178,8 @@ describe("registerOverlayExtension", () => {
 
     // First shortcut failed → warning logged
     expect(logger.warn).toHaveBeenCalledTimes(1);
-    // Commands still registered regardless
-    expect(api.registerCommand).toHaveBeenCalledTimes(3);
+    // Subcommands still registered via dispatcher regardless
+    expect(dispatcher.getSubcommands()).toHaveLength(3);
   });
 
   it("uses custom hotkey values from config", () => {
@@ -186,7 +190,7 @@ describe("registerOverlayExtension", () => {
       executionMonitor: "ctrl+e",
     };
 
-    registerOverlayExtension(api, {
+    registerOverlayExtension(new TffDispatcher(), api, {
       overlayDataPort: mockOverlayDataPort(),
       budgetTrackingPort: { getUsagePercent: vi.fn() } as unknown as BudgetTrackingPort,
       eventBus: { publish: vi.fn(), subscribe: vi.fn() } as unknown as EventBusPort,
@@ -204,7 +208,7 @@ describe("registerOverlayExtension", () => {
     const api = mockApi();
     const eventBus = mockEventBus();
 
-    registerOverlayExtension(api, {
+    registerOverlayExtension(new TffDispatcher(), api, {
       overlayDataPort: mockOverlayDataPort(),
       budgetTrackingPort: { getUsagePercent: vi.fn() } as unknown as BudgetTrackingPort,
       eventBus,
@@ -234,7 +238,7 @@ describe("registerOverlayExtension", () => {
     const api = mockApi();
     const eventBus = mockEventBus();
 
-    registerOverlayExtension(api, {
+    registerOverlayExtension(new TffDispatcher(), api, {
       overlayDataPort: mockOverlayDataPort(),
       budgetTrackingPort: { getUsagePercent: vi.fn() } as unknown as BudgetTrackingPort,
       eventBus,
@@ -251,9 +255,10 @@ describe("registerOverlayExtension", () => {
     }
   });
 
-  it("workflow and execution monitor still register commands and shortcuts", () => {
+  it("workflow and execution monitor still register subcommands and shortcuts", () => {
     const api = mockApi();
-    registerOverlayExtension(api, {
+    const dispatcher = new TffDispatcher();
+    registerOverlayExtension(dispatcher, api, {
       overlayDataPort: mockOverlayDataPort(),
       budgetTrackingPort: { getUsagePercent: vi.fn() } as unknown as BudgetTrackingPort,
       eventBus: { publish: vi.fn(), subscribe: vi.fn() } as unknown as EventBusPort,
@@ -262,8 +267,9 @@ describe("registerOverlayExtension", () => {
       logger: mockLogger(),
     });
 
-    expect(api.commands.has("tff:workflow-view")).toBe(true);
-    expect(api.commands.has("tff:execution-monitor")).toBe(true);
+    const names = dispatcher.getSubcommands().map((s) => s.name);
+    expect(names).toContain("workflow-view");
+    expect(names).toContain("execution-monitor");
     expect(api.shortcuts.has(DEFAULT_HOTKEYS.workflow)).toBe(true);
     expect(api.shortcuts.has(DEFAULT_HOTKEYS.executionMonitor)).toBe(true);
   });

@@ -12,20 +12,29 @@ import {
 export class NodeArtifactFileAdapter extends ArtifactFilePort {
   private readonly projectRoot: string;
   private readonly basePath: string;
+  private readonly resolveActiveTffDir?: (sliceId?: string) => Promise<string>;
 
-  constructor(projectRoot: string) {
+  constructor(projectRoot: string, resolveActiveTffDir?: (sliceId?: string) => Promise<string>) {
     super();
     this.projectRoot = resolve(projectRoot);
     this.basePath = resolve(projectRoot, ".tff", "milestones");
+    this.resolveActiveTffDir = resolveActiveTffDir;
   }
 
-  private resolvePath(
+  private async resolvePath(
     milestoneLabel: string | null,
     sliceLabel: string,
     artifactType: ArtifactType,
     kind: SliceKind = "milestone",
-  ): string {
-    const tffRoot = resolve(this.projectRoot, ".tff");
+    sliceId?: string,
+  ): Promise<string> {
+    // Resolve the .tff root — worktree if available, else project root
+    let tffRoot: string;
+    if (sliceId && this.resolveActiveTffDir) {
+      tffRoot = await this.resolveActiveTffDir(sliceId);
+    } else {
+      tffRoot = resolve(this.projectRoot, ".tff");
+    }
 
     if (kind === "quick") {
       const target = resolve(tffRoot, "quick", sliceLabel, ARTIFACT_FILENAMES[artifactType]);
@@ -46,14 +55,15 @@ export class NodeArtifactFileAdapter extends ArtifactFilePort {
     if (milestoneLabel === null) {
       throw new FileIOError("milestoneLabel is required for milestone kind");
     }
+    const milestonesBase = resolve(tffRoot, "milestones");
     const target = resolve(
-      this.basePath,
+      milestonesBase,
       milestoneLabel,
       "slices",
       sliceLabel,
       ARTIFACT_FILENAMES[artifactType],
     );
-    if (!target.startsWith(this.basePath)) {
+    if (!target.startsWith(milestonesBase)) {
       throw new FileIOError("Path traversal detected: resolved path escapes base directory");
     }
     return target;
@@ -65,8 +75,9 @@ export class NodeArtifactFileAdapter extends ArtifactFilePort {
     artifactType: ArtifactType,
     content: string,
     kind?: SliceKind,
+    sliceId?: string,
   ): Promise<Result<string, FileIOError>> {
-    const path = this.resolvePath(milestoneLabel, sliceLabel, artifactType, kind);
+    const path = await this.resolvePath(milestoneLabel, sliceLabel, artifactType, kind, sliceId);
     try {
       await mkdir(dirname(path), { recursive: true });
       await writeFile(path, content, "utf-8");
@@ -81,8 +92,9 @@ export class NodeArtifactFileAdapter extends ArtifactFilePort {
     sliceLabel: string,
     artifactType: ArtifactType,
     kind?: SliceKind,
+    sliceId?: string,
   ): Promise<Result<string | null, FileIOError>> {
-    const path = this.resolvePath(milestoneLabel, sliceLabel, artifactType, kind);
+    const path = await this.resolvePath(milestoneLabel, sliceLabel, artifactType, kind, sliceId);
     try {
       const content = await readFile(path, "utf-8");
       return ok(content);

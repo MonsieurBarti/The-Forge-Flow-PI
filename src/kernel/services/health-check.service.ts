@@ -1,4 +1,4 @@
-import { appendFileSync, existsSync, readFileSync, unlinkSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { JournalRepositoryPort } from "@hexagons/execution/domain/ports/journal-repository.port";
 import type { SliceRepositoryPort } from "@hexagons/slice";
@@ -55,7 +55,10 @@ export class HealthCheckService {
 
   async ensureGitignore(): Promise<Result<string | null, Error>> {
     const gitignorePath = join(this.deps.projectRoot, ".gitignore");
-    if (!existsSync(gitignorePath)) return ok(null);
+    if (!existsSync(gitignorePath)) {
+      writeFileSync(gitignorePath, ".tff/\n.tff.backup.*\n");
+      return ok(".gitignore: created with .tff/ and .tff.backup.*");
+    }
 
     const content = readFileSync(gitignorePath, "utf-8");
     const lines = content.split("\n");
@@ -157,8 +160,12 @@ export class HealthCheckService {
       }
     }
 
+    // Worktrees are created at the start of the discussing phase (via StartDiscussUseCase).
+    // Only warn for slices that should definitely have worktrees — executing and beyond.
+    const worktreeRequiredStatuses = new Set(["executing", "verifying", "reviewing"]);
+
     for (const slice of activeSlices) {
-      if (!worktreeSliceIds.has(slice.id)) {
+      if (!worktreeSliceIds.has(slice.id) && worktreeRequiredStatuses.has(slice.status)) {
         warnings.push(`Active slice ${slice.label} (${slice.id}) has no worktree`);
       }
     }

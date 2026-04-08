@@ -8,7 +8,7 @@ function validProps(overrides?: Partial<ContextPackageProps>): ContextPackagePro
     phase: "executing",
     sliceId: faker.string.uuid(),
     skills: [{ name: "test-driven-development", type: "rigid" }],
-    agentType: "fixer",
+    agentType: "tff-fixer",
     modelProfile: "balanced",
     filePaths: ["src/foo.ts"],
     taskPrompt: "Implement the feature",
@@ -24,7 +24,7 @@ describe("ContextPackage", () => {
       expect(pkg.phase).toBe("executing");
       expect(pkg.sliceId).toBe(props.sliceId);
       expect(pkg.skills).toEqual([{ name: "test-driven-development", type: "rigid" }]);
-      expect(pkg.agentType).toBe("fixer");
+      expect(pkg.agentType).toBe("tff-fixer");
       expect(pkg.modelProfile).toBe("balanced");
       expect(pkg.filePaths).toEqual(["src/foo.ts"]);
       expect(pkg.taskPrompt).toBe("Implement the feature");

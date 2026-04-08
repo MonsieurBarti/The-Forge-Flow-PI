@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ok, type Result } from "@kernel";
@@ -15,7 +16,15 @@ import type {
   VerificationUIResponse,
 } from "../../../domain/schemas/review-ui.schemas";
 
-const CHANGE_MARKERS = ["[DELETION]", "[REPLACEMENT]", "[INSERTION]"];
+const PLANNOTATOR_REQUEST_CHANNEL = "plannotator:request";
+const PLANNOTATOR_REVIEW_RESULT_CHANNEL = "plannotator:review-result";
+const ACK_TIMEOUT_MS = 10_000;
+
+/** Narrow interface for the PI event bus — avoids importing PI types into infrastructure */
+export interface PlannotatorEventEmitter {
+  emit(channel: string, data: unknown): void;
+  on(channel: string, handler: (data: unknown) => void): () => void;
+}
 
 // Promisify execFile for non-blocking subprocess
 function execFileAsync(cmd: string, args: string[]): Promise<string> {
@@ -28,7 +37,10 @@ function execFileAsync(cmd: string, args: string[]): Promise<string> {
 }
 
 export class PlannotatorReviewUIAdapter extends ReviewUIPort {
-  constructor(private readonly plannotatorPath: string) {
+  constructor(
+    private readonly plannotatorPath: string,
+    private readonly events: PlannotatorEventEmitter,
+  ) {
     super();
   }
 
@@ -66,24 +78,99 @@ export class PlannotatorReviewUIAdapter extends ReviewUIPort {
     ctx: ApprovalUIContext,
   ): Promise<Result<ApprovalUIResponse, ReviewUIError>> {
     try {
-      const feedback = await this.runAnnotateFile(ctx.artifactPath);
-      const hasChanges = CHANGE_MARKERS.some((m) => feedback.includes(m));
-      const decision = hasChanges ? "changes_requested" : "approved";
+      const planContent = await readFile(ctx.artifactPath, "utf-8");
+
+      // 1. Emit plan-review request, get reviewId
+      const ack = await this.emitPlanReview({
+        planContent,
+        planFilePath: ctx.artifactPath,
+        origin: "tff",
+      });
+
+      if (ack.status !== "handled" || ack.result?.status !== "pending") {
+        // Plannotator unavailable or error — fall back to annotate
+        return this.presentForApprovalViaAnnotate(ctx);
+      }
+
+      // 2. Wait for user's review decision
+      const reviewResult = await this.awaitReviewCompletion(ack.result.reviewId);
+
+      const decision = reviewResult.approved ? "approved" : "changes_requested";
       return ok({
         decision,
-        feedback: hasChanges ? feedback : undefined,
-        formattedOutput: feedback || "[no feedback]",
+        feedback: reviewResult.feedback,
+        formattedOutput:
+          reviewResult.feedback || (reviewResult.approved ? "[approved]" : "[changes requested]"),
       });
     } catch {
-      return ok({
-        decision: "changes_requested",
-        feedback: "Plannotator parse error — please review manually",
-        formattedOutput: "[plannotator error — changes requested for safety]",
-      });
+      // Timeout or communication error — fall back to annotate
+      try {
+        return await this.presentForApprovalViaAnnotate(ctx);
+      } catch {
+        return ok({
+          decision: "changes_requested",
+          feedback: "Plannotator review failed — please review manually",
+          formattedOutput: "[plannotator error — changes requested for safety]",
+        });
+      }
     }
   }
 
-  // Write temp markdown, run plannotator annotate, return stdout, cleanup
+  // ── Fallback: annotate-based approval (used when plan-review is unavailable) ──
+
+  private async presentForApprovalViaAnnotate(
+    ctx: ApprovalUIContext,
+  ): Promise<Result<ApprovalUIResponse, ReviewUIError>> {
+    const feedback = await this.runAnnotateFile(ctx.artifactPath);
+    const CHANGE_MARKERS = ["[DELETION]", "[REPLACEMENT]", "[INSERTION]"];
+    const hasChanges = CHANGE_MARKERS.some((m) => feedback.includes(m));
+    const decision = hasChanges ? "changes_requested" : "approved";
+    return ok({
+      decision,
+      feedback: hasChanges ? feedback : undefined,
+      formattedOutput: feedback || "[no feedback]",
+    });
+  }
+
+  // ── Event-based plan-review helpers ──
+
+  private emitPlanReview(payload: {
+    planContent: string;
+    planFilePath?: string;
+    origin?: string;
+  }): Promise<{ status: string; result?: { status: string; reviewId: string } }> {
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(
+        () => reject(new Error("plannotator:request acknowledgment timeout")),
+        ACK_TIMEOUT_MS,
+      );
+      this.events.emit(PLANNOTATOR_REQUEST_CHANNEL, {
+        requestId: randomUUID(),
+        action: "plan-review",
+        payload,
+        respond: (response: { status: string; result?: { status: string; reviewId: string } }) => {
+          clearTimeout(timeout);
+          resolve(response);
+        },
+      });
+    });
+  }
+
+  private awaitReviewCompletion(
+    reviewId: string,
+  ): Promise<{ approved: boolean; feedback?: string }> {
+    return new Promise((resolve) => {
+      const unsubscribe = this.events.on(PLANNOTATOR_REVIEW_RESULT_CHANNEL, (data: unknown) => {
+        const result = data as { reviewId: string; approved: boolean; feedback?: string };
+        if (result.reviewId !== reviewId) return;
+        unsubscribe();
+        resolve({ approved: result.approved, feedback: result.feedback });
+      });
+    });
+  }
+
+  // ── CLI subprocess helpers (for annotate-based methods) ──
+
   private async runAnnotate(markdownContent: string): Promise<string> {
     const tmpDir = await mkdtemp(join(tmpdir(), "tff-review-ui-"));
     const tmpFile = join(tmpDir, "review.md");
@@ -95,7 +182,6 @@ export class PlannotatorReviewUIAdapter extends ReviewUIPort {
     }
   }
 
-  // Run plannotator annotate on existing file, return stdout (non-blocking)
   private runAnnotateFile(filePath: string): Promise<string> {
     return execFileAsync(this.plannotatorPath, ["annotate", filePath]);
   }

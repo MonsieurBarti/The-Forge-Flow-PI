@@ -24,13 +24,14 @@ describe("createTffExtension", () => {
     rmSync(projectRoot, { recursive: true, force: true });
   });
 
-  it("registers tff:new and tff:status commands", () => {
+  it("registers single tff command via dispatcher", () => {
     const { api, fns } = createMockExtensionAPI();
     createTffExtension(api, { projectRoot });
 
     const commandNames = fns.registerCommand.mock.calls.map((call: unknown[]) => call[0]);
-    expect(commandNames).toContain("tff:new");
-    expect(commandNames).toContain("tff:status");
+    expect(commandNames).toContain("tff");
+    // Individual commands are now subcommands of "tff", not separate top-level commands
+    expect(commandNames).toHaveLength(1);
   });
 
   it("registers tff_init_project and tff_status tools", () => {
@@ -43,26 +44,6 @@ describe("createTffExtension", () => {
     });
     expect(toolNames).toContain("tff_init_project");
     expect(toolNames).toContain("tff_status");
-  });
-
-  it("registers tff:health, tff:progress, tff:settings, tff:help commands", () => {
-    const { api, fns } = createMockExtensionAPI();
-    createTffExtension(api, { projectRoot });
-
-    const commandNames = fns.registerCommand.mock.calls.map((call: unknown[]) => call[0]);
-    expect(commandNames).toContain("tff:health");
-    expect(commandNames).toContain("tff:progress");
-    expect(commandNames).toContain("tff:settings");
-    expect(commandNames).toContain("tff:help");
-  });
-
-  it("registers tff:quick and tff:debug commands", () => {
-    const { api, fns } = createMockExtensionAPI();
-    createTffExtension(api, { projectRoot });
-
-    const commandNames = fns.registerCommand.mock.calls.map((call: unknown[]) => call[0]);
-    expect(commandNames).toContain("tff:quick");
-    expect(commandNames).toContain("tff:debug");
   });
 
   it("registers tff_health_check, tff_progress, tff_read_settings, tff_update_setting, tff_quick_start tools", () => {

@@ -27,6 +27,7 @@ export const ExecutionResultSchema = z.object({
   totalWaves: z.number().int().nonnegative(),
   status: z.enum(["completed", "failed", "paused"]),
   failureReason: z.string().optional(),
+  taskErrors: z.record(z.string(), z.string()).optional(),
 });
 export type ExecutionResult = z.infer<typeof ExecutionResultSchema>;
 

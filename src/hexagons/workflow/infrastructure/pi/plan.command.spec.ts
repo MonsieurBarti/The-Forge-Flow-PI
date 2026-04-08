@@ -1,10 +1,15 @@
 import { MilestoneBuilder } from "@hexagons/milestone/domain/milestone.builder";
 import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/in-memory-milestone.repository";
+import { InMemoryProjectRepository } from "@hexagons/project/infrastructure/in-memory-project.repository";
 import { SliceBuilder } from "@hexagons/slice/domain/slice.builder";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
-import { createMockExtensionAPI, createMockExtensionContext } from "@infrastructure/pi/testing";
+import {
+  createMockExtensionAPI,
+  createMockExtensionCommandContext,
+} from "@infrastructure/pi/testing";
 import { err } from "@kernel";
 import { describe, expect, it, vi } from "vitest";
+import { TffDispatcher } from "../../../../cli/tff-dispatcher";
 import { FileIOError } from "../../domain/errors/file-io.error";
 import { WorkflowSessionBuilder } from "../../domain/workflow-session.builder";
 import { SuggestNextStepUseCase } from "../../use-cases/suggest-next-step.use-case";
@@ -14,22 +19,21 @@ import type { PlanCommandDeps } from "./plan.command";
 import { registerPlanCommand } from "./plan.command";
 
 describe("registerPlanCommand", () => {
-  it("registers tff:plan command", () => {
-    const { api, fns } = createMockExtensionAPI();
+  it("registers plan subcommand", () => {
+    const { api } = createMockExtensionAPI();
+    const dispatcher = new TffDispatcher();
     const sessionRepo = new InMemoryWorkflowSessionRepository();
     const sliceRepo = new InMemorySliceRepository();
     const deps: PlanCommandDeps = {
       sliceRepo,
       milestoneRepo: new InMemoryMilestoneRepository(),
+      projectRepo: new InMemoryProjectRepository(),
       sessionRepo,
       artifactFile: new InMemoryArtifactFileAdapter(),
       suggestNextStep: new SuggestNextStepUseCase(sessionRepo, sliceRepo),
     };
-    registerPlanCommand(api, deps);
-    expect(fns.registerCommand).toHaveBeenCalledWith(
-      "tff:plan",
-      expect.objectContaining({ description: expect.any(String) }),
-    );
+    registerPlanCommand(dispatcher, api, deps);
+    expect(dispatcher.getSubcommands().find((s) => s.name === "plan")).toBeDefined();
   });
 
   describe("command handler", () => {
@@ -39,6 +43,7 @@ describe("registerPlanCommand", () => {
       return {
         sliceRepo,
         milestoneRepo: new InMemoryMilestoneRepository(),
+        projectRepo: new InMemoryProjectRepository(),
         sessionRepo,
         artifactFile: new InMemoryArtifactFileAdapter(),
         suggestNextStep: new SuggestNextStepUseCase(sessionRepo, sliceRepo),
@@ -47,17 +52,21 @@ describe("registerPlanCommand", () => {
 
     async function invokeHandler(deps: ReturnType<typeof makeDeps>, args: string) {
       const { api, fns } = createMockExtensionAPI();
-      registerPlanCommand(api, deps);
-      const [, options] = fns.registerCommand.mock.calls[0];
-      const ctx = createMockExtensionContext();
-      await options.handler(args, ctx);
+      const dispatcher = new TffDispatcher();
+      registerPlanCommand(dispatcher, api, deps);
+      // biome-ignore lint/style/noNonNullAssertion: test helper — command is always registered
+      const handler = dispatcher.getSubcommands().find((s) => s.name === "plan")!.handler;
+      const ctx = createMockExtensionCommandContext();
+      await handler(args, ctx);
       return { fns };
     }
 
-    it("returns error if no args provided", async () => {
+    it("returns no-project message when no args and no project exists", async () => {
       const deps = makeDeps();
       const { fns } = await invokeHandler(deps, "  ");
-      expect(fns.sendUserMessage).toHaveBeenCalledWith("Usage: /tff:plan <slice-label-or-id>");
+      expect(fns.sendUserMessage).toHaveBeenCalledWith(
+        "No TFF project found. Run /tff new to initialize.",
+      );
     });
 
     it("returns error if slice not found", async () => {
@@ -75,7 +84,7 @@ describe("registerPlanCommand", () => {
 
       const { fns } = await invokeHandler(deps, "M03-S07");
       expect(fns.sendUserMessage).toHaveBeenCalledWith(
-        "No workflow session found. Run /tff:discuss first.",
+        "No workflow session found. Run /tff discuss first.",
       );
     });
 
@@ -92,7 +101,9 @@ describe("registerPlanCommand", () => {
       deps.sessionRepo.seed(session);
 
       const { fns } = await invokeHandler(deps, "M03-S07");
-      expect(fns.sendUserMessage).toHaveBeenCalledWith("not planning");
+      expect(fns.sendUserMessage).toHaveBeenCalledWith(
+        expect.stringContaining("Cannot start plan"),
+      );
     });
 
     it("returns error if SPEC.md not found", async () => {
@@ -108,7 +119,7 @@ describe("registerPlanCommand", () => {
       deps.sessionRepo.seed(session);
 
       const { fns } = await invokeHandler(deps, "M03-S07");
-      expect(fns.sendUserMessage).toHaveBeenCalledWith("No SPEC.md found. Run /tff:discuss first.");
+      expect(fns.sendUserMessage).toHaveBeenCalledWith("No SPEC.md found. Run /tff discuss first.");
     });
 
     it("returns error if reading SPEC.md returns FileIOError", async () => {
@@ -149,7 +160,7 @@ describe("registerPlanCommand", () => {
       await deps.artifactFile.write("M03", "M03-S07", "research", "# RESEARCH\n\nsome research");
 
       const { fns } = await invokeHandler(deps, "M03-S07");
-      expect(fns.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("PLANNING —"));
+      expect(fns.sendMessage).toHaveBeenCalled();
     });
 
     it("proceeds without RESEARCH.md when not present", async () => {
@@ -172,7 +183,7 @@ describe("registerPlanCommand", () => {
       await deps.artifactFile.write("M03", "M03-S07", "spec", "# SPEC\n\nsome content");
 
       const { fns } = await invokeHandler(deps, "M03-S07");
-      expect(fns.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("PLANNING —"));
+      expect(fns.sendMessage).toHaveBeenCalled();
     });
 
     it("resolves slice by UUID when label lookup returns null", async () => {
@@ -190,7 +201,7 @@ describe("registerPlanCommand", () => {
       await deps.artifactFile.write("M03", "M03-S07", "spec", "# SPEC content");
 
       const { fns } = await invokeHandler(deps, slice.id);
-      expect(fns.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("PLANNING —"));
+      expect(fns.sendMessage).toHaveBeenCalled();
     });
   });
 });

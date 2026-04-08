@@ -6,7 +6,7 @@ import { AgentDispatchConfigSchema } from "../schemas/agent-dispatch.schema";
 export class AgentDispatchConfigBuilder {
   private _taskId: string = faker.string.uuid();
   private _sliceId: string = faker.string.uuid();
-  private _agentType: AgentType = "fixer";
+  private _agentType: AgentType = "tff-fixer";
   private _workingDirectory = "/tmp/test-workspace";
   private _systemPrompt: string = faker.lorem.paragraph();
   private _taskPrompt: string = faker.lorem.paragraph();

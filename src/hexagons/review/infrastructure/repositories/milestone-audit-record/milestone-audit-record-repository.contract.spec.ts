@@ -28,8 +28,8 @@ function createRecord(
     milestoneId,
     milestoneLabel: "M07",
     auditReports: [
-      { agentType: "spec-reviewer", verdict, findings, summary: "Test" },
-      { agentType: "security-auditor", verdict: "PASS", findings: [], summary: "OK" },
+      { agentType: "tff-spec-reviewer", verdict, findings, summary: "Test" },
+      { agentType: "tff-security-auditor", verdict: "PASS", findings: [], summary: "OK" },
     ],
     now: overrides.auditedAt ?? new Date(),
   });

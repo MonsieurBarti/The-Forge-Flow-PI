@@ -1,4 +1,5 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@infrastructure/pi";
+import type { TffDispatcher } from "../../../../cli/tff-dispatcher";
 import type { AuditMilestoneUseCase } from "../../application/audit-milestone.use-case";
 import type { AuditReportProps } from "../../domain/schemas/completion.schemas";
 
@@ -27,7 +28,7 @@ function formatAuditReport(
   lines.push("");
 
   for (const report of reports) {
-    const title = report.agentType === "spec-reviewer" ? "Intent Audit" : "Security Audit";
+    const title = report.agentType === "tff-spec-reviewer" ? "Intent Audit" : "Security Audit";
     lines.push(`### ${title}`);
     lines.push(`**Verdict:** ${report.verdict} | **Findings:** ${report.findings.length}`);
     lines.push("");
@@ -45,19 +46,21 @@ function formatAuditReport(
   }
 
   if (allPassed) {
-    lines.push("All clear. `/tff:complete-milestone` can proceed.");
+    lines.push("All clear. `/tff complete-milestone` can proceed.");
   } else {
-    lines.push("Address all findings, then re-run `/tff:audit-milestone`.");
+    lines.push("Address all findings, then re-run `/tff audit-milestone`.");
   }
 
   return lines.join("\n");
 }
 
 export function registerAuditMilestoneCommand(
+  dispatcher: TffDispatcher,
   api: ExtensionAPI,
   deps: AuditMilestoneCommandDeps,
 ): void {
-  api.registerCommand("tff:audit-milestone", {
+  dispatcher.register({
+    name: "audit-milestone",
     description: "Run milestone audit (required before completion)",
     handler: async (_args: string, _ctx: ExtensionCommandContext) => {
       const milestone = await deps.resolveActiveMilestone();

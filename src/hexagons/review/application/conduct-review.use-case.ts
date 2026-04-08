@@ -33,9 +33,9 @@ import { MergedReview } from "../domain/value-objects/merged-review.vo";
 import type { ReviewPromptBuilder } from "./review-prompt-builder";
 
 const REVIEWER_ROLES: readonly ReviewRole[] = [
-  "code-reviewer",
-  "spec-reviewer",
-  "security-auditor",
+  "tff-code-reviewer",
+  "tff-spec-reviewer",
+  "tff-security-auditor",
 ] as const;
 
 interface DispatchOutcome {

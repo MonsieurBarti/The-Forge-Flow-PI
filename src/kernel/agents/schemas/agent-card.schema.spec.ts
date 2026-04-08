@@ -8,11 +8,11 @@ import {
 
 describe("AgentTypeSchema", () => {
   it("accepts valid agent types", () => {
-    expect(AgentTypeSchema.parse("spec-reviewer")).toBe("spec-reviewer");
-    expect(AgentTypeSchema.parse("code-reviewer")).toBe("code-reviewer");
-    expect(AgentTypeSchema.parse("security-auditor")).toBe("security-auditor");
-    expect(AgentTypeSchema.parse("fixer")).toBe("fixer");
-    expect(AgentTypeSchema.parse("executor")).toBe("executor");
+    expect(AgentTypeSchema.parse("tff-spec-reviewer")).toBe("tff-spec-reviewer");
+    expect(AgentTypeSchema.parse("tff-code-reviewer")).toBe("tff-code-reviewer");
+    expect(AgentTypeSchema.parse("tff-security-auditor")).toBe("tff-security-auditor");
+    expect(AgentTypeSchema.parse("tff-fixer")).toBe("tff-fixer");
+    expect(AgentTypeSchema.parse("tff-executor")).toBe("tff-executor");
   });
 
   it("rejects unknown agent type", () => {
@@ -35,7 +35,7 @@ describe("AgentCapabilitySchema", () => {
 describe("AgentCardSchema", () => {
   it("parses a valid agent card", () => {
     const card = AgentCardSchema.parse({
-      type: "code-reviewer",
+      type: "tff-code-reviewer",
       displayName: "Code Reviewer",
       description: "Reviews code for correctness, patterns, and security",
       identity: "You are a senior code reviewer.",
@@ -47,14 +47,14 @@ describe("AgentCardSchema", () => {
       skills: [{ name: "ctr", prompt: "prompts/ctr.md", strategy: "critique-then-reflection" }],
       requiredTools: ["Read", "Glob", "Grep"],
     });
-    expect(card.type).toBe("code-reviewer");
+    expect(card.type).toBe("tff-code-reviewer");
     expect(card.optionalTools).toEqual([]);
   });
 
   it("rejects card with empty capabilities", () => {
     expect(() =>
       AgentCardSchema.parse({
-        type: "code-reviewer",
+        type: "tff-code-reviewer",
         displayName: "Code Reviewer",
         description: "Reviews code",
         identity: "You are a senior code reviewer.",
@@ -72,7 +72,7 @@ describe("AgentCardSchema", () => {
   it("rejects card with invalid model profile", () => {
     expect(() =>
       AgentCardSchema.parse({
-        type: "code-reviewer",
+        type: "tff-code-reviewer",
         displayName: "Code Reviewer",
         description: "Reviews code",
         identity: "You are a senior code reviewer.",
@@ -111,7 +111,7 @@ describe("AgentSkillSchema", () => {
 
 describe("AgentCardSchema (extended)", () => {
   const validCard = {
-    type: "code-reviewer",
+    type: "tff-code-reviewer",
     displayName: "Code Reviewer",
     description: "Reviews code",
     identity: "You are a senior code reviewer.",
@@ -126,7 +126,7 @@ describe("AgentCardSchema (extended)", () => {
 
   it("parses a fully populated card", () => {
     const card = AgentCardSchema.parse(validCard);
-    expect(card.type).toBe("code-reviewer");
+    expect(card.type).toBe("tff-code-reviewer");
     expect(card.identity).toBe("You are a senior code reviewer.");
     expect(card.purpose).toBe("Review code changes for quality");
     expect(card.scope).toBe("slice");

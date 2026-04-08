@@ -1,6 +1,7 @@
 import type { ComplexityTier } from "@hexagons/slice";
 import type { ExtensionAPI } from "@infrastructure/pi";
 import { isErr } from "@kernel";
+import type { TffDispatcher } from "../../../../cli/tff-dispatcher";
 import type { QuickStartUseCase } from "../../use-cases/quick-start.use-case";
 
 export interface DebugCommandDeps {
@@ -59,16 +60,20 @@ function buildDebugProtocolMessage(
   ].join("\n");
 }
 
-export function registerDebugCommand(api: ExtensionAPI, deps: DebugCommandDeps): void {
-  api.registerCommand("tff:debug", {
+export function registerDebugCommand(
+  dispatcher: TffDispatcher,
+  api: ExtensionAPI,
+  deps: DebugCommandDeps,
+): void {
+  dispatcher.register({
+    name: "debug",
     description: "Open a debugging slice with systematic-debugging skill",
     handler: async (args: string, ctx) => {
-      if (ctx?.newSession) await ctx.newSession();
       await deps.withGuard?.();
 
       const { title, complexity } = parseDebugArgs(args);
       if (!title) {
-        api.sendUserMessage("Usage: /tff:debug <bug description> [--complexity S|F-lite|F-full]");
+        api.sendUserMessage("Usage: /tff debug <bug description> [--complexity S|F-lite|F-full]");
         return;
       }
 

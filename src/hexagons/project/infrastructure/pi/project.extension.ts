@@ -3,6 +3,7 @@ import type { ExtensionAPI } from "@infrastructure/pi";
 import { createZodTool } from "@infrastructure/pi";
 import type { DateProviderPort, EventBusPort } from "@kernel";
 import type { GitHookPort } from "@kernel/ports/git-hook.port";
+import type { TffDispatcher } from "../../../../cli/tff-dispatcher";
 import type { ProjectFileSystemPort } from "../../domain/ports/project-filesystem.port";
 import type { ProjectRepositoryPort } from "../../domain/ports/project-repository.port";
 import { InitProjectParamsSchema, InitProjectUseCase } from "../../use-cases/init-project.use-case";
@@ -17,16 +18,22 @@ export interface ProjectExtensionDeps {
   gitHookPort?: GitHookPort;
   discoverStack?: DiscoverStackUseCase;
   withGuard?: () => Promise<void>;
+  /** Called after init creates .tff/ — triggers lazy DB initialization. */
+  onBeforeProjectSave?: () => void;
+  loadPrompt: (path: string) => string;
 }
 
-export function registerProjectExtension(api: ExtensionAPI, deps: ProjectExtensionDeps): void {
-  api.registerCommand("tff:new", {
+export function registerProjectExtension(
+  dispatcher: TffDispatcher,
+  api: ExtensionAPI,
+  deps: ProjectExtensionDeps,
+): void {
+  dispatcher.register({
+    name: "new",
     description: "Initialize a new TFF project in the current directory",
     handler: async (_args, _ctx) => {
-      await deps.withGuard?.();
-      api.sendUserMessage(
-        "I'll initialize a TFF project. Please provide a project name and vision, then I'll call the tff_init_project tool.",
-      );
+      // No withGuard here — this command creates the project, so there's nothing to guard yet.
+      api.sendUserMessage(deps.loadPrompt("prompts/new-project-workflow.md"));
     },
   });
 
@@ -35,7 +42,7 @@ export function registerProjectExtension(api: ExtensionAPI, deps: ProjectExtensi
       name: "tff_init_project",
       label: "Initialize TFF Project",
       description:
-        "Create .tff/ directory structure, PROJECT.md, settings.yaml, and Project aggregate",
+        "Initialize a new The Forge Flow (TFF) project — creates .tff/ directory structure, PROJECT.md, settings.yaml, and Project aggregate. Artifacts (specs, plans, research) are Markdown files, not YAML.",
       schema: InitProjectParamsSchema,
       execute: async (params) => {
         const useCase = new InitProjectUseCase(
@@ -46,6 +53,7 @@ export function registerProjectExtension(api: ExtensionAPI, deps: ProjectExtensi
           deps.dateProvider,
           deps.gitHookPort,
           deps.discoverStack,
+          deps.onBeforeProjectSave,
         );
         const result = await useCase.execute(params);
         if (!result.ok) {
@@ -58,7 +66,7 @@ export function registerProjectExtension(api: ExtensionAPI, deps: ProjectExtensi
           content: [
             {
               type: "text",
-              text: `Project "${params.name}" initialized at ${params.projectRoot}/.tff/`,
+              text: `Project "${params.name}" initialized at ${params.projectRoot}/.tff/\n\nNext step: run /tff new-milestone to create your first milestone.`,
             },
           ],
           details: undefined,

@@ -42,8 +42,12 @@ describe("TerminalReviewUIAdapter", () => {
             lineStart: 12,
             description: "severity mismatch",
             reviewerVerdicts: [
-              { reviewId: "r1", role: "code-reviewer" as const, severity: "medium" as const },
-              { reviewId: "r2", role: "security-auditor" as const, severity: "critical" as const },
+              { reviewId: "r1", role: "tff-code-reviewer" as const, severity: "medium" as const },
+              {
+                reviewId: "r2",
+                role: "tff-security-auditor" as const,
+                severity: "critical" as const,
+              },
             ],
           },
         ],

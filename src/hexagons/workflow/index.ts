@@ -38,6 +38,7 @@ export { FileIOError } from "./domain/errors/file-io.error";
 export { GuardRejectedError } from "./domain/errors/guard-rejected.error";
 export { NoMatchingTransitionError } from "./domain/errors/no-matching-transition.error";
 export { NoSliceAssignedError } from "./domain/errors/no-slice-assigned.error";
+export { PhaseValidationError } from "./domain/errors/phase-validation.error";
 export { SliceAlreadyAssignedError } from "./domain/errors/slice-already-assigned.error";
 export { WorkflowBaseError } from "./domain/errors/workflow-base.error";
 // Domain — Escalation

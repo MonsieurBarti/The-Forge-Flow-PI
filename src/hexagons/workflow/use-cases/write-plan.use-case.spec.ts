@@ -1,4 +1,5 @@
 import { SliceRepositoryPort } from "@hexagons/slice/domain/ports/slice-repository.port";
+import { Slice } from "@hexagons/slice/domain/slice.aggregate";
 import { SliceBuilder } from "@hexagons/slice/domain/slice.builder";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
 import { CyclicDependencyError } from "@hexagons/task/domain/errors/cyclic-dependency.error";
@@ -46,7 +47,9 @@ describe("WritePlanUseCase", () => {
   it("should write PLAN.md, create tasks, and update slice planPath", async () => {
     const { useCase, sliceRepo } = setup();
     const sliceId = crypto.randomUUID();
-    const slice = new SliceBuilder().withId(sliceId).build();
+    const slice = Slice.reconstitute(
+      new SliceBuilder().withId(sliceId).withStatus("planning").buildProps(),
+    );
     sliceRepo.seed(slice);
 
     const result = await useCase.execute(makeInput(sliceId));
@@ -67,7 +70,9 @@ describe("WritePlanUseCase", () => {
   it("should return FileIOError when artifact write fails", async () => {
     const { sliceRepo, dateProvider } = setup();
     const sliceId = crypto.randomUUID();
-    const slice = new SliceBuilder().withId(sliceId).build();
+    const slice = Slice.reconstitute(
+      new SliceBuilder().withId(sliceId).withStatus("planning").buildProps(),
+    );
     sliceRepo.seed(slice);
 
     const failingAdapter = Object.assign(Object.create(ArtifactFilePort.prototype), {
@@ -98,7 +103,9 @@ describe("WritePlanUseCase", () => {
   it("should return PersistenceError when repo save fails", async () => {
     const { artifactFile, dateProvider } = setup();
     const sliceId = crypto.randomUUID();
-    const slice = new SliceBuilder().withId(sliceId).build();
+    const slice = Slice.reconstitute(
+      new SliceBuilder().withId(sliceId).withStatus("planning").buildProps(),
+    );
 
     const failingRepo = Object.assign(Object.create(SliceRepositoryPort.prototype), {
       findById: async () => ok(slice),
@@ -122,7 +129,9 @@ describe("WritePlanUseCase", () => {
   it("should return CyclicDependencyError when tasks have cycles", async () => {
     const { sliceRepo, artifactFile, dateProvider } = setup();
     const sliceId = crypto.randomUUID();
-    const slice = new SliceBuilder().withId(sliceId).build();
+    const slice = Slice.reconstitute(
+      new SliceBuilder().withId(sliceId).withStatus("planning").buildProps(),
+    );
     sliceRepo.seed(slice);
 
     const cyclePort = Object.assign(Object.create(CreateTasksPort.prototype), {

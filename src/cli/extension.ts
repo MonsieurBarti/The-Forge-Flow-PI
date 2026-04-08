@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { ExecuteSliceUseCase } from "@hexagons/execution/application/execute-slice.use-case";
 import { GetSliceExecutorsUseCase } from "@hexagons/execution/application/get-slice-executors.use-case";
 import { ReplayJournalUseCase } from "@hexagons/execution/application/replay-journal.use-case";
@@ -31,7 +31,9 @@ import { TimeoutStrategy } from "@hexagons/execution/infrastructure/policies/tim
 import { MarkdownCheckpointRepository } from "@hexagons/execution/infrastructure/repositories/checkpoint/markdown-checkpoint.repository";
 import { JsonlJournalRepository } from "@hexagons/execution/infrastructure/repositories/journal/jsonl-journal.repository";
 import { JsonlMetricsRepository } from "@hexagons/execution/infrastructure/repositories/metrics/jsonl-metrics.repository";
+import { registerMilestoneExtension } from "@hexagons/milestone/infrastructure/pi/milestone.extension";
 import { SqliteMilestoneRepository } from "@hexagons/milestone/infrastructure/sqlite-milestone.repository";
+import { CreateMilestoneUseCase } from "@hexagons/milestone/use-cases/create-milestone.use-case";
 import { registerProjectExtension } from "@hexagons/project";
 import { NodeProjectFileSystemAdapter } from "@hexagons/project/infrastructure/node-project-filesystem.adapter";
 import { SqliteProjectRepository } from "@hexagons/project/infrastructure/sqlite-project.repository";
@@ -99,10 +101,12 @@ import { registerMapCodebaseCommand } from "@hexagons/workflow/infrastructure/pi
 import { createMapCodebaseTool } from "@hexagons/workflow/infrastructure/pi/map-codebase.tool";
 import { registerProgressCommand } from "@hexagons/workflow/infrastructure/pi/progress.command";
 import { createProgressTool } from "@hexagons/workflow/infrastructure/pi/progress.tool";
+import { registerRepairBranchesCommand } from "@hexagons/workflow/infrastructure/pi/repair-branches.command";
 import { registerSettingsCommand } from "@hexagons/workflow/infrastructure/pi/settings.command";
 import { createReadSettingsTool } from "@hexagons/workflow/infrastructure/pi/settings-read.tool";
 import { createUpdateSettingTool } from "@hexagons/workflow/infrastructure/pi/settings-update.tool";
 import { PiDocWriterAdapter } from "@hexagons/workflow/infrastructure/pi-doc-writer.adapter";
+// import { SuggestNextStepUseCase } from "@hexagons/workflow/use-cases/suggest-next-step.use-case";
 import type { ExtensionAPI, ExtensionCommandContext } from "@infrastructure/pi";
 import type { Result } from "@kernel";
 import {
@@ -141,10 +145,14 @@ import { StateExporter } from "@kernel/services/state-exporter";
 import { StateGuard } from "@kernel/services/state-guard";
 import { StateImporter } from "@kernel/services/state-importer";
 import type { KnownProvider } from "@mariozechner/pi-ai";
-import { getModels, getProviders } from "@mariozechner/pi-ai";
-import Database from "better-sqlite3";
+import { getModels } from "@mariozechner/pi-ai";
+import { AuthStorage, ModelRegistry } from "@mariozechner/pi-coding-agent";
+// Auto-mode disabled — will be reimplemented in a future milestone
+// import { registerAutoMode } from "./auto-mode";
 import { OverlayDataAdapter } from "./infrastructure/overlay-data.adapter";
+import { createLazyDatabase } from "./lazy-database";
 import { registerOverlayExtension } from "./overlay.extension";
+import { TffDispatcher } from "./tff-dispatcher";
 
 /**
  * Resolve model ID from PI's registry by name.
@@ -164,15 +172,6 @@ function resolveModelFromRegistry(provider: KnownProvider, name: string): string
   return alias?.id ?? partials[partials.length - 1].id;
 }
 
-/**
- * Return PI's default model ID for the given provider.
- * Uses the first model in PI's registry for that provider.
- */
-function piDefaultModelId(provider: KnownProvider): string {
-  const models = getModels(provider);
-  return models[0]?.id ?? "unknown";
-}
-
 function detectPlannotator(): string | undefined {
   try {
     return execFileSync("which", ["plannotator"], { encoding: "utf-8" }).trim() || undefined;
@@ -181,10 +180,21 @@ function detectPlannotator(): string | undefined {
   }
 }
 
-function resolveResourceRoot(projectRoot: string): string {
-  const distResources = join(projectRoot, "dist", "resources");
+function resolveResourceRoot(packageRoot: string): string {
+  const distResources = join(packageRoot, "dist", "resources");
   if (existsSync(distResources)) return distResources;
-  return join(projectRoot, "src", "resources");
+  return join(packageRoot, "src", "resources");
+}
+
+function resolvePackageRoot(): string {
+  // Walk up from this file (dist/cli/ or src/cli/) to find the package root
+  const thisDir = new URL(".", import.meta.url).pathname;
+  let dir = thisDir;
+  while (dir !== dirname(dir)) {
+    if (existsSync(join(dir, "package.json"))) return dir;
+    dir = dirname(dir);
+  }
+  return thisDir;
 }
 
 export interface TffExtensionOptions {
@@ -192,8 +202,11 @@ export interface TffExtensionOptions {
 }
 
 export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptions): void {
+  const dispatcher = new TffDispatcher();
+
   // --- Resource resolution (dist/resources/ for production, src/resources/ for dev) ---
-  const resourceRoot = resolveResourceRoot(options.projectRoot);
+  const packageRoot = resolvePackageRoot();
+  const resourceRoot = resolveResourceRoot(packageRoot);
 
   // --- Shared infrastructure ---
   const logger = new ConsoleLoggerAdapter();
@@ -217,7 +230,8 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
 
   // --- tffDir resolution ---
   const rootTffDir = join(options.projectRoot, ".tff");
-  mkdirSync(rootTffDir, { recursive: true });
+  // Note: .tff/ is NOT created eagerly — tff_init_project creates it.
+  // The lazy database defers DB creation until .tff/ exists.
   const worktreeAdapter = new GitWorktreeAdapter(gitPort, options.projectRoot);
   const resolveActiveTffDir = async (sliceId?: string): Promise<string> => {
     if (sliceId && (await worktreeAdapter.exists(sliceId))) {
@@ -226,8 +240,8 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     return rootTffDir;
   };
 
-  // --- Shared SQLite database for core entities ---
-  const stateDb = new Database(join(rootTffDir, "state.db"));
+  // --- Shared SQLite database for core entities (lazy — created on first use) ---
+  const stateDb = createLazyDatabase(join(rootTffDir, "state.db"));
 
   // --- Repositories (SQLite-backed) ---
   const projectRepo = new SqliteProjectRepository(stateDb);
@@ -239,13 +253,13 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const gitHookAdapter = new GitHookAdapter(join(options.projectRoot, ".git"));
 
   const sliceTransitionPort = new WorkflowSliceTransitionAdapter(sliceRepo, dateProvider);
-  const artifactFile = new NodeArtifactFileAdapter(options.projectRoot);
+  const artifactFile = new NodeArtifactFileAdapter(options.projectRoot, resolveActiveTffDir);
   const workflowSessionRepo = new SqliteWorkflowSessionRepository(stateDb);
-  const autonomyModeProvider = { getAutonomyMode: () => "plan-to-pr" as const };
+  const autonomyModeProvider = { getAutonomyMode: () => "guided" as const };
 
   const plannotatorPath = detectPlannotator();
   const reviewUI = plannotatorPath
-    ? new PlannotatorReviewUIAdapter(plannotatorPath)
+    ? new PlannotatorReviewUIAdapter(plannotatorPath, api.events)
     : new TerminalReviewUIAdapter();
 
   // --- Shared: modelResolver + templateLoader (needed by execution & review) ---
@@ -263,42 +277,52 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   });
   const modelProfiles = settingsForModel.ok ? settingsForModel.data.modelRouting.profiles : null;
 
-  const providers = getProviders();
-  const defaultProvider = providers[0];
-  if (!defaultProvider) {
-    throw new Error("No PI providers available. Ensure at least one provider is configured.");
+  // Resolve the default model from PI's model registry (respects configured API keys)
+  const authStorage = AuthStorage.create();
+  const modelRegistry = ModelRegistry.create(authStorage);
+  const availableModels = modelRegistry.getAvailable();
+  const piDefaultModel = availableModels[0];
+  if (!piDefaultModel) {
+    throw new Error("No PI models available. Ensure at least one provider has a valid API key.");
   }
+  const defaultProvider = piDefaultModel.provider as string;
+  const defaultModelId = piDefaultModel.id;
+
   const modelResolver = (profileName: string): ResolvedModel => {
-    const provider = defaultProvider;
     const profile =
       profileName === "quality" || profileName === "balanced" || profileName === "budget"
         ? modelProfiles?.[profileName]
         : undefined;
     const modelName = profile?.model;
 
-    if (!modelName) {
-      // No profile configured — use PI's default model for the provider
-      return { provider, modelId: piDefaultModelId(provider) };
+    if (!modelName || modelName === "default") {
+      return { provider: defaultProvider, modelId: defaultModelId };
     }
 
-    const resolved = resolveModelFromRegistry(provider, modelName);
-    return { provider, modelId: resolved ?? piDefaultModelId(provider) };
+    // Search available models (have valid API keys) by exact then substring match
+    const exact = availableModels.find((m) => m.id === modelName);
+    if (exact) return { provider: exact.provider as string, modelId: exact.id };
+    const partial = availableModels.find((m) => m.id.includes(modelName));
+    if (partial) return { provider: partial.provider as string, modelId: partial.id };
+
+    // Fall back to static registry search on default provider
+    const resolved = resolveModelFromRegistry(defaultProvider as KnownProvider, modelName);
+    if (resolved) return { provider: defaultProvider, modelId: resolved };
+
+    return { provider: defaultProvider, modelId: defaultModelId };
   };
 
   // --- Execution extension ---
   const journalRepo = new JsonlJournalRepository(join(rootTffDir, "journal"));
-  const checkpointRepo = new MarkdownCheckpointRepository(options.projectRoot, async (sliceId) => {
-    if (await worktreeAdapter.exists(sliceId)) {
-      return { ok: true as const, data: join(".tff", "worktrees", sliceId) };
-    }
-    return err(new PersistenceError(`No worktree for slice: ${sliceId}`));
-  });
+  // Resolve checkpoint/session path inside the worktree's .tff/ dir (gitignored)
+  // so CHECKPOINT.md doesn't appear as an untracked file in the worktree
   const resolveSlicePath = async (sliceId: string): Promise<Result<string, PersistenceError>> => {
     if (await worktreeAdapter.exists(sliceId)) {
-      return { ok: true as const, data: join(".tff", "worktrees", sliceId) };
+      return { ok: true as const, data: join(".tff", "worktrees", sliceId, ".tff") };
     }
     return err(new PersistenceError(`No worktree for slice: ${sliceId}`));
   };
+  const checkpointRepo = new MarkdownCheckpointRepository(options.projectRoot, resolveSlicePath);
   const sessionRepo = new MarkdownExecutionSessionAdapter(options.projectRoot, resolveSlicePath);
   const replayJournal = new ReplayJournalUseCase(journalRepo);
 
@@ -335,6 +359,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const executeProtocol = readFileSync(join(resourceRoot, "protocols/execute.md"), "utf-8");
 
   const executeSlice = new ExecuteSliceUseCase({
+    sliceRepo,
     taskRepository: taskRepo,
     waveDetection: new DetectWavesUseCase(),
     checkpointRepository: checkpointRepo,
@@ -368,6 +393,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const rollbackUseCase = new RollbackSliceUseCase(journalRepo, gitPort, phaseTransitionAdapter);
 
   registerExecutionExtension(
+    dispatcher,
     api,
     {
       sessionRepository: sessionRepo,
@@ -381,6 +407,9 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     },
     {
       rollback: { rollback: rollbackUseCase, checkpointRepo: checkpointRepo, sliceRepo },
+      worktreeAdapter,
+      modelResolver,
+      sliceRepo,
     },
   );
 
@@ -396,9 +425,17 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const freshReviewerService = new FreshReviewerService(executorQueryAdapter);
   const critiqueReflectionService = new CritiqueReflectionService();
   const reviewPromptBuilder = new ReviewPromptBuilder(templateLoader);
+  // Cache for resolving UUIDs to labels — populated by verify/review/ship commands
+  const sliceLabelCache = new Map<
+    string,
+    { milestoneLabel: string; sliceLabel: string; sliceTitle: string }
+  >();
   const beadSliceSpecAdapter = new BeadSliceSpecAdapter(
     (milestoneLabel, sliceLabel) => artifactFile.read(milestoneLabel, sliceLabel, "spec"),
     (sliceId) => {
+      // Check UUID cache first (populated by verify/review/ship commands)
+      const cached = sliceLabelCache.get(sliceId);
+      if (cached) return cached;
       // Bead IDs: "The-Forge-Flow-PI-4t7.X.Y" where X=milestone, Y=slice
       const match = sliceId.match(/\.(\d+)\.(\d+)$/);
       if (!match) {
@@ -429,11 +466,13 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     },
   );
   const gitChangedFilesAdapter = new GitChangedFilesAdapter(gitPort, (sliceId) => {
+    const cached = sliceLabelCache.get(sliceId);
+    if (cached) return `milestone/${cached.milestoneLabel}`;
     const match = sliceId.match(/\.(\d+)\.\d+$/);
     if (match) return `milestone/M${match[1].padStart(2, "0")}`;
     const labelMatch = sliceId.match(/M(\d+)/);
     if (labelMatch) return `milestone/M${labelMatch[1].padStart(2, "0")}`;
-    return "milestone/M05";
+    throw new Error(`Cannot resolve milestone branch for sliceId: ${sliceId}`);
   });
   const piFixerAdapter = new PiFixerAdapter(
     sharedAgentDispatch,
@@ -473,12 +512,13 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     logger,
     templateLoader,
   );
-  api.registerCommand("tff:verify", {
+  dispatcher.register({
+    name: "verify",
     description: "Verify acceptance criteria for the current slice",
     handler: async (args: string, _ctx: ExtensionCommandContext) => {
       const sliceLabel = args.trim();
       if (!sliceLabel) {
-        api.sendUserMessage("Usage: /tff:verify <slice-label>");
+        api.sendUserMessage("Usage: /tff verify <slice-label>");
         return;
       }
       const sliceResult = await sliceRepo.findByLabel(sliceLabel);
@@ -486,6 +526,12 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
         api.sendUserMessage(`Slice not found: ${sliceLabel}`);
         return;
       }
+      const mLabel = sliceResult.data.label.replace(/-S\d+$/, "");
+      sliceLabelCache.set(sliceResult.data.id, {
+        milestoneLabel: mLabel,
+        sliceLabel: sliceResult.data.label,
+        sliceTitle: sliceResult.data.title,
+      });
       const result = await verifyUseCase.execute({
         sliceId: sliceResult.data.id,
         workingDirectory: options.projectRoot,
@@ -498,6 +544,45 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
       }
       api.sendUserMessage(
         `Verification complete: ${result.data.finalVerdict} (${result.data.verifications.length} verification rounds)`,
+      );
+    },
+  });
+
+  dispatcher.register({
+    name: "review",
+    description:
+      "Run code review pipeline on the current slice (spec-reviewer + code-reviewer + security-auditor)",
+    handler: async (args: string, _ctx: ExtensionCommandContext) => {
+      const sliceLabel = args.trim();
+      if (!sliceLabel) {
+        api.sendUserMessage("Usage: /tff review <slice-label>");
+        return;
+      }
+      const sliceResult = await sliceRepo.findByLabel(sliceLabel);
+      if (!sliceResult.ok || !sliceResult.data) {
+        api.sendUserMessage(`Slice not found: ${sliceLabel}`);
+        return;
+      }
+      const mLabel = sliceResult.data.label.replace(/-S\d+$/, "");
+      sliceLabelCache.set(sliceResult.data.id, {
+        milestoneLabel: mLabel,
+        sliceLabel: sliceResult.data.label,
+        sliceTitle: sliceResult.data.title,
+      });
+      const result = await conductReviewUseCase.execute({
+        sliceId: sliceResult.data.id,
+        workingDirectory: options.projectRoot,
+        maxFixCycles: 2,
+        timeoutMs: 300_000,
+      });
+      if (!result.ok) {
+        api.sendUserMessage(`Review failed: ${result.error.message}`);
+        return;
+      }
+      const verdict = result.data.mergedReview.verdict;
+      const findingCount = result.data.mergedReview.findings.length;
+      api.sendUserMessage(
+        `Review complete: ${verdict} (${findingCount} findings). ${verdict === "approved" ? "Run /tff ship to create the PR." : "Address findings and re-run /tff review."}`,
       );
     },
   });
@@ -544,6 +629,8 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     milestoneRepo,
     sliceRepo,
     logger,
+    stateBranchOps,
+    gitPort,
   );
   stateBranchCreationHandler.register(eventBus);
 
@@ -565,12 +652,13 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     gitStateSyncAdapter,
     options.projectRoot,
   );
-  api.registerCommand("tff:ship", {
+  dispatcher.register({
+    name: "ship",
     description: "Ship the current slice — review, create PR, merge gate",
     handler: async (args: string, _ctx: ExtensionCommandContext) => {
       const sliceLabel = args.trim();
       if (!sliceLabel) {
-        api.sendUserMessage("Usage: /tff:ship <slice-label>");
+        api.sendUserMessage("Usage: /tff ship <slice-label>");
         return;
       }
       const sliceResult = await sliceRepo.findByLabel(sliceLabel);
@@ -579,6 +667,11 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
         return;
       }
       const milestoneLabel = sliceLabel.replace(/-S\d+$/, "");
+      sliceLabelCache.set(sliceResult.data.id, {
+        milestoneLabel,
+        sliceLabel: sliceResult.data.label,
+        sliceTitle: sliceResult.data.title,
+      });
       const result = await shipSliceUseCase.execute({
         sliceId: sliceResult.data.id,
         workingDirectory: options.projectRoot,
@@ -603,7 +696,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const milestoneTransitionAdapter = new MilestoneTransitionAdapter(milestoneRepo, dateProvider);
   const milestoneAuditRecordRepo = new SqliteMilestoneAuditRecordRepository(stateDb);
 
-  // --- Map codebase use case (shared with CompleteMilestone + /tff:map-codebase) ---
+  // --- Map codebase use case (shared with CompleteMilestone + /tff map-codebase) ---
   const docWriterAdapter = new PiDocWriterAdapter(
     new PiAgentDispatchAdapter({ agentEventPort: agentEventHub }),
     templateLoader,
@@ -627,7 +720,8 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     gitStateSyncAdapter,
     mapCodebaseUseCase,
   );
-  api.registerCommand("tff:complete-milestone", {
+  dispatcher.register({
+    name: "complete-milestone",
     description: "Complete the active milestone — audit, create PR, merge gate",
     handler: async (_args: string, _ctx: ExtensionCommandContext) => {
       const project = await projectRepo.findSingleton();
@@ -722,7 +816,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
 
   // --- Hexagon extensions (registered after withGuard is available) ---
   const settingsFileAdapter = new FsSettingsFileAdapter();
-  registerProjectExtension(api, {
+  registerProjectExtension(dispatcher, api, {
     projectRoot: options.projectRoot,
     projectRepo,
     projectFs: new NodeProjectFileSystemAdapter(),
@@ -732,6 +826,20 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     gitHookPort: gitHookAdapter,
     discoverStack: new DiscoverStackUseCase(settingsFileAdapter),
     withGuard,
+    onBeforeProjectSave: () => (stateDb as ReturnType<typeof createLazyDatabase>).ensureReady(),
+    loadPrompt: templateLoader,
+  });
+
+  registerMilestoneExtension(dispatcher, api, {
+    createMilestone: new CreateMilestoneUseCase(
+      projectRepo,
+      milestoneRepo,
+      eventBus,
+      dateProvider,
+      options.projectRoot,
+    ),
+    reviewUI,
+    loadPrompt: templateLoader,
   });
 
   const settingsResolver = new SettingsModelProfileResolver(new MergeSettingsUseCase());
@@ -742,7 +850,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     join(rootTffDir, "workflow-journal.jsonl"),
   );
 
-  registerWorkflowExtension(api, {
+  registerWorkflowExtension(dispatcher, api, {
     projectRepo,
     milestoneRepo,
     sliceRepo,
@@ -764,10 +872,15 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     failurePolicies: settingsForModel.ok
       ? settingsForModel.data.workflow.failurePolicies
       : undefined,
+    loadPrompt: templateLoader,
+    worktreePort: worktreeAdapter,
+    stateSyncPort: gitStateSyncAdapter,
   });
 
+  // --- Auto-mode disabled — will be reimplemented in a future milestone ---
+
   // --- Health command + tool ---
-  registerHealthCommand(api, { healthCheck: healthCheckService, tffDir: rootTffDir });
+  registerHealthCommand(dispatcher, api, { healthCheck: healthCheckService, tffDir: rootTffDir });
   api.registerTool(createHealthCheckTool({ healthCheck: healthCheckService, tffDir: rootTffDir }));
 
   // --- Progress command + tool ---
@@ -777,7 +890,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     sliceRepo,
     taskRepo,
   );
-  registerProgressCommand(api, { getStatus: getStatusForProgress, tffDir: rootTffDir });
+  registerProgressCommand(dispatcher, api, { getStatus: getStatusForProgress, tffDir: rootTffDir });
   api.registerTool(createProgressTool({ getStatus: getStatusForProgress }));
 
   // --- Settings command + tools ---
@@ -787,7 +900,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   );
   const mergeSettingsForSettings = new MergeSettingsUseCase();
   const formatCascade = new FormatSettingsCascadeService();
-  registerSettingsCommand(api, {
+  registerSettingsCommand(dispatcher, api, {
     loadSettings,
     mergeSettings: mergeSettingsForSettings,
     formatCascade,
@@ -803,11 +916,17 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   );
   api.registerTool(createUpdateSettingTool({ projectRoot: options.projectRoot }));
 
-  // --- Help command ---
-  registerHelpCommand(api);
+  // --- Help + repair commands ---
+  registerHelpCommand(dispatcher, api);
+  registerRepairBranchesCommand(dispatcher, api, {
+    projectRepo,
+    milestoneRepo,
+    projectRoot: options.projectRoot,
+  });
 
-  // --- /tff:sync command ---
-  api.registerCommand("tff:sync", {
+  // --- /tff sync command ---
+  dispatcher.register({
+    name: "sync",
     description: "Force-push or force-pull state to/from state branch",
     handler: async (args: string, _ctx: ExtensionCommandContext) => {
       const guardResult = await stateGuard.ensure(rootTffDir);
@@ -835,7 +954,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   });
 
   // --- S09: Slice management commands ---
-  const addSliceUseCase = new AddSliceUseCase(sliceRepo, milestoneRepo, dateProvider);
+  const addSliceUseCase = new AddSliceUseCase(sliceRepo, milestoneRepo, dateProvider, eventBus);
   const removeSliceUseCase = new RemoveSliceUseCase(
     sliceRepo,
     worktreeAdapter,
@@ -845,7 +964,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     rootTffDir,
   );
 
-  registerAddSliceCommand(api, {
+  registerAddSliceCommand(dispatcher, api, {
     addSlice: addSliceUseCase,
     activeMilestoneId: async () => {
       const project = await projectRepo.findSingleton();
@@ -856,9 +975,9 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
       return active?.id ?? null;
     },
   });
-  api.registerTool(createAddSliceTool({ addSlice: addSliceUseCase }));
+  api.registerTool(createAddSliceTool({ addSlice: addSliceUseCase, tffDir: rootTffDir }));
 
-  registerRemoveSliceCommand(api, { removeSlice: removeSliceUseCase });
+  registerRemoveSliceCommand(dispatcher, api, { removeSlice: removeSliceUseCase });
   api.registerTool(createRemoveSliceTool({ removeSlice: removeSliceUseCase }));
 
   // --- S09: Audit milestone ---
@@ -876,7 +995,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     dateProvider,
     () => crypto.randomUUID(),
   );
-  registerAuditMilestoneCommand(api, {
+  registerAuditMilestoneCommand(dispatcher, api, {
     auditMilestone: auditMilestoneUseCase,
     resolveActiveMilestone: async () => {
       const project = await projectRepo.findSingleton();
@@ -897,7 +1016,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   api.registerTool(createAuditMilestoneTool({ auditMilestone: auditMilestoneUseCase }));
 
   // --- S09: Map codebase ---
-  registerMapCodebaseCommand(api, {
+  registerMapCodebaseCommand(dispatcher, api, {
     mapCodebase: mapCodebaseUseCase,
     tffDir: rootTffDir,
     workingDirectory: options.projectRoot,
@@ -917,7 +1036,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
   const hotkeys = settingsResult.ok ? settingsResult.data.hotkeys : HOTKEYS_DEFAULTS;
 
   const budgetTrackingPort = new LoggingBudgetAdapter(logger);
-  registerOverlayExtension(api, {
+  registerOverlayExtension(dispatcher, api, {
     overlayDataPort: overlayDataAdapter,
     budgetTrackingPort,
     eventBus,
@@ -925,4 +1044,31 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     hotkeys,
     logger,
   });
+
+  // --- Global merge guardrail — block git merge/push in ALL bash calls ---
+  const BLOCKED_GIT_PATTERNS = [
+    {
+      regex: /\bgit\s+merge\b/,
+      reason: "git merge is blocked — use /tff ship to create a PR instead",
+    },
+    { regex: /\bgit\s+push\b/, reason: "git push is blocked — use /tff ship to push via PR" },
+    {
+      regex: /\bgit\s+checkout\s+(main|master)\b/,
+      reason: "git checkout main/master is blocked — stay on the slice branch",
+    },
+  ];
+
+  api.on("tool_call", (event) => {
+    if (event.toolName !== "bash") return;
+    const command = (event as { input?: { command?: string } }).input?.command ?? "";
+    for (const { regex, reason } of BLOCKED_GIT_PATTERNS) {
+      if (regex.test(command)) {
+        return { block: true, reason };
+      }
+    }
+    return undefined;
+  });
+
+  // --- Mount the single /tff dispatcher command ---
+  dispatcher.mount(api);
 }

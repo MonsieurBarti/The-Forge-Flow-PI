@@ -285,7 +285,7 @@ function buildUseCase(overrides: BuildUseCaseOverrides = {}): VerifyAcceptanceCr
       ok(
         new AgentResultBuilder()
           .withTaskId(randomUUID())
-          .withAgentType("verifier")
+          .withAgentType("tff-verifier")
           .withOutput(makePassingOutput())
           .build(),
       ),
@@ -318,7 +318,7 @@ describe("VerifyAcceptanceCriteriaUseCase", () => {
         ok(
           new AgentResultBuilder()
             .withTaskId(randomUUID())
-            .withAgentType("verifier")
+            .withAgentType("tff-verifier")
             .withOutput(makePassingOutput())
             .build(),
         ),
@@ -450,7 +450,7 @@ describe("VerifyAcceptanceCriteriaUseCase", () => {
         ok(
           new AgentResultBuilder()
             .withTaskId(randomUUID())
-            .withAgentType("verifier")
+            .withAgentType("tff-verifier")
             .withOutput(makePassingOutput())
             .build(),
         ),
@@ -511,7 +511,7 @@ describe("VerifyAcceptanceCriteriaUseCase", () => {
         ok(
           new AgentResultBuilder()
             .withTaskId(randomUUID())
-            .withAgentType("verifier")
+            .withAgentType("tff-verifier")
             .withOutput("not valid json at all")
             .build(),
         ),
@@ -544,7 +544,7 @@ describe("VerifyAcceptanceCriteriaUseCase", () => {
         ok(
           new AgentResultBuilder()
             .withTaskId(randomUUID())
-            .withAgentType("verifier")
+            .withAgentType("tff-verifier")
             .withOutput("[]")
             .build(),
         ),
@@ -578,7 +578,7 @@ describe("VerifyAcceptanceCriteriaUseCase", () => {
         ok(
           new AgentResultBuilder()
             .withTaskId(randomUUID())
-            .withAgentType("verifier")
+            .withAgentType("tff-verifier")
             .withOutput(makeFailingOutput())
             .build(),
         ),
@@ -586,7 +586,7 @@ describe("VerifyAcceptanceCriteriaUseCase", () => {
         ok(
           new AgentResultBuilder()
             .withTaskId(randomUUID())
-            .withAgentType("verifier")
+            .withAgentType("tff-verifier")
             .withOutput(makePassingOutput())
             .build(),
         ),
@@ -628,7 +628,7 @@ describe("VerifyAcceptanceCriteriaUseCase", () => {
         ok(
           new AgentResultBuilder()
             .withTaskId(randomUUID())
-            .withAgentType("verifier")
+            .withAgentType("tff-verifier")
             .withOutput(makeFailingOutput())
             .build(),
         ),
@@ -636,7 +636,7 @@ describe("VerifyAcceptanceCriteriaUseCase", () => {
         ok(
           new AgentResultBuilder()
             .withTaskId(randomUUID())
-            .withAgentType("verifier")
+            .withAgentType("tff-verifier")
             .withOutput(makeFailingOutput())
             .build(),
         ),
@@ -644,7 +644,7 @@ describe("VerifyAcceptanceCriteriaUseCase", () => {
         ok(
           new AgentResultBuilder()
             .withTaskId(randomUUID())
-            .withAgentType("verifier")
+            .withAgentType("tff-verifier")
             .withOutput(makeFailingOutput())
             .build(),
         ),
@@ -682,7 +682,7 @@ describe("VerifyAcceptanceCriteriaUseCase", () => {
         ok(
           new AgentResultBuilder()
             .withTaskId(randomUUID())
-            .withAgentType("verifier")
+            .withAgentType("tff-verifier")
             .withOutput(makeFailingOutput())
             .build(),
         ),
@@ -720,7 +720,7 @@ describe("VerifyAcceptanceCriteriaUseCase", () => {
         ok(
           new AgentResultBuilder()
             .withTaskId(randomUUID())
-            .withAgentType("verifier")
+            .withAgentType("tff-verifier")
             .withOutput(makePassingOutput())
             .build(),
         ),
@@ -740,7 +740,7 @@ describe("VerifyAcceptanceCriteriaUseCase", () => {
 
       expect(dispatch.dispatchedConfigs).toHaveLength(1);
       const config = dispatch.dispatchedConfigs[0];
-      expect(config.agentType).toBe("verifier");
+      expect(config.agentType).toBe("tff-verifier");
       expect(config.model).toEqual({ provider: "anthropic", modelId: "claude-sonnet-4-6" });
       expect(config.tools).toEqual(["Read", "Grep", "Glob", "Bash"]);
       expect(config.sliceId).toBe(SLICE_ID);

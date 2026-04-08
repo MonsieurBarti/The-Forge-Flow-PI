@@ -1,6 +1,10 @@
-import { createMockExtensionAPI, createMockExtensionContext } from "@infrastructure/pi/testing";
+import {
+  createMockExtensionAPI,
+  createMockExtensionCommandContext,
+} from "@infrastructure/pi/testing";
 import { err, ok } from "@kernel";
 import { describe, expect, it, vi } from "vitest";
+import { TffDispatcher } from "../../../../cli/tff-dispatcher";
 import type { QuickStartUseCase } from "../../use-cases/quick-start.use-case";
 import type { DebugCommandDeps } from "./debug.command";
 import { registerDebugCommand } from "./debug.command";
@@ -42,10 +46,12 @@ function makeDeps(overrides?: {
 
 async function invokeHandler(deps: DebugCommandDeps, args: string) {
   const { api, fns } = createMockExtensionAPI();
-  registerDebugCommand(api, deps);
-  const [, options] = fns.registerCommand.mock.calls[0];
-  const ctx = createMockExtensionContext();
-  await options.handler(args, ctx);
+  const dispatcher = new TffDispatcher();
+  registerDebugCommand(dispatcher, api, deps);
+  // biome-ignore lint/style/noNonNullAssertion: test helper — command is always registered
+  const handler = dispatcher.getSubcommands().find((s) => s.name === "debug")!.handler;
+  const ctx = createMockExtensionCommandContext();
+  await handler(args, ctx);
   return { fns };
 }
 

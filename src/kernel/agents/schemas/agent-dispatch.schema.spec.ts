@@ -23,7 +23,7 @@ describe("AgentDispatchConfigSchema", () => {
     const config = AgentDispatchConfigSchema.parse({
       taskId: faker.string.uuid(),
       sliceId: faker.string.uuid(),
-      agentType: "fixer",
+      agentType: "tff-fixer",
       workingDirectory: "/tmp/work",
       systemPrompt: "You are a backend developer.",
       taskPrompt: "Implement the feature.",
@@ -39,7 +39,7 @@ describe("AgentDispatchConfigSchema", () => {
       AgentDispatchConfigSchema.parse({
         taskId: faker.string.uuid(),
         sliceId: faker.string.uuid(),
-        agentType: "fixer",
+        agentType: "tff-fixer",
         workingDirectory: "/tmp/work",
         systemPrompt: "",
         taskPrompt: "Do it.",

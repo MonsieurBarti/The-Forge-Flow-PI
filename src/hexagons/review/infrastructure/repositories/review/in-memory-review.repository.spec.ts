@@ -32,8 +32,8 @@ describe("InMemoryReviewRepository", () => {
 
   it("findBySliceId returns all reviews for a slice (AC16)", async () => {
     const sliceId = faker.string.uuid();
-    const r1 = new ReviewBuilder().withSliceId(sliceId).withRole("code-reviewer").build();
-    const r2 = new ReviewBuilder().withSliceId(sliceId).withRole("security-auditor").build();
+    const r1 = new ReviewBuilder().withSliceId(sliceId).withRole("tff-code-reviewer").build();
+    const r2 = new ReviewBuilder().withSliceId(sliceId).withRole("tff-security-auditor").build();
     const r3 = new ReviewBuilder().withSliceId(faker.string.uuid()).build();
     await repo.save(r1);
     await repo.save(r2);

@@ -57,12 +57,18 @@ export class StartDiscussUseCase {
     if (isErr(sliceResult)) return sliceResult;
     if (!sliceResult.data) return err(new SliceNotFoundError(input.sliceId));
 
-    // 2. Workspace creation (if ports available)
+    // 2. Workspace creation (if ports available) — non-fatal, degrades gracefully
     if (this.worktreePort && this.stateSyncPort && this.milestoneRepo) {
       const sliceMilestoneId = sliceResult.data.milestoneId;
       if (sliceMilestoneId) {
         const wsResult = await this.createWorkspace(input, sliceMilestoneId);
-        if (isErr(wsResult)) return wsResult;
+        if (isErr(wsResult)) {
+          // Worktree creation failed — continue without isolation (graceful degradation)
+          // The slice will execute in the project root instead of a worktree
+          console.warn(
+            `[TFF] Worktree creation failed for slice ${input.sliceId}: ${wsResult.error.message}. Continuing without worktree isolation.`,
+          );
+        }
       }
     }
 
@@ -81,25 +87,29 @@ export class StartDiscussUseCase {
       });
     }
 
-    // 4. Assign slice
+    // 4. Assign slice (skip if already assigned to this slice — idempotent retry)
     const fromPhase = session.currentPhase;
-    const assignResult = session.assignSlice(input.sliceId);
-    if (isErr(assignResult)) return assignResult;
+    if (session.sliceId !== input.sliceId) {
+      const assignResult = session.assignSlice(input.sliceId);
+      if (isErr(assignResult)) return assignResult;
+    }
 
-    // 5. Trigger start transition
-    const triggerResult = session.trigger(
-      "start",
-      {
-        complexityTier: null,
-        retryCount: 0,
-        maxRetries: 2,
-        allSlicesClosed: false,
-        lastError: null,
-        failurePolicy: "strict",
-      },
-      now,
-    );
-    if (isErr(triggerResult)) return triggerResult;
+    // 5. Trigger start transition (skip if already discussing — idempotent retry)
+    if (session.currentPhase !== "discussing") {
+      const triggerResult = session.trigger(
+        "start",
+        {
+          complexityTier: null,
+          retryCount: 0,
+          maxRetries: 2,
+          allSlicesClosed: false,
+          lastError: null,
+          failurePolicy: "strict",
+        },
+        now,
+      );
+      if (isErr(triggerResult)) return triggerResult;
+    }
 
     // 6. Save session
     const saveResult = await this.sessionRepo.save(session);
@@ -140,19 +150,29 @@ export class StartDiscussUseCase {
     const sliceCodeBranch = `slice/${input.sliceId}`;
     const parentStateBranch = `tff-state/${baseBranch}`;
 
-    // 3a. Create worktree
-    const wtResult = await worktreePort.create(input.sliceId, baseBranch);
-    if (!wtResult.ok) return err(wtResult.error);
-
-    // 3b. Create state branch
-    const sbResult = await stateSyncPort.createStateBranch(sliceCodeBranch, parentStateBranch);
-    if (!sbResult.ok) {
-      // Rollback: delete worktree
-      await worktreePort.delete(input.sliceId);
-      return err(sbResult.error);
+    // 3a. Create worktree (skip if already exists — idempotent retry)
+    const worktreeExists = await worktreePort.exists(input.sliceId);
+    if (!worktreeExists) {
+      const wtResult = await worktreePort.create(input.sliceId, baseBranch);
+      if (!wtResult.ok) return err(wtResult.error);
     }
 
-    // 3c. Initialize workspace
+    // 3b. Create state branch (ignore "already exists" errors — idempotent retry)
+    const sbResult = await stateSyncPort.createStateBranch(sliceCodeBranch, parentStateBranch);
+    if (!sbResult.ok) {
+      const isAlreadyExists =
+        sbResult.error.message.includes("already exists") ||
+        sbResult.error.message.includes("already a branch");
+      if (!isAlreadyExists) {
+        if (!worktreeExists) await worktreePort.delete(input.sliceId);
+        return err(sbResult.error);
+      }
+    }
+
+    // 3c. Initialize workspace (skip if worktree already existed — already initialized)
+    if (worktreeExists) {
+      return ok(undefined);
+    }
     const now = this.dateProvider.now();
     const branchMeta = {
       version: 1,

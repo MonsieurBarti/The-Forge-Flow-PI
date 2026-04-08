@@ -32,7 +32,6 @@ checkNodeVersion(22);
 // --- Environment setup ---
 
 process.title = "tff";
-process.env.PI_PACKAGE_DIR = packageRoot;
 
 // --- Heavy bootstrap: delegate to PI SDK's main() ---
 

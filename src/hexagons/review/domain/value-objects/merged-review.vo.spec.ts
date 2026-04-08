@@ -83,7 +83,7 @@ describe("MergedReview", () => {
       const r2reconProps = {
         id: faker.string.uuid(),
         sliceId,
-        role: "code-reviewer" as const,
+        role: "tff-code-reviewer" as const,
         agentIdentity: "agent-2",
         verdict: "rejected" as const,
         findings: [],

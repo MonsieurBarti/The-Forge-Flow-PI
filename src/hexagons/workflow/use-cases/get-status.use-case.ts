@@ -21,6 +21,7 @@ export const StatusReportSchema = z.object({
     .nullable(),
   slices: z.array(
     z.object({
+      id: z.string(),
       label: z.string(),
       title: z.string(),
       status: SliceStatusSchema,
@@ -99,6 +100,7 @@ export class GetStatusUseCase {
       if (slice.status === "closed") completedSlices++;
 
       slices.push({
+        id: slice.id,
         label: slice.label,
         title: slice.title,
         status: slice.status,

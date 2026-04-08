@@ -3,7 +3,9 @@ import type { SliceRepositoryPort } from "@hexagons/slice/domain/ports/slice-rep
 import type { DomainEvent } from "@kernel/domain-event.base";
 import { EVENT_NAMES } from "@kernel/event-names";
 import type { EventBusPort } from "@kernel/ports/event-bus.port";
+import type { GitPort } from "@kernel/ports/git.port";
 import type { LoggerPort } from "@kernel/ports/logger.port";
+import type { StateBranchOpsPort } from "@kernel/ports/state-branch-ops.port";
 import type { StateSyncPort } from "@kernel/ports/state-sync.port";
 
 export class StateBranchCreationHandler {
@@ -12,11 +14,42 @@ export class StateBranchCreationHandler {
     private readonly milestoneRepo: MilestoneRepositoryPort,
     private readonly sliceRepo: SliceRepositoryPort,
     private readonly logger: LoggerPort,
+    private readonly stateBranchOps?: StateBranchOpsPort,
+    private readonly gitPort?: GitPort,
   ) {}
 
   register(eventBus: EventBusPort): void {
+    eventBus.subscribe(EVENT_NAMES.PROJECT_INITIALIZED, (event) =>
+      this.onProjectInitialized(event),
+    );
     eventBus.subscribe(EVENT_NAMES.MILESTONE_CREATED, (event) => this.onMilestoneCreated(event));
     eventBus.subscribe(EVENT_NAMES.SLICE_CREATED, (event) => this.onSliceCreated(event));
+  }
+
+  private async onProjectInitialized(_event: DomainEvent): Promise<void> {
+    if (!this.stateBranchOps) {
+      this.logger.warn(
+        "StateBranchCreationHandler: no stateBranchOps — cannot create tff-state/main",
+      );
+      return;
+    }
+
+    try {
+      // Initial commit is now handled by InitProjectUseCase directly
+      const existsResult = await this.stateBranchOps.branchExists("tff-state/main");
+      if (existsResult.ok && existsResult.data) return; // Already exists
+
+      const result = await this.stateBranchOps.createOrphan("tff-state/main");
+      if (!result.ok) {
+        this.logger.warn(
+          `StateBranchCreationHandler: failed to create tff-state/main: ${result.error.message}`,
+        );
+      }
+    } catch (e) {
+      this.logger.warn(
+        `StateBranchCreationHandler: error handling PROJECT_INITIALIZED: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
   }
 
   private async onMilestoneCreated(event: DomainEvent): Promise<void> {
@@ -29,6 +62,25 @@ export class StateBranchCreationHandler {
 
       const milestone = milestoneResult.data;
       const codeBranch = `milestone/${milestone.label}`;
+
+      // Create the code branch from current HEAD (needed for worktree creation later)
+      if (this.gitPort) {
+        const branchExists = await this.gitPort.branchExists(codeBranch);
+        if (!branchExists.ok || !branchExists.data) {
+          // Detect the actual default branch (could be main, master, etc.)
+          const currentBranchResult = await this.gitPort.currentBranch();
+          const baseBranch =
+            currentBranchResult.ok && currentBranchResult.data ? currentBranchResult.data : "HEAD";
+          const createResult = await this.gitPort.createBranch(codeBranch, baseBranch);
+          if (!createResult.ok) {
+            this.logger.warn(
+              `StateBranchCreationHandler: failed to create code branch ${codeBranch} from ${baseBranch}: ${createResult.error.message}`,
+            );
+          }
+        }
+      }
+
+      // Create the state branch
       const result = await this.stateSync.createStateBranch(codeBranch, "tff-state/main");
 
       if (!result.ok) {

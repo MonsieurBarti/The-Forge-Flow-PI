@@ -12,51 +12,51 @@ describe("NextStepSuggestion", () => {
       allSlicesClosed: false,
     };
 
-    it("idle (slices open) suggests /tff:discuss", () => {
+    it("idle (slices open) suggests /tff discuss", () => {
       const s = NextStepSuggestion.build(base);
       expect(s).not.toBeNull();
-      expect(s?.command).toBe("/tff:discuss");
-      expect(s?.displayText).toBe("Next: /tff:discuss");
+      expect(s?.command).toBe("/tff discuss");
+      expect(s?.displayText).toBe("Next: /tff discuss");
       expect(s?.autoInvoke).toBe(false);
       expect(s?.args).toBeUndefined();
     });
 
-    it("idle (all closed) suggests /tff:complete-milestone", () => {
+    it("idle (all closed) suggests /tff complete-milestone", () => {
       const s = NextStepSuggestion.build({ ...base, allSlicesClosed: true });
       expect(s).not.toBeNull();
-      expect(s?.command).toBe("/tff:complete-milestone");
-      expect(s?.displayText).toBe("Next: /tff:complete-milestone");
+      expect(s?.command).toBe("/tff complete-milestone");
+      expect(s?.displayText).toBe("Next: /tff complete-milestone");
       expect(s?.autoInvoke).toBe(false);
     });
 
-    it("discussing suggests /tff:research <label>", () => {
+    it("discussing suggests /tff research <label>", () => {
       const s = NextStepSuggestion.build({ ...base, phase: "discussing" });
-      expect(s?.command).toBe("/tff:research");
+      expect(s?.command).toBe("/tff research");
       expect(s?.args).toBe(label);
-      expect(s?.displayText).toBe(`Next: /tff:research ${label}`);
+      expect(s?.displayText).toBe(`Next: /tff research ${label}`);
       expect(s?.autoInvoke).toBe(false);
     });
 
-    it("discussing + S-tier suggests /tff:plan <label>", () => {
+    it("discussing + S-tier suggests /tff plan <label>", () => {
       const s = NextStepSuggestion.build({
         ...base,
         phase: "discussing",
         tier: "S",
       });
-      expect(s?.command).toBe("/tff:plan");
+      expect(s?.command).toBe("/tff plan");
       expect(s?.args).toBe(label);
-      expect(s?.displayText).toBe(`Next: /tff:plan ${label}`);
+      expect(s?.displayText).toBe(`Next: /tff plan ${label}`);
     });
 
-    it("discussing + tier undefined defaults to /tff:research", () => {
+    it("discussing + tier undefined defaults to /tff research", () => {
       const s = NextStepSuggestion.build({ ...base, phase: "discussing" });
-      expect(s?.command).toBe("/tff:research");
+      expect(s?.command).toBe("/tff research");
     });
 
-    it("researching suggests /tff:plan <label>", () => {
+    it("researching suggests /tff plan <label>", () => {
       const s = NextStepSuggestion.build({ ...base, phase: "researching" });
-      expect(s?.command).toBe("/tff:plan");
-      expect(s?.displayText).toBe(`Next: /tff:plan ${label}`);
+      expect(s?.command).toBe("/tff plan");
+      expect(s?.displayText).toBe(`Next: /tff plan ${label}`);
       expect(s?.autoInvoke).toBe(false);
     });
 
@@ -66,16 +66,16 @@ describe("NextStepSuggestion", () => {
       expect(s?.autoInvoke).toBe(false);
     });
 
-    it("executing suggests /tff:verify <label>", () => {
+    it("executing suggests /tff verify <label>", () => {
       const s = NextStepSuggestion.build({ ...base, phase: "executing" });
-      expect(s?.command).toBe("/tff:verify");
-      expect(s?.displayText).toBe(`Next: /tff:verify ${label}`);
+      expect(s?.command).toBe("/tff verify");
+      expect(s?.displayText).toBe(`Next: /tff verify ${label}`);
       expect(s?.autoInvoke).toBe(false);
     });
 
-    it("verifying suggests /tff:review <label>", () => {
+    it("verifying suggests /tff review <label>", () => {
       const s = NextStepSuggestion.build({ ...base, phase: "verifying" });
-      expect(s?.displayText).toBe(`Next: /tff:review ${label}`);
+      expect(s?.displayText).toBe(`Next: /tff review ${label}`);
       expect(s?.autoInvoke).toBe(false);
     });
 
@@ -105,8 +105,8 @@ describe("NextStepSuggestion", () => {
         phase: "paused",
         previousPhase: "executing",
       });
-      expect(s?.command).toBe("/tff:resume");
-      expect(s?.displayText).toBe(`Resume: /tff:resume ${label} (was: executing)`);
+      expect(s?.command).toBe("/tff resume");
+      expect(s?.displayText).toBe(`Resume: /tff resume ${label} (was: executing)`);
       expect(s?.autoInvoke).toBe(false);
     });
 
@@ -176,13 +176,13 @@ describe("NextStepSuggestion", () => {
       expect(NextStepSuggestion.build({ ...base, phase: "blocked" })?.autoInvoke).toBe(false);
     });
 
-    it("S-tier discussing still autoInvokes but targets /tff:plan", () => {
+    it("S-tier discussing still autoInvokes but targets /tff plan", () => {
       const s = NextStepSuggestion.build({
         ...base,
         phase: "discussing",
         tier: "S",
       });
-      expect(s?.command).toBe("/tff:plan");
+      expect(s?.command).toBe("/tff plan");
       expect(s?.autoInvoke).toBe(true);
     });
 

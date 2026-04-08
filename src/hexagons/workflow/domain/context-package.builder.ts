@@ -9,7 +9,7 @@ export class ContextPackageBuilder {
   private _sliceId: string = faker.string.uuid();
   private _taskId: string | undefined = undefined;
   private _skills: SkillReference[] = [{ name: "test-driven-development", type: "rigid" }];
-  private _agentType: AgentType = "fixer";
+  private _agentType: AgentType = "tff-fixer";
   private _modelProfile: ModelProfileName = "balanced";
   private _filePaths: string[] = ["src/example.ts"];
   private _taskPrompt: string = faker.lorem.sentence();

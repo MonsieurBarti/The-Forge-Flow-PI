@@ -1,6 +1,10 @@
-import { createMockExtensionAPI, createMockExtensionContext } from "@infrastructure/pi/testing";
+import {
+  createMockExtensionAPI,
+  createMockExtensionCommandContext,
+} from "@infrastructure/pi/testing";
 import { err, ok } from "@kernel";
 import { describe, expect, it, vi } from "vitest";
+import { TffDispatcher } from "../../../../cli/tff-dispatcher";
 import type { QuickStartOutput } from "../../use-cases/quick-start.use-case";
 import type { QuickCommandDeps } from "./quick.command";
 import { registerQuickCommand } from "./quick.command";
@@ -29,28 +33,28 @@ function makeDeps(overrides: Partial<QuickCommandDeps> = {}): QuickCommandDeps {
 
 async function invokeHandler(deps: QuickCommandDeps, args: string) {
   const { api, fns } = createMockExtensionAPI();
-  registerQuickCommand(api, deps);
-  const [, options] = fns.registerCommand.mock.calls[0];
-  const ctx = createMockExtensionContext();
-  await options.handler(args, ctx);
+  const dispatcher = new TffDispatcher();
+  registerQuickCommand(dispatcher, api, deps);
+  // biome-ignore lint/style/noNonNullAssertion: test helper — command is always registered
+  const handler = dispatcher.getSubcommands().find((s) => s.name === "quick")!.handler;
+  const ctx = createMockExtensionCommandContext();
+  await handler(args, ctx);
   return { fns };
 }
 
 describe("registerQuickCommand", () => {
-  it("registers tff:quick command", () => {
-    const { api, fns } = createMockExtensionAPI();
-    registerQuickCommand(api, makeDeps());
-    expect(fns.registerCommand).toHaveBeenCalledWith(
-      "tff:quick",
-      expect.objectContaining({ description: expect.any(String) }),
-    );
+  it("registers quick subcommand", () => {
+    const { api } = createMockExtensionAPI();
+    const dispatcher = new TffDispatcher();
+    registerQuickCommand(dispatcher, api, makeDeps());
+    expect(dispatcher.getSubcommands().find((s) => s.name === "quick")).toBeDefined();
   });
 
   it("shows usage when no title provided", async () => {
     const deps = makeDeps();
     const { fns } = await invokeHandler(deps, "  ");
     expect(fns.sendUserMessage).toHaveBeenCalledWith(
-      "Usage: /tff:quick <title> [--complexity S|F-lite|F-full]",
+      "Usage: /tff quick <title> [--complexity S|F-lite|F-full]",
     );
   });
 

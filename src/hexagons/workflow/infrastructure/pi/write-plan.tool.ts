@@ -9,7 +9,7 @@ import type { WritePlanUseCase } from "../../use-cases/write-plan.use-case";
 const WritePlanSchema = z.object({
   milestoneLabel: MilestoneLabelSchema.describe("Milestone label, e.g. M03"),
   sliceLabel: SliceLabelSchema.describe("Slice label, e.g. M03-S07"),
-  sliceId: IdSchema.describe("Slice UUID"),
+  sliceId: IdSchema.describe("Slice ID (from tff_status output)"),
   content: z.string().describe("Markdown plan content"),
   tasks: z
     .array(
@@ -29,7 +29,8 @@ export function createWritePlanTool(useCase: WritePlanUseCase, reviewUI: ReviewU
   return createZodTool({
     name: "tff_write_plan",
     label: "TFF Write Plan",
-    description: "Write PLAN.md, create task entities with wave detection, update slice.",
+    description:
+      "Write PLAN.md, create task entities with wave detection, update slice. Output path: .tff/milestones/{milestoneLabel}/slices/{sliceLabel}/PLAN.md",
     schema: WritePlanSchema,
     execute: async (params) => {
       const result = await useCase.execute(params);
@@ -44,6 +45,7 @@ export function createWritePlanTool(useCase: WritePlanUseCase, reviewUI: ReviewU
       });
 
       const approval = approvalResult.ok ? approvalResult.data : undefined;
+      const approved = approval?.decision === "approved";
       return textResult(
         JSON.stringify({
           ok: true,
@@ -57,6 +59,9 @@ export function createWritePlanTool(useCase: WritePlanUseCase, reviewUI: ReviewU
                 formattedOutput: approval.formattedOutput,
               }
             : undefined,
+          nextSteps: approved
+            ? "Plannotator APPROVED the plan. Present the plan summary to the user. If the feedback contains minor comments, mention them. Do NOT call tff_workflow_transition yourself — the user will invoke /tff execute when ready."
+            : "Plannotator REQUESTED CHANGES. Show the feedback to the user, revise the plan accordingly, then call tff_write_plan again with the revised content.",
         }),
       );
     },

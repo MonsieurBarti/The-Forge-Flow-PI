@@ -174,11 +174,11 @@ describe("ToolPoliciesConfigSchema", () => {
     const result = ToolPoliciesConfigSchema.parse({
       defaults: { blocked: ["Agent"] },
       byTier: { S: { blocked: ["Agent"] } },
-      byRole: { "security-auditor": { allowed: ["Read", "Grep", "Glob"] } },
+      byRole: { "tff-security-auditor": { allowed: ["Read", "Grep", "Glob"] } },
     });
     expect(result.defaults.blocked).toEqual(["Agent"]);
     expect(result.byTier.S?.blocked).toEqual(["Agent"]);
-    expect(result.byRole["security-auditor"]?.allowed).toEqual(["Read", "Grep", "Glob"]);
+    expect(result.byRole["tff-security-auditor"]?.allowed).toEqual(["Read", "Grep", "Glob"]);
   });
 
   it("returns defaults on invalid input via .catch()", () => {

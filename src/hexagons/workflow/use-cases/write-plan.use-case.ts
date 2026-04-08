@@ -5,6 +5,7 @@ import type { CreateTasksPort, TaskInput } from "@hexagons/task/domain/ports/cre
 import type { DateProviderPort, PersistenceError } from "@kernel";
 import { err, isErr, ok, type Result } from "@kernel";
 import type { FileIOError } from "../domain/errors/file-io.error";
+import { PhaseValidationError } from "../domain/errors/phase-validation.error";
 import type { ArtifactFilePort } from "../domain/ports/artifact-file.port";
 
 export interface WritePlanInput {
@@ -28,22 +29,33 @@ export class WritePlanUseCase {
   ): Promise<
     Result<
       { path: string; taskCount: number; waveCount: number },
-      FileIOError | SliceNotFoundError | PersistenceError | CyclicDependencyError
+      | FileIOError
+      | SliceNotFoundError
+      | PersistenceError
+      | CyclicDependencyError
+      | PhaseValidationError
     >
   > {
-    // 1. Write PLAN.md
+    // 1. Validate slice exists
+    const sliceResult = await this.sliceRepo.findById(input.sliceId);
+    if (isErr(sliceResult)) return sliceResult;
+    if (!sliceResult.data) return err(new SliceNotFoundError(input.sliceId));
+
+    // 1b. Validate slice is in planning phase
+    if (sliceResult.data.status !== "planning") {
+      return err(new PhaseValidationError("write plan", "planning", sliceResult.data.status));
+    }
+
+    // 2. Write PLAN.md
     const writeResult = await this.artifactFilePort.write(
       input.milestoneLabel,
       input.sliceLabel,
       "plan",
       input.content,
+      undefined,
+      input.sliceId,
     );
     if (isErr(writeResult)) return writeResult;
-
-    // 2. Load slice
-    const sliceResult = await this.sliceRepo.findById(input.sliceId);
-    if (isErr(sliceResult)) return sliceResult;
-    if (!sliceResult.data) return err(new SliceNotFoundError(input.sliceId));
 
     // 3. Create tasks via cross-hexagon port
     const tasksResult = await this.createTasksPort.createTasks({

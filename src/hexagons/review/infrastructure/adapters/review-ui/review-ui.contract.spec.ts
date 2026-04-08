@@ -55,14 +55,34 @@ contractSuite("TerminalReviewUIAdapter", () => new TerminalReviewUIAdapter());
 
 type ExecFileCallback = (...args: unknown[]) => unknown;
 
-// PlannotatorReviewUIAdapter — mock subprocess to satisfy AC8 (all 3 adapters)
+// PlannotatorReviewUIAdapter — mock subprocess + events to satisfy AC8 (all 3 adapters)
 vi.mock("node:child_process", () => ({
   execFile: vi.fn((_cmd: string, _args: string[], _opts: unknown, cb: ExecFileCallback) => {
     cb(null, "User reviewed the document and has no feedback.", "");
   }),
 }));
 
+vi.mock("node:fs/promises", () => ({
+  readFile: vi.fn().mockResolvedValue("# Mock plan content"),
+  mkdtemp: vi.fn().mockResolvedValue("/tmp/tff-mock"),
+  writeFile: vi.fn().mockResolvedValue(undefined),
+  rm: vi.fn().mockResolvedValue(undefined),
+}));
+
+const mockEvents = {
+  emit(channel: string, data: unknown) {
+    if (channel === "plannotator:request") {
+      const req = data as { respond: (r: unknown) => void };
+      // Simulate unavailable — forces annotate fallback
+      setTimeout(() => req.respond({ status: "unavailable" }), 0);
+    }
+  },
+  on() {
+    return () => {};
+  },
+};
+
 contractSuite(
   "PlannotatorReviewUIAdapter",
-  () => new PlannotatorReviewUIAdapter("/mock/plannotator"),
+  () => new PlannotatorReviewUIAdapter("/mock/plannotator", mockEvents),
 );

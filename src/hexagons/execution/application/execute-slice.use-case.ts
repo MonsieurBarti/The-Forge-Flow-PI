@@ -1,3 +1,4 @@
+import type { SliceRepositoryPort } from "@hexagons/slice";
 import type { TaskRepositoryPort } from "@hexagons/task/domain/ports/task-repository.port";
 import type { WaveDetectionPort } from "@hexagons/task/domain/ports/wave-detection.port";
 import type { Task } from "@hexagons/task/domain/task.aggregate";
@@ -61,6 +62,7 @@ function toAgentConcern(v: GuardrailViolation): AgentConcern {
 const STALE_CLAIM_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
 
 interface ExecuteSliceUseCaseDeps {
+  readonly sliceRepo: SliceRepositoryPort;
   readonly taskRepository: TaskRepositoryPort;
   readonly waveDetection: WaveDetectionPort;
   readonly checkpointRepository: CheckpointRepositoryPort;
@@ -193,6 +195,17 @@ export class ExecuteSliceUseCase {
     input: ExecuteSliceInput,
     signal?: AbortSignal,
   ): Promise<Result<ExecuteSliceResult, ExecutionError>> {
+    // 0. Validate slice is in executing phase
+    const sliceResult = await this.deps.sliceRepo.findById(input.sliceId);
+    if (sliceResult.ok && sliceResult.data && sliceResult.data.status !== "executing") {
+      return err(
+        ExecutionError.invalidState(
+          input.sliceId,
+          `Cannot execute slice: slice is not in executing phase. Current phase: ${sliceResult.data.status}. Run the appropriate /tff command first.`,
+        ),
+      );
+    }
+
     // 1. Load tasks
     const tasksResult = await this.deps.taskRepository.findBySliceId(input.sliceId);
     if (!tasksResult.ok) {
@@ -267,6 +280,7 @@ export class ExecuteSliceUseCase {
     const completedTasks: string[] = [];
     const failedTasks: string[] = [];
     const skippedTasks: string[] = [];
+    const taskErrors = new Map<string, string>();
     let wavesCompleted = 0;
     let aborted = false;
 
@@ -310,7 +324,7 @@ export class ExecuteSliceUseCase {
       // 6c. Start tasks + record in checkpoint
       for (const task of waveTasks) {
         task.start(this.deps.dateProvider.now());
-        checkpoint.recordTaskStart(task.id, "executor", this.deps.dateProvider.now());
+        checkpoint.recordTaskStart(task.id, "tff-executor", this.deps.dateProvider.now());
       }
 
       // 6d. Build dispatch configs
@@ -370,6 +384,10 @@ export class ExecuteSliceUseCase {
             if (!report.passed) {
               // Blocker — skip dispatch
               preDispatchBlocked.add(task.id);
+              const blockerMessages = report.violations
+                .filter((v) => v.severity === "blocker")
+                .map((v) => v.message);
+              taskErrors.set(task.id, `Pre-dispatch blocked: ${blockerMessages.join("; ")}`);
               return err(AgentDispatchError.sessionAborted(task.id));
             }
           }
@@ -562,14 +580,22 @@ export class ExecuteSliceUseCase {
               }
 
               waveFailedTasks.push(task.id);
+              taskErrors.set(task.id, `Agent returned status: ${agentResult.status}`);
             }
           } else {
             // AgentDispatchError
             waveFailedTasks.push(task.id);
+            taskErrors.set(task.id, dispatchResult.error.message);
           }
         } else {
           // Rejected (thrown error)
           waveFailedTasks.push(task.id);
+          taskErrors.set(
+            task.id,
+            settlement.reason instanceof Error
+              ? settlement.reason.message
+              : String(settlement.reason),
+          );
         }
       }
 
@@ -618,6 +644,7 @@ export class ExecuteSliceUseCase {
           wavesCompleted,
           totalWaves: waves.length,
           aborted: true,
+          taskErrors: Object.fromEntries(taskErrors),
         });
       }
 
@@ -648,6 +675,7 @@ export class ExecuteSliceUseCase {
       wavesCompleted,
       totalWaves: waves.length,
       aborted,
+      taskErrors: Object.fromEntries(taskErrors),
     });
   }
 

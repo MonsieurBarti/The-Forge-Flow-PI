@@ -20,6 +20,7 @@ export abstract class ArtifactFilePort {
     artifactType: ArtifactType,
     content: string,
     kind?: SliceKind,
+    sliceId?: string,
   ): Promise<Result<string, FileIOError>>;
 
   abstract read(
@@ -27,5 +28,6 @@ export abstract class ArtifactFilePort {
     sliceLabel: string,
     artifactType: ArtifactType,
     kind?: SliceKind,
+    sliceId?: string,
   ): Promise<Result<string | null, FileIOError>>;
 }

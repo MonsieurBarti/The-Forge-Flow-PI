@@ -1,6 +1,7 @@
 import { createMockExtensionAPI } from "@infrastructure/pi/testing";
 import { err, ok } from "@kernel";
 import { describe, expect, it, vi } from "vitest";
+import { TffDispatcher } from "../../../../cli/tff-dispatcher";
 import { ProjectSettingsBuilder } from "../../../settings/domain/project-settings.builder";
 import type { SettingsCommandDeps } from "./settings.command";
 import { registerSettingsCommand } from "./settings.command";
@@ -29,20 +30,20 @@ function makeDeps(overrides: Partial<SettingsCommandDeps> = {}): SettingsCommand
 
 async function invokeHandler(deps: SettingsCommandDeps) {
   const { api, fns } = createMockExtensionAPI();
-  registerSettingsCommand(api, deps);
-  const [, options] = fns.registerCommand.mock.calls[0];
-  await options.handler("", undefined);
+  const dispatcher = new TffDispatcher();
+  registerSettingsCommand(dispatcher, api, deps);
+  // biome-ignore lint/style/noNonNullAssertion: test helper — command is always registered
+  const handler = dispatcher.getSubcommands().find((s) => s.name === "settings")!.handler;
+  await handler("", undefined as never);
   return { fns };
 }
 
 describe("registerSettingsCommand", () => {
-  it("registers tff:settings command", () => {
-    const { api, fns } = createMockExtensionAPI();
-    registerSettingsCommand(api, makeDeps());
-    expect(fns.registerCommand).toHaveBeenCalledWith(
-      "tff:settings",
-      expect.objectContaining({ description: expect.any(String) }),
-    );
+  it("registers settings subcommand", () => {
+    const { api } = createMockExtensionAPI();
+    const dispatcher = new TffDispatcher();
+    registerSettingsCommand(dispatcher, api, makeDeps());
+    expect(dispatcher.getSubcommands().find((s) => s.name === "settings")).toBeDefined();
   });
 
   it("loads, merges, formats, and sends cascade on success", async () => {

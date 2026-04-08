@@ -35,8 +35,8 @@ function runContractTests(name: string, factory: () => ReviewRepositoryPort & { 
 
     it("findBySliceId returns matching reviews", async () => {
       const sliceId = crypto.randomUUID();
-      const r1 = new ReviewBuilder().withSliceId(sliceId).withRole("code-reviewer").build();
-      const r2 = new ReviewBuilder().withSliceId(sliceId).withRole("spec-reviewer").build();
+      const r1 = new ReviewBuilder().withSliceId(sliceId).withRole("tff-code-reviewer").build();
+      const r2 = new ReviewBuilder().withSliceId(sliceId).withRole("tff-spec-reviewer").build();
       const r3 = new ReviewBuilder().build();
       await repo.save(r1);
       await repo.save(r2);

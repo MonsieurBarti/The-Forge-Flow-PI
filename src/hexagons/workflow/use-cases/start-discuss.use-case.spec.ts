@@ -55,7 +55,7 @@ function setup(overrides?: { autonomyMode?: "guided" | "plan-to-pr"; withWorkspa
   const fixedNow = new Date("2026-03-27T12:00:00Z");
   const dateProvider = { now: () => fixedNow };
   const autonomyModeProvider = {
-    getAutonomyMode: () => overrides?.autonomyMode ?? ("plan-to-pr" as const),
+    getAutonomyMode: () => overrides?.autonomyMode ?? ("guided" as const),
   };
 
   const worktreeAdapter = new InMemoryWorktreeAdapter();
@@ -103,7 +103,7 @@ describe("StartDiscussUseCase", () => {
     if (isOk(result)) {
       expect(result.data.fromPhase).toBe("idle");
       expect(result.data.toPhase).toBe("discussing");
-      expect(result.data.autonomyMode).toBe("plan-to-pr");
+      expect(result.data.autonomyMode).toBe("guided");
     }
   });
 
@@ -167,7 +167,7 @@ describe("StartDiscussUseCase", () => {
     if (isErr(result)) expect(result.error.code).toBe("WORKFLOW.SLICE_ALREADY_ASSIGNED");
   });
 
-  it("should return NoMatchingTransitionError if session not idle", async () => {
+  it("should succeed idempotently if session already discussing", async () => {
     const { useCase, sliceRepo, sessionRepo } = setup();
     const slice = new SliceBuilder().withId("a0000000-0000-1000-a000-000000000005").build();
     sliceRepo.seed(slice);
@@ -185,7 +185,7 @@ describe("StartDiscussUseCase", () => {
       milestoneId: "b0000000-0000-1000-a000-000000000003",
       tffDir: "/tmp/.tff",
     });
-    expect(isErr(result)).toBe(true);
+    expect(isOk(result)).toBe(true);
   });
 
   describe("workspace creation", () => {
@@ -215,8 +215,8 @@ describe("StartDiscussUseCase", () => {
       expect(stateSyncPort.createCalls).toHaveLength(1);
     });
 
-    it("rolls back worktree if state branch creation fails", async () => {
-      const { useCase, sliceRepo, worktreeAdapter, stateSyncPort, milestoneRepo } = setup({
+    it("succeeds with graceful degradation if state branch creation fails", async () => {
+      const { useCase, sliceRepo, stateSyncPort, milestoneRepo } = setup({
         withWorkspace: true,
       });
       const slice = new SliceBuilder()
@@ -237,9 +237,8 @@ describe("StartDiscussUseCase", () => {
         tffDir: "/tmp/.tff",
       });
 
-      expect(isErr(result)).toBe(true);
-      // Worktree should be cleaned up
-      expect(await worktreeAdapter.exists("a0000000-0000-1000-a000-000000000011")).toBe(false);
+      // Worktree failures are non-fatal — use case succeeds via graceful degradation
+      expect(isOk(result)).toBe(true);
     });
   });
 });

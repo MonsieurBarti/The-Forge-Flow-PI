@@ -10,7 +10,7 @@ const baseConfig: ReviewPromptConfig = {
   sliceId: "slice-123",
   sliceLabel: "M05-S03",
   sliceTitle: "Critique-then-reflection",
-  role: "code-reviewer",
+  role: "tff-code-reviewer",
   changedFiles: "- src/foo.ts\n- src/bar.ts",
   acceptanceCriteria: "- AC1: Must pass",
 };
@@ -26,14 +26,14 @@ describe("ReviewPromptBuilder", () => {
 
   it("builds CTR prompt for security-auditor (AC18)", () => {
     const builder = new ReviewPromptBuilder(realLoader);
-    const prompt = builder.build({ ...baseConfig, role: "security-auditor" });
+    const prompt = builder.build({ ...baseConfig, role: "tff-security-auditor" });
     expect(prompt).toContain("PASS 1");
-    expect(prompt).toContain("security-auditor");
+    expect(prompt).toContain("tff-security-auditor");
   });
 
   it("builds standard prompt for spec-reviewer without two-pass (AC16)", () => {
     const builder = new ReviewPromptBuilder(realLoader);
-    const prompt = builder.build({ ...baseConfig, role: "spec-reviewer" });
+    const prompt = builder.build({ ...baseConfig, role: "tff-spec-reviewer" });
     expect(prompt).not.toContain("PASS 1");
     expect(prompt).not.toContain("PASS 2");
   });
@@ -70,20 +70,20 @@ describe("ReviewPromptBuilder", () => {
       return "# Template\n{{reviewRole}} {{sliceLabel}} {{sliceTitle}} {{sliceId}} {{changedFiles}} {{acceptanceCriteria}}";
     };
     const builder = new ReviewPromptBuilder(spyLoader);
-    builder.build({ ...baseConfig, role: "spec-reviewer" });
+    builder.build({ ...baseConfig, role: "tff-spec-reviewer" });
     expect(loadedPath).toBe("prompts/standard-review.md");
   });
 
   it("standard prompt contains no raw {{...}} tokens (AC19)", () => {
     const builder = new ReviewPromptBuilder(realLoader);
-    const prompt = builder.build({ ...baseConfig, role: "spec-reviewer" });
+    const prompt = builder.build({ ...baseConfig, role: "tff-spec-reviewer" });
     expect(prompt).not.toMatch(/\{\{.*?\}\}/);
   });
 
   it("standard prompt contains all context fields", () => {
     const builder = new ReviewPromptBuilder(realLoader);
-    const prompt = builder.build({ ...baseConfig, role: "spec-reviewer" });
-    expect(prompt).toContain("spec-reviewer");
+    const prompt = builder.build({ ...baseConfig, role: "tff-spec-reviewer" });
+    expect(prompt).toContain("tff-spec-reviewer");
     expect(prompt).toContain("M05-S03");
     expect(prompt).toContain("Critique-then-reflection");
     expect(prompt).toContain("slice-123");

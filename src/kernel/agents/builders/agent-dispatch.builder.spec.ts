@@ -15,8 +15,8 @@ describe("AgentDispatchConfigBuilder", () => {
   });
 
   it("overrides agentType", () => {
-    const config = new AgentDispatchConfigBuilder().withAgentType("code-reviewer").build();
-    expect(config.agentType).toBe("code-reviewer");
+    const config = new AgentDispatchConfigBuilder().withAgentType("tff-code-reviewer").build();
+    expect(config.agentType).toBe("tff-code-reviewer");
   });
 
   it("overrides model", () => {
@@ -35,13 +35,13 @@ describe("AgentDispatchConfigBuilder", () => {
 
   it("is chainable", () => {
     const config = new AgentDispatchConfigBuilder()
-      .withAgentType("spec-reviewer")
+      .withAgentType("tff-spec-reviewer")
       .withWorkingDirectory("/workspace")
       .withSystemPrompt("Review the spec.")
       .withTaskPrompt("Check completeness.")
       .withTools(["Read", "Glob"])
       .build();
-    expect(config.agentType).toBe("spec-reviewer");
+    expect(config.agentType).toBe("tff-spec-reviewer");
     expect(config.workingDirectory).toBe("/workspace");
   });
 });

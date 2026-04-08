@@ -27,7 +27,7 @@ export class PiFixerAdapter extends FixerPort {
   }
 
   async fix(request: FixRequest): Promise<Result<FixResult, FixerError>> {
-    const card = getAgentCard("fixer");
+    const card = getAgentCard("tff-fixer");
     const template = this.promptLoader("prompts/fixer.md");
 
     // Sort findings by severity (critical first)
@@ -42,7 +42,7 @@ export class PiFixerAdapter extends FixerPort {
     const config: AgentDispatchConfig = {
       taskId: this.generateTaskId(),
       sliceId: request.sliceId,
-      agentType: "fixer",
+      agentType: "tff-fixer",
       workingDirectory: request.workingDirectory,
       systemPrompt: card.identity,
       taskPrompt,

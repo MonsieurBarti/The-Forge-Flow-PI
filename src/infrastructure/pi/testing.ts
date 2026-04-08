@@ -4,7 +4,11 @@
  * Provides complete mock factories that satisfy the real PI SDK interfaces
  * without requiring type casts.
  */
-import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import type {
+  ExtensionAPI,
+  ExtensionCommandContext,
+  ExtensionContext,
+} from "@mariozechner/pi-coding-agent";
 import { vi } from "vitest";
 
 /**
@@ -78,6 +82,21 @@ function createDeepMock<T>(): T {
 export function createMockExtensionContext(overrides: { cwd?: string } = {}): ExtensionContext {
   const ctx = createDeepMock<ExtensionContext>();
   // Override specific properties that tests may inspect
+  Object.defineProperty(ctx, "cwd", { value: overrides.cwd ?? "/tmp", writable: true });
+  Object.defineProperty(ctx, "hasUI", { value: false, writable: true });
+  Object.defineProperty(ctx, "model", { value: undefined, writable: true });
+  Object.defineProperty(ctx, "signal", { value: undefined, writable: true });
+  return ctx;
+}
+
+/**
+ * Create a mock of ExtensionCommandContext (extends ExtensionContext with session control methods).
+ * Proxy-based deep mock satisfies both ExtensionContext and ExtensionCommandContext.
+ */
+export function createMockExtensionCommandContext(
+  overrides: { cwd?: string } = {},
+): ExtensionCommandContext {
+  const ctx = createDeepMock<ExtensionCommandContext>();
   Object.defineProperty(ctx, "cwd", { value: overrides.cwd ?? "/tmp", writable: true });
   Object.defineProperty(ctx, "hasUI", { value: false, writable: true });
   Object.defineProperty(ctx, "model", { value: undefined, writable: true });

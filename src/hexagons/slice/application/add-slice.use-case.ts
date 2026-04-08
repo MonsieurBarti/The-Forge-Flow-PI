@@ -1,5 +1,5 @@
 import type { MilestoneRepositoryPort } from "@hexagons/milestone/domain/ports/milestone-repository.port";
-import { err, ok, PersistenceError, type Result } from "@kernel";
+import { type EventBusPort, err, ok, PersistenceError, type Result } from "@kernel";
 import type { DateProviderPort } from "@kernel/ports";
 import type { SliceRepositoryPort } from "../domain/ports/slice-repository.port";
 import { Slice } from "../domain/slice.aggregate";
@@ -22,9 +22,24 @@ export class AddSliceUseCase {
     private readonly sliceRepo: SliceRepositoryPort,
     private readonly milestoneRepo: MilestoneRepositoryPort,
     private readonly dateProvider: DateProviderPort,
+    private readonly eventBus: EventBusPort,
   ) {}
 
   async execute(input: AddSliceInput): Promise<Result<AddSliceOutput, PersistenceError>> {
+    // Retry loop handles parallel calls that race on label assignment
+    const MAX_RETRIES = 8;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      const result = await this.tryCreate(input);
+      if (result.ok) return result;
+
+      // Retry only on label uniqueness violations (parallel race condition)
+      if (result.error.message.includes("Label uniqueness violated")) continue;
+      return result;
+    }
+    return err(new PersistenceError("Failed to create slice after retries — label collision"));
+  }
+
+  private async tryCreate(input: AddSliceInput): Promise<Result<AddSliceOutput, PersistenceError>> {
     // 1. Load milestone, guard in_progress
     const msResult = await this.milestoneRepo.findById(input.milestoneId);
     if (!msResult.ok) return err(msResult.error);
@@ -89,6 +104,10 @@ export class AddSliceUseCase {
 
     const saveResult = await this.sliceRepo.save(slice);
     if (!saveResult.ok) return err(saveResult.error);
+
+    for (const event of slice.pullEvents()) {
+      await this.eventBus.publish(event);
+    }
 
     return ok({ sliceId: id, sliceLabel, position });
   }

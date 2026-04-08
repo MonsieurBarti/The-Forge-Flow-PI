@@ -15,7 +15,7 @@ function writePrompt(name: string): void {
 }
 
 const VALID_AGENT = `---
-type: fixer
+type: tff-fixer
 displayName: Fixer
 purpose: Fix bugs
 scope: task
@@ -50,7 +50,7 @@ describe("AgentResourceLoader", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.data.size).toBe(1);
-      const card = result.data.get("fixer");
+      const card = result.data.get("tff-fixer");
       expect(card?.identity).toBe("You are a fixer.");
       expect(card?.description).toBe("Fix bugs");
       expect(card?.defaultModelProfile).toBe("budget");
@@ -108,7 +108,7 @@ describe("AgentResourceLoader", () => {
     const result = loader.loadAll(TEST_DIR);
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.data.get("fixer")?.defaultModelProfile).toBe("budget");
+      expect(result.data.get("tff-fixer")?.defaultModelProfile).toBe("budget");
     }
   });
 
@@ -118,7 +118,7 @@ describe("AgentResourceLoader", () => {
     const result = loader.loadAll(TEST_DIR);
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.data.get("fixer")?.description).toBe("Fix bugs");
+      expect(result.data.get("tff-fixer")?.description).toBe("Fix bugs");
     }
   });
 });

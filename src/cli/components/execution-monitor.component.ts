@@ -13,7 +13,7 @@ export interface ExecutionMonitorState {
 
 export function buildMarkdown(state: ExecutionMonitorState): string {
   if (state.activeTaskId === null) {
-    return "*Waiting for execution\u2026 Run `/tff:execute` to start.*";
+    return "*Waiting for execution\u2026 Run `/tff execute` to start.*";
   }
 
   const headerLine = state.isExecuting

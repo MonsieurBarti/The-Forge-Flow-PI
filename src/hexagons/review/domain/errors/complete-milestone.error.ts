@@ -67,7 +67,7 @@ export class CompleteMilestoneError extends BaseDomainError {
   static auditRequired(milestoneId: string, reason?: string): CompleteMilestoneError {
     return new CompleteMilestoneError(
       "MILESTONE.AUDIT_REQUIRED",
-      reason ?? `Run /tff:audit-milestone first. All findings must be resolved.`,
+      reason ?? `Run /tff audit-milestone first. All findings must be resolved.`,
       { milestoneId },
     );
   }

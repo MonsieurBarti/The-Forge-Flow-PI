@@ -16,8 +16,8 @@ import {
 } from "../../../domain/schemas/completion.schemas";
 
 const PROMPT_MAP: Record<string, string> = {
-  "spec-reviewer": "prompts/audit-milestone-intent.md",
-  "security-auditor": "prompts/audit-milestone-security.md",
+  "tff-spec-reviewer": "prompts/audit-milestone-intent.md",
+  "tff-security-auditor": "prompts/audit-milestone-security.md",
 };
 
 export class PiAuditAdapter extends AuditPort {
@@ -35,7 +35,7 @@ export class PiAuditAdapter extends AuditPort {
     milestoneLabel: string;
     requirementsContent: string;
     diffContent: string;
-    agentType: "spec-reviewer" | "security-auditor";
+    agentType: "tff-spec-reviewer" | "tff-security-auditor";
   }): Promise<Result<AuditReportProps, AuditError>> {
     const card = getAgentCard(params.agentType);
     const promptPath = PROMPT_MAP[params.agentType];

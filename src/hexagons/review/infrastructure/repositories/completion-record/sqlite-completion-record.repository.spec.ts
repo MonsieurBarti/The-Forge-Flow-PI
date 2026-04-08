@@ -9,7 +9,7 @@ const NOW = new Date("2026-04-02T12:00:00Z");
 function makeAuditReports(): AuditReportProps[] {
   return [
     {
-      agentType: "spec-reviewer",
+      agentType: "tff-spec-reviewer",
       verdict: "PASS",
       findings: [
         {
@@ -23,7 +23,7 @@ function makeAuditReports(): AuditReportProps[] {
       summary: "Spec review passed with minor findings",
     },
     {
-      agentType: "security-auditor",
+      agentType: "tff-security-auditor",
       verdict: "PASS",
       findings: [],
       summary: "No security issues found",
@@ -106,10 +106,10 @@ describe("SqliteCompletionRecordRepository", () => {
     expect(found).not.toBeNull();
     expect(found?.milestoneId).toBe(milestoneId);
     expect(found?.auditReports).toHaveLength(2);
-    expect(found?.auditReports[0].agentType).toBe("spec-reviewer");
+    expect(found?.auditReports[0].agentType).toBe("tff-spec-reviewer");
     expect(found?.auditReports[0].verdict).toBe("PASS");
     expect(found?.auditReports[0].findings).toHaveLength(1);
-    expect(found?.auditReports[1].agentType).toBe("security-auditor");
+    expect(found?.auditReports[1].agentType).toBe("tff-security-auditor");
     expect(found?.toJSON().outcome).toBeNull();
   });
 

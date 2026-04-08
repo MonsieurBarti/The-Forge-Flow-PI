@@ -8,6 +8,7 @@ import type {
   SliceTransitionPort,
 } from "@kernel";
 import { err, isErr, ok } from "@kernel";
+import type { StateSyncPort } from "@kernel/ports/state-sync.port";
 import { WorkflowBaseError } from "../domain/errors/workflow-base.error";
 import { mapPhaseToSliceStatus } from "../domain/phase-status-mapping";
 import type { WorkflowJournalPort } from "../domain/ports/workflow-journal.port";
@@ -39,6 +40,7 @@ export interface PhaseTransitionResult {
   fromPhase: WorkflowPhase;
   toPhase: WorkflowPhase;
   sliceTransitioned: boolean;
+  syncWarnings?: string[];
 }
 
 export class WorkflowSessionNotFoundError extends WorkflowBaseError {
@@ -63,6 +65,8 @@ export class OrchestratePhaseTransitionUseCase {
     private readonly dateProvider: DateProviderPort,
     private readonly workflowJournal?: WorkflowJournalPort,
     private readonly metricsRepository?: MetricsRepositoryPort,
+    private readonly stateSyncPort?: StateSyncPort,
+    private readonly tffDir?: string,
   ) {}
 
   async execute(
@@ -219,10 +223,25 @@ export class OrchestratePhaseTransitionUseCase {
       await this.eventBus.publish(event);
     }
 
+    // 6. Auto-sync state branch (non-blocking — failures are warnings)
+    const syncWarnings: string[] = [];
+    if (this.stateSyncPort && this.tffDir && session.sliceId) {
+      const codeBranch = `slice/${session.sliceId}`;
+      try {
+        const syncResult = await this.stateSyncPort.syncToStateBranch(codeBranch, this.tffDir);
+        if (!syncResult.ok) {
+          syncWarnings.push(`State sync failed: ${syncResult.error.message}`);
+        }
+      } catch (e) {
+        syncWarnings.push(`State sync error: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+
     return ok({
       fromPhase,
       toPhase: session.currentPhase,
       sliceTransitioned,
+      syncWarnings: syncWarnings.length > 0 ? syncWarnings : undefined,
     });
   }
 }

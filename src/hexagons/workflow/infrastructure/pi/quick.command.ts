@@ -1,6 +1,7 @@
 import type { ComplexityTier } from "@hexagons/slice";
 import type { ExtensionAPI } from "@infrastructure/pi";
 import { isErr } from "@kernel";
+import type { TffDispatcher } from "../../../../cli/tff-dispatcher";
 import type { QuickStartUseCase } from "../../use-cases/quick-start.use-case";
 
 export interface QuickCommandDeps {
@@ -56,16 +57,20 @@ function buildQuickProtocolMessage(output: {
   ].join("\n");
 }
 
-export function registerQuickCommand(api: ExtensionAPI, deps: QuickCommandDeps): void {
-  api.registerCommand("tff:quick", {
+export function registerQuickCommand(
+  dispatcher: TffDispatcher,
+  api: ExtensionAPI,
+  deps: QuickCommandDeps,
+): void {
+  dispatcher.register({
+    name: "quick",
     description: "Quick-start an ad-hoc slice (skip discuss + research)",
     handler: async (args: string, ctx) => {
-      if (ctx?.newSession) await ctx.newSession();
       await deps.withGuard?.();
 
       const { title, complexity } = parseQuickArgs(args);
       if (!title) {
-        api.sendUserMessage("Usage: /tff:quick <title> [--complexity S|F-lite|F-full]");
+        api.sendUserMessage("Usage: /tff quick <title> [--complexity S|F-lite|F-full]");
         return;
       }
 

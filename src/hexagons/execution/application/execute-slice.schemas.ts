@@ -26,5 +26,6 @@ export const ExecuteSliceResultSchema = z.object({
   wavesCompleted: z.number().int().nonnegative(),
   totalWaves: z.number().int().nonnegative(),
   aborted: z.boolean(),
+  taskErrors: z.record(z.string(), z.string()).optional(),
 });
 export type ExecuteSliceResult = z.infer<typeof ExecuteSliceResultSchema>;

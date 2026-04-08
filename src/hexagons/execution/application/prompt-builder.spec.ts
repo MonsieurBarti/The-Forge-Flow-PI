@@ -34,7 +34,7 @@ describe("PromptBuilder", () => {
 
   it("sets agentType to executor", () => {
     const result = builder.build(task);
-    expect(result.agentType).toBe("executor");
+    expect(result.agentType).toBe("tff-executor");
   });
 
   it("includes workingDirectory from config", () => {

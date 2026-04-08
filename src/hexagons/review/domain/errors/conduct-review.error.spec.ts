@@ -14,7 +14,7 @@ describe("ConductReviewError", () => {
   });
 
   it("allReviewersFailed has correct code and metadata", () => {
-    const failures = [{ role: "code-reviewer", cause: "timeout" }];
+    const failures = [{ role: "tff-code-reviewer", cause: "timeout" }];
     const error = ConductReviewError.allReviewersFailed("slice-1", failures);
     expect(error.code).toBe("REVIEW.ALL_REVIEWERS_FAILED");
     expect(error.metadata?.sliceId).toBe("slice-1");
@@ -24,15 +24,19 @@ describe("ConductReviewError", () => {
   it("reviewerRetryExhausted has correct code and metadata", () => {
     const error = ConductReviewError.reviewerRetryExhausted(
       "slice-1",
-      "code-reviewer",
+      "tff-code-reviewer",
       new Error("timeout"),
     );
     expect(error.code).toBe("REVIEW.REVIEWER_RETRY_EXHAUSTED");
-    expect(error.metadata?.role).toBe("code-reviewer");
+    expect(error.metadata?.role).toBe("tff-code-reviewer");
   });
 
   it("freshReviewerBlocked has correct code and metadata", () => {
-    const error = ConductReviewError.freshReviewerBlocked("slice-1", "code-reviewer", "agent-42");
+    const error = ConductReviewError.freshReviewerBlocked(
+      "slice-1",
+      "tff-code-reviewer",
+      "agent-42",
+    );
     expect(error.code).toBe("REVIEW.FRESH_REVIEWER_BLOCKED");
     expect(error.metadata?.reviewerId).toBe("agent-42");
   });

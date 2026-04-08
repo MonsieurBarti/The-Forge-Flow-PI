@@ -45,7 +45,7 @@ export type VerificationUIResponse = z.infer<typeof VerificationUIResponseSchema
 export const ApprovalUIContextSchema = z.object({
   sliceId: z.string().min(1),
   sliceLabel: z.string().min(1),
-  artifactType: z.enum(["plan", "spec", "verification"]),
+  artifactType: z.enum(["plan", "research", "spec", "verification"]),
   artifactPath: z.string().min(1),
   summary: z.string().min(1),
 });

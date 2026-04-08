@@ -1,78 +1,80 @@
 import { createMockExtensionAPI } from "@infrastructure/pi/testing";
 import { describe, expect, it } from "vitest";
+import { TffDispatcher } from "../../../../cli/tff-dispatcher";
 import { registerHelpCommand } from "./help.command";
 
-async function invokeHandler(commands: { name: string; description?: string }[]) {
+function makeDispatcherWithCommands(
+  commands: { name: string; description: string }[],
+): TffDispatcher {
+  const dispatcher = new TffDispatcher();
+  for (const cmd of commands) {
+    dispatcher.register({
+      name: cmd.name,
+      description: cmd.description,
+      handler: async () => {},
+    });
+  }
+  return dispatcher;
+}
+
+async function invokeHandler(subcommands: { name: string; description: string }[]) {
   const { api, fns } = createMockExtensionAPI();
-  fns.getCommands.mockReturnValue(commands);
-  registerHelpCommand(api);
-  const [, options] = fns.registerCommand.mock.calls[0];
-  await options.handler("");
+  const dispatcher = makeDispatcherWithCommands(subcommands);
+  registerHelpCommand(dispatcher, api);
+  // biome-ignore lint/style/noNonNullAssertion: test helper — command is always registered
+  const handler = dispatcher.getSubcommands().find((s) => s.name === "help")!.handler;
+  await handler("", undefined as never);
   return { fns };
 }
 
 describe("registerHelpCommand", () => {
-  it("registers tff:help command", () => {
-    const { api, fns } = createMockExtensionAPI();
-    fns.getCommands.mockReturnValue([]);
-    registerHelpCommand(api);
-    expect(fns.registerCommand).toHaveBeenCalledWith(
-      "tff:help",
-      expect.objectContaining({ description: expect.any(String) }),
-    );
+  it("registers help subcommand", () => {
+    const { api } = createMockExtensionAPI();
+    const dispatcher = new TffDispatcher();
+    registerHelpCommand(dispatcher, api);
+    expect(dispatcher.getSubcommands().find((s) => s.name === "help")).toBeDefined();
   });
 
-  it("calls api.getCommands()", async () => {
+  it("lists registered subcommands", async () => {
     const { fns } = await invokeHandler([
-      { name: "tff:discuss", description: "Start discuss phase" },
-      { name: "tff:quick", description: "Quick-start a slice" },
-      { name: "other:command", description: "Not TFF" },
-      { name: "tff:health", description: "Health check" },
+      { name: "discuss", description: "Start discuss phase" },
+      { name: "quick", description: "Quick-start a slice" },
+      { name: "health", description: "Health check" },
     ]);
 
     const msg = fns.sendUserMessage.mock.calls[0][0];
-    expect(msg).toContain("tff:discuss");
-    expect(msg).toContain("tff:health");
-    expect(msg).toContain("tff:quick");
-    expect(msg).not.toContain("other:command");
+    expect(msg).toContain("discuss");
+    expect(msg).toContain("health");
+    expect(msg).toContain("quick");
   });
 
   it("sorts commands alphabetically", async () => {
     const { fns } = await invokeHandler([
-      { name: "tff:quick", description: "Quick-start a slice" },
-      { name: "tff:discuss", description: "Start discuss phase" },
-      { name: "tff:health", description: "Health check" },
+      { name: "quick", description: "Quick-start a slice" },
+      { name: "discuss", description: "Start discuss phase" },
+      { name: "health", description: "Health check" },
     ]);
 
     const msg: string = fns.sendUserMessage.mock.calls[0][0];
-    const discussIdx = msg.indexOf("tff:discuss");
-    const quickIdx = msg.indexOf("tff:quick");
+    const discussIdx = msg.indexOf("discuss");
+    const quickIdx = msg.indexOf("quick");
     expect(discussIdx).toBeLessThan(quickIdx);
   });
 
   it("renders markdown table", async () => {
-    const { fns } = await invokeHandler([
-      { name: "tff:discuss", description: "Start discuss phase" },
-    ]);
+    const { fns } = await invokeHandler([{ name: "discuss", description: "Start discuss phase" }]);
 
     const msg: string = fns.sendUserMessage.mock.calls[0][0];
     expect(msg).toContain("| Command | Description |");
     expect(msg).toContain("|---|---|");
-    expect(msg).toContain("| /tff:discuss | Start discuss phase |");
+    expect(msg).toContain("| /tff discuss | Start discuss phase |");
   });
 
-  it("handles missing description gracefully", async () => {
-    const { fns } = await invokeHandler([{ name: "tff:discuss" }]);
-
-    const msg: string = fns.sendUserMessage.mock.calls[0][0];
-    expect(msg).toContain("| /tff:discuss |  |");
-  });
-
-  it("renders empty table when no tff commands exist", async () => {
-    const { fns } = await invokeHandler([{ name: "other:command", description: "Not TFF" }]);
+  it("renders empty table when no other subcommands exist", async () => {
+    const { fns } = await invokeHandler([]);
 
     const msg: string = fns.sendUserMessage.mock.calls[0][0];
     expect(msg).toContain("| Command | Description |");
-    expect(msg).not.toContain("other:command");
+    // Only the help command itself should be present
   });
 });

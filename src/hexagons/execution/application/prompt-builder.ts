@@ -32,7 +32,7 @@ export class PromptBuilder {
     return {
       taskId: task.id,
       sliceId: this.config.sliceId,
-      agentType: "executor",
+      agentType: "tff-executor",
       workingDirectory: this.config.workingDirectory,
       systemPrompt: this.buildSystemPrompt(skills),
       taskPrompt: this.interpolateTemplate(task),

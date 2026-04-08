@@ -36,7 +36,7 @@ function makeTransport(overrides?: Record<string, unknown>) {
 
 describe("crossCheckAgentResult", () => {
   it("returns valid when no discrepancies", () => {
-    const result = crossCheckAgentResult(makeReport(), makeTransport(), "fixer");
+    const result = crossCheckAgentResult(makeReport(), makeTransport(), "tff-fixer");
     expect(result.valid).toBe(true);
     expect(result.discrepancies).toEqual([]);
   });
@@ -45,7 +45,7 @@ describe("crossCheckAgentResult", () => {
     const result = crossCheckAgentResult(
       makeReport(),
       makeTransport({ filesChanged: [] }),
-      "fixer",
+      "tff-fixer",
     );
     expect(result.valid).toBe(false);
     expect(result.discrepancies).toHaveLength(1);
@@ -56,7 +56,7 @@ describe("crossCheckAgentResult", () => {
     const result = crossCheckAgentResult(
       makeReport(),
       makeTransport({ filesChanged: [] }),
-      "code-reviewer",
+      "tff-code-reviewer",
     );
     expect(result.valid).toBe(true);
   });
@@ -65,7 +65,7 @@ describe("crossCheckAgentResult", () => {
     const result = crossCheckAgentResult(
       makeReport(),
       makeTransport({ error: "Something went wrong" }),
-      "fixer",
+      "tff-fixer",
     );
     expect(result.valid).toBe(false);
     expect(result.discrepancies[0].area).toBe("error-consistency");
@@ -76,7 +76,7 @@ describe("crossCheckAgentResult", () => {
       status: "DONE",
       concerns: [{ area: "test", description: "Flaky", severity: "warning" }],
     });
-    const result = crossCheckAgentResult(report, makeTransport(), "fixer");
+    const result = crossCheckAgentResult(report, makeTransport(), "tff-fixer");
     expect(result.valid).toBe(false);
     expect(result.discrepancies[0].area).toBe("concern-consistency");
   });
@@ -86,12 +86,16 @@ describe("crossCheckAgentResult", () => {
       status: "DONE_WITH_CONCERNS",
       concerns: [{ area: "test", description: "Flaky", severity: "warning" }],
     });
-    const result = crossCheckAgentResult(report, makeTransport(), "fixer");
+    const result = crossCheckAgentResult(report, makeTransport(), "tff-fixer");
     expect(result.discrepancies.every((d) => d.area !== "concern-consistency")).toBe(true);
   });
 
   it("flags zero duration with non-zero tokens", () => {
-    const result = crossCheckAgentResult(makeReport(), makeTransport({ durationMs: 0 }), "fixer");
+    const result = crossCheckAgentResult(
+      makeReport(),
+      makeTransport({ durationMs: 0 }),
+      "tff-fixer",
+    );
     expect(result.valid).toBe(false);
     expect(result.discrepancies[0].area).toBe("cost-sanity");
   });
@@ -108,7 +112,7 @@ describe("crossCheckAgentResult", () => {
           costUsd: 0,
         },
       }),
-      "fixer",
+      "tff-fixer",
     );
     expect(result.valid).toBe(false);
     expect(result.discrepancies[0].area).toBe("cost-sanity");

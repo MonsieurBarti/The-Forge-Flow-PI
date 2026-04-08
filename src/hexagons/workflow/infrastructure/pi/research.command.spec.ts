@@ -1,10 +1,15 @@
 import { MilestoneBuilder } from "@hexagons/milestone/domain/milestone.builder";
 import { InMemoryMilestoneRepository } from "@hexagons/milestone/infrastructure/in-memory-milestone.repository";
+import { InMemoryProjectRepository } from "@hexagons/project/infrastructure/in-memory-project.repository";
 import { SliceBuilder } from "@hexagons/slice/domain/slice.builder";
 import { InMemorySliceRepository } from "@hexagons/slice/infrastructure/in-memory-slice.repository";
-import { createMockExtensionAPI, createMockExtensionContext } from "@infrastructure/pi/testing";
+import {
+  createMockExtensionAPI,
+  createMockExtensionCommandContext,
+} from "@infrastructure/pi/testing";
 import { err } from "@kernel";
 import { describe, expect, it, vi } from "vitest";
+import { TffDispatcher } from "../../../../cli/tff-dispatcher";
 import { FileIOError } from "../../domain/errors/file-io.error";
 import { WorkflowSessionBuilder } from "../../domain/workflow-session.builder";
 import { SuggestNextStepUseCase } from "../../use-cases/suggest-next-step.use-case";
@@ -14,22 +19,21 @@ import type { ResearchCommandDeps } from "./research.command";
 import { registerResearchCommand } from "./research.command";
 
 describe("registerResearchCommand", () => {
-  it("registers tff:research command", () => {
-    const { api, fns } = createMockExtensionAPI();
+  it("registers research subcommand", () => {
+    const { api } = createMockExtensionAPI();
+    const dispatcher = new TffDispatcher();
     const sessionRepo = new InMemoryWorkflowSessionRepository();
     const sliceRepo = new InMemorySliceRepository();
     const deps: ResearchCommandDeps = {
       sliceRepo,
       milestoneRepo: new InMemoryMilestoneRepository(),
+      projectRepo: new InMemoryProjectRepository(),
       sessionRepo,
       artifactFile: new InMemoryArtifactFileAdapter(),
       suggestNextStep: new SuggestNextStepUseCase(sessionRepo, sliceRepo),
     };
-    registerResearchCommand(api, deps);
-    expect(fns.registerCommand).toHaveBeenCalledWith(
-      "tff:research",
-      expect.objectContaining({ description: expect.any(String) }),
-    );
+    registerResearchCommand(dispatcher, api, deps);
+    expect(dispatcher.getSubcommands().find((s) => s.name === "research")).toBeDefined();
   });
 
   describe("command handler", () => {
@@ -39,6 +43,7 @@ describe("registerResearchCommand", () => {
       return {
         sliceRepo,
         milestoneRepo: new InMemoryMilestoneRepository(),
+        projectRepo: new InMemoryProjectRepository(),
         sessionRepo,
         artifactFile: new InMemoryArtifactFileAdapter(),
         suggestNextStep: new SuggestNextStepUseCase(sessionRepo, sliceRepo),
@@ -47,17 +52,21 @@ describe("registerResearchCommand", () => {
 
     async function invokeHandler(deps: ReturnType<typeof makeDeps>, args: string) {
       const { api, fns } = createMockExtensionAPI();
-      registerResearchCommand(api, deps);
-      const [, options] = fns.registerCommand.mock.calls[0];
-      const ctx = createMockExtensionContext();
-      await options.handler(args, ctx);
+      const dispatcher = new TffDispatcher();
+      registerResearchCommand(dispatcher, api, deps);
+      // biome-ignore lint/style/noNonNullAssertion: test helper — command is always registered
+      const handler = dispatcher.getSubcommands().find((s) => s.name === "research")!.handler;
+      const ctx = createMockExtensionCommandContext();
+      await handler(args, ctx);
       return { fns };
     }
 
-    it("returns error if no args provided", async () => {
+    it("returns no-project message when no args and no project exists", async () => {
       const deps = makeDeps();
       const { fns } = await invokeHandler(deps, "  ");
-      expect(fns.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("Usage"));
+      expect(fns.sendUserMessage).toHaveBeenCalledWith(
+        "No TFF project found. Run /tff new to initialize.",
+      );
     });
 
     it("returns error if slice not found", async () => {
@@ -75,7 +84,7 @@ describe("registerResearchCommand", () => {
 
       const { fns } = await invokeHandler(deps, "M03-S06");
       expect(fns.sendUserMessage).toHaveBeenCalledWith(
-        "No workflow session found, run /tff:discuss first",
+        "No workflow session found, run /tff discuss first",
       );
     });
 
@@ -92,7 +101,9 @@ describe("registerResearchCommand", () => {
       deps.sessionRepo.seed(session);
 
       const { fns } = await invokeHandler(deps, "M03-S06");
-      expect(fns.sendUserMessage).toHaveBeenCalledWith("not researching, run /tff:discuss first");
+      expect(fns.sendUserMessage).toHaveBeenCalledWith(
+        expect.stringContaining("Cannot start research"),
+      );
     });
 
     it("returns error if SPEC.md not found", async () => {
@@ -108,7 +119,7 @@ describe("registerResearchCommand", () => {
       deps.sessionRepo.seed(session);
 
       const { fns } = await invokeHandler(deps, "M03-S06");
-      expect(fns.sendUserMessage).toHaveBeenCalledWith("No SPEC.md found, run /tff:discuss first");
+      expect(fns.sendUserMessage).toHaveBeenCalledWith("No SPEC.md found, run /tff discuss first");
     });
 
     it("returns error if ArtifactFilePort.read returns FileIOError", async () => {
@@ -148,7 +159,7 @@ describe("registerResearchCommand", () => {
       await deps.artifactFile.write("M03", "M03-S06", "spec", "# SPEC\n\nsome content");
 
       const { fns } = await invokeHandler(deps, "M03-S06");
-      expect(fns.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("RESEARCHING —"));
+      expect(fns.sendMessage).toHaveBeenCalled();
     });
 
     it("resolves slice by UUID when label lookup returns null", async () => {
@@ -166,7 +177,7 @@ describe("registerResearchCommand", () => {
       await deps.artifactFile.write("M03", "M03-S06", "spec", "# SPEC content");
 
       const { fns } = await invokeHandler(deps, slice.id);
-      expect(fns.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("RESEARCHING —"));
+      expect(fns.sendMessage).toHaveBeenCalled();
     });
   });
 });

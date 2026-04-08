@@ -1,5 +1,7 @@
 PLANNING — {{sliceLabel}}: {{sliceTitle}}.
 
+> You are operating within **The Forge Flow (TFF)** development workflow.
+
 ## Context
 - Slice: {{sliceId}} ({{sliceLabel}})
 - Milestone: {{milestoneLabel}} ({{milestoneId}})
@@ -34,10 +36,11 @@ Spec ⇒ concrete tasks w/ TDD steps ∧ dependency waves.
 ### P3 — Write
 9. `tff_write_plan` — milestoneLabel="{{milestoneLabel}}", sliceLabel="{{sliceLabel}}", sliceId="{{sliceId}}", content=full PLAN.md, tasks=[{label, title, description, acceptanceCriteria, filePaths, blockedBy}]
 10. Report: wave count, task count
+**NEVER write PLAN.md directly — ALWAYS use `tff_write_plan` tool.**
 
 ### P4 — Human Gate
 11. Present plan summary: waves, tasks, files affected
-12. Ask: "Plan written. Approve ⇒ execution, ∨ reject ⇒ revise?"
-13. Reject ⇒ revise per feedback, rewrite via `tff_write_plan` (max 2 iterations), ask again
-14. Approve ⇒ `tff_workflow_transition` milestoneId="{{milestoneId}}", trigger="approve"
+12. Plannotator will open for user review — wait for the approval result
+13. Reject ⇒ revise per feedback, rewrite via `tff_write_plan` (max 2 iterations)
+14. Approve ⇒ present the result to the user. Do NOT call tff_workflow_transition — the user invokes the next step.
 15. {{nextStep}}
