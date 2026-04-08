@@ -403,6 +403,7 @@ export function createTffExtension(api: ExtensionAPI, options: TffExtensionOptio
     {
       rollback: { rollback: rollbackUseCase, checkpointRepo: checkpointRepo, sliceRepo },
       worktreeAdapter,
+      modelResolver,
     },
   );
 

@@ -25,17 +25,19 @@ export interface WorkflowTransitionToolDeps {
 
 const PHASE_GUIDANCE: Record<string, string> = {
   executing:
-    "CRITICAL: You MUST call tff_execute_slice to begin execution. " +
-    "NEVER implement code manually — the tool auto-resolves the worktree path from sliceId. " +
-    "Required params: sliceId, milestoneId, sliceLabel, sliceTitle, complexity, model, modelProfile.",
+    "Transitioned to executing. Present this to the user and suggest /tff execute as the next step. " +
+    "Do NOT call tff_execute_slice yourself — the user decides when to start execution.",
   researching:
-    "Run /tff research to begin the research phase. Use tff_write_research to save findings.",
+    "Transitioned to researching. Present this to the user and suggest /tff research as the next step.",
   planning:
-    "Run /tff plan to begin planning. Use tff_write_plan to write PLAN.md — NEVER write files directly.",
-  verifying: "Run /tff verify to validate acceptance criteria against the implementation.",
-  reviewing: "Run /tff review to run code review.",
-  shipping: "Run /tff ship to create a PR. NEVER merge or push directly.",
-  idle: "Slice complete. Call tff_status for the next slice to work on, or /tff complete-milestone if all slices are closed.",
+    "Transitioned to planning. Present this to the user and suggest /tff plan as the next step.",
+  verifying:
+    "Transitioned to verifying. Present this to the user and suggest /tff verify as the next step.",
+  reviewing:
+    "Transitioned to reviewing. Present this to the user and suggest /tff review as the next step.",
+  shipping:
+    "Transitioned to shipping. Present this to the user and suggest /tff ship as the next step.",
+  idle: "Slice complete. Present this to the user and suggest checking tff_status for the next slice.",
 };
 
 export function createWorkflowTransitionTool(deps: WorkflowTransitionToolDeps) {

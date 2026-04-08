@@ -46,7 +46,7 @@ export function createWriteSpecTool(useCase: WriteSpecUseCase, reviewUI: ReviewU
               }
             : undefined,
           nextSteps: approved
-            ? "Plannotator APPROVED the spec. If the feedback contains minor comments or suggestions, address them briefly inline but do NOT re-ask the user for approval. Proceed directly: 1) Propose complexity tier (S/F-lite/F-full) and get user confirmation, 2) Call tff_classify_complexity, 3) Call tff_workflow_transition with trigger='next' (or 'skip' for S-tier)"
+            ? "Plannotator APPROVED the spec. Present the result to the user. If the feedback contains minor comments, mention them. Then propose a complexity tier (S/F-lite/F-full) and wait for user confirmation before calling tff_classify_complexity. Do NOT call tff_workflow_transition yourself — the user will invoke the next step."
             : "Plannotator REQUESTED CHANGES. Show the feedback to the user, revise the spec accordingly, then call tff_write_spec again with the revised content.",
         }),
       );

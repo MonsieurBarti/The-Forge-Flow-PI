@@ -40,8 +40,7 @@ Spec ⇒ concrete tasks w/ TDD steps ∧ dependency waves.
 
 ### P4 — Human Gate
 11. Present plan summary: waves, tasks, files affected
-12. Ask: "Plan written. Approve ⇒ execution, ∨ reject ⇒ revise?"
-13. Reject ⇒ revise per feedback, rewrite via `tff_write_plan` (max 2 iterations), ask again
-14. Approve ⇒ `tff_workflow_transition` milestoneId="{{milestoneId}}", trigger="approve"
-15. After transition to executing: you MUST call `tff_execute_slice` — NEVER implement code manually. The tool auto-resolves the worktree.
-16. {{nextStep}}
+12. Plannotator will open for user review — wait for the approval result
+13. Reject ⇒ revise per feedback, rewrite via `tff_write_plan` (max 2 iterations)
+14. Approve ⇒ present the result to the user. Do NOT call tff_workflow_transition — the user invokes the next step.
+15. {{nextStep}}

@@ -46,7 +46,7 @@ export function createWriteResearchTool(useCase: WriteResearchUseCase, reviewUI:
               }
             : undefined,
           nextSteps: approved
-            ? "Plannotator APPROVED the research. If the feedback contains minor comments or suggestions, address them briefly inline but do NOT re-ask the user for approval. Proceed directly: call tff_workflow_transition with trigger='next' to advance to the planning phase."
+            ? "Plannotator APPROVED the research. Present the result to the user. If the feedback contains minor comments, mention them. Do NOT call tff_workflow_transition yourself — the user will invoke /tff plan when ready."
             : "Plannotator REQUESTED CHANGES. Show the feedback to the user, revise the research accordingly, then call tff_write_research again with the revised content.",
         }),
       );

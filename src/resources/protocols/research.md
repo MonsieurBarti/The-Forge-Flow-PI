@@ -34,8 +34,7 @@ Codebase research ⇒ RESEARCH.md for planning phase.
 5. `tff_write_research` — milestoneLabel="{{milestoneLabel}}", sliceLabel="{{sliceLabel}}", sliceId="{{sliceId}}", content=full research markdown
 
 ### Phase 3 — User Gate
-6. Present key findings summary
-7. Ask: "Research complete. Approve ⇒ planning, ∨ request deeper investigation?"
-8. Deeper investigation requested ⇒ explore further with filesystem tools (max 2 rounds), update via `tff_write_research`, ask again
-9. Approved ⇒ `tff_workflow_transition` milestoneId="{{milestoneId}}", trigger="next"
-10. {{nextStep}}
+6. Plannotator will open for user review — wait for the approval result
+7. If changes requested ⇒ explore further, update via `tff_write_research` (max 2 rounds)
+8. If approved ⇒ present the result to the user and suggest /tff plan as the next step. Do NOT call tff_workflow_transition — the user invokes the next step.
+9. {{nextStep}}

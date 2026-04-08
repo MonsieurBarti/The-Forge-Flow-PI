@@ -1,5 +1,6 @@
 import type { SliceRepositoryPort } from "@hexagons/slice/domain/ports/slice-repository.port";
 import type { ExtensionAPI } from "@infrastructure/pi";
+import type { ResolvedModel } from "@kernel";
 import type { WorktreePort } from "@kernel/ports/worktree.port";
 import type { TffDispatcher } from "../../../../cli/tff-dispatcher";
 import {
@@ -21,6 +22,7 @@ export interface ExecutionExtensionExtraDeps {
     sliceRepo: SliceRepositoryPort;
   };
   worktreeAdapter?: WorktreePort;
+  modelResolver?: (profileName: string) => ResolvedModel;
 }
 
 export function registerExecutionExtension(
@@ -31,13 +33,23 @@ export function registerExecutionExtension(
 ): void {
   const coordinator = new ExecutionCoordinator(deps);
 
-  if (extra?.worktreeAdapter) {
+  if (extra?.worktreeAdapter && extra?.modelResolver) {
     api.registerTool(
-      createExecuteSliceTool({ coordinator, worktreeAdapter: extra.worktreeAdapter }),
+      createExecuteSliceTool({
+        coordinator,
+        worktreeAdapter: extra.worktreeAdapter,
+        modelResolver: extra.modelResolver,
+      }),
+    );
+    api.registerTool(
+      createResumeExecutionTool({
+        coordinator,
+        worktreeAdapter: extra.worktreeAdapter,
+        modelResolver: extra.modelResolver,
+      }),
     );
   }
   api.registerTool(createPauseExecutionTool(coordinator));
-  api.registerTool(createResumeExecutionTool(coordinator));
 
   if (extra?.rollback) {
     registerRollbackCommand(dispatcher, api, extra.rollback);

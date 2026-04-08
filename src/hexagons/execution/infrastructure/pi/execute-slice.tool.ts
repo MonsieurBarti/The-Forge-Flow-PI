@@ -1,15 +1,22 @@
 import { dirname } from "node:path";
 import { createZodTool, textResult } from "@infrastructure/pi";
 import {
+  type ComplexityTier,
   ComplexityTierSchema,
   IdSchema,
   isErr,
-  ModelProfileNameSchema,
-  ResolvedModelSchema,
+  type ModelProfileName,
+  type ResolvedModel,
 } from "@kernel";
 import type { WorktreePort } from "@kernel/ports/worktree.port";
 import { z } from "zod";
 import type { ExecutionCoordinator } from "../../application/execution-coordinator.use-case";
+
+const COMPLEXITY_TO_PROFILE: Record<ComplexityTier, ModelProfileName> = {
+  S: "budget",
+  "F-lite": "balanced",
+  "F-full": "quality",
+};
 
 const ExecuteSliceSchema = z.object({
   sliceId: IdSchema.describe("Slice ID (from tff_status output)"),
@@ -17,13 +24,12 @@ const ExecuteSliceSchema = z.object({
   sliceLabel: z.string().min(1).describe("Slice label"),
   sliceTitle: z.string().min(1).describe("Slice title"),
   complexity: ComplexityTierSchema.describe("Complexity tier: S, F-lite, F-full"),
-  model: ResolvedModelSchema.describe("Model configuration"),
-  modelProfile: ModelProfileNameSchema.describe("Model profile name"),
 });
 
 export interface ExecuteSliceToolDeps {
   coordinator: ExecutionCoordinator;
   worktreeAdapter: WorktreePort;
+  modelResolver: (profileName: string) => ResolvedModel;
 }
 
 export function createExecuteSliceTool(deps: ExecuteSliceToolDeps) {
@@ -31,14 +37,17 @@ export function createExecuteSliceTool(deps: ExecuteSliceToolDeps) {
     name: "tff_execute_slice",
     label: "TFF Execute Slice",
     description:
-      "Start wave-based task execution for a slice. The worktree path is auto-resolved from the slice ID.",
+      "Start wave-based task execution for a slice. Model and worktree path are auto-resolved.",
     schema: ExecuteSliceSchema,
     execute: async (params) => {
-      // Auto-resolve worktree path from slice ID
       const worktreePath = dirname(deps.worktreeAdapter.resolveTffDir(params.sliceId));
+      const modelProfile = COMPLEXITY_TO_PROFILE[params.complexity];
+      const model = deps.modelResolver(modelProfile);
 
       const result = await deps.coordinator.startExecution({
         ...params,
+        model,
+        modelProfile,
         workingDirectory: worktreePath,
       });
       if (isErr(result)) return textResult(`Error: ${result.error.message}`);
@@ -46,12 +55,11 @@ export function createExecuteSliceTool(deps: ExecuteSliceToolDeps) {
       const data = result.data;
       const nextSteps =
         data.status === "completed"
-          ? "Execution complete. Run /tff verify to validate acceptance criteria against the implementation."
+          ? "Execution complete. Present the results to the user and suggest /tff verify as the next step."
           : data.status === "paused"
-            ? "Execution paused. Call tff_resume_execution to continue, or /tff rollback to revert."
-            : "Execution failed. Review the errors above, then retry with tff_execute_slice or /tff rollback.";
+            ? "Execution paused. Present the status to the user and suggest /tff resume or /tff rollback."
+            : "Execution failed. Present the errors to the user and suggest retrying or /tff rollback.";
 
-      // Include per-task failure details if any tasks failed
       if (data.failedTasks.length > 0 && data.taskErrors) {
         const failureDetails = data.failedTasks.map((id) => ({
           taskId: id,
